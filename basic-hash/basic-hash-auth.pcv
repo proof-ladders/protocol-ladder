@@ -1,0 +1,45 @@
+(* Example from
+D. Baelde, S. Delaune, A. Koutsos, C. Jacomme, and S. Moreau, “An Interactive Prover for Protocol Verification in the Computational Model,” in Proceedings of the 42nd IEEE Symposium on Security and Privacy (S&P’21), 2021, https://hal.inria.fr/hal-03172119.
+*)
+
+
+(* An attempt to encode an authentication property for basic hash *)
+(* Stéphanie Delaune *)
+
+
+param NT, NR, NK.
+
+type nonce [large,fixed].
+type key [fixed].
+type hashed [large,fixed].
+
+proba Pprf.
+
+expand PRF(key, nonce, hashed, hash, Pprf).
+
+
+(* Queries and Events *)
+event acceptR(nonce,hashed).
+event startT(nonce,hashed).
+
+query xn: nonce, xh:hashed; event(acceptR(xn,xh)) ==> event(startT(xn,xh)).
+
+(* Channels and Processes *)
+channel c0, c1, c2, c3, start, finish.
+
+
+table keys(key).
+
+let processT(kT:key) =
+        in(c0, ());
+        new n: nonce;
+        event startT(n, hash(kT,n));
+	out(c1, (n, hash(kT,n))).
+
+let processR(kR:key) =
+       in(c2,(m1:nonce,m2:hashed));
+       if m2 = hash(kR,m1) then event acceptR(m1,m2).
+
+process
+         ! iK <= NK (in(start, ());  new kT:key; insert keys(kT); out(finish, ());  ! iT <= NT processT(kT)) 
+        |   (! iR <= NR in(start, ());  get keys(xkT) in   out(finish, ()); processR(xkT))

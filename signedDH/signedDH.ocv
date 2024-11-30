@@ -1,0 +1,236 @@
+(* Example from CV tutorials
+
+https://bblanche.gitlabpages.inria.fr/CryptoVerif/tutorial/index.html
+edited for
+https://github.com/charlie-j/summer-school-2023/tree/master
+
+*)
+
+
+(* CryptoVerif is able to prove the queries in this model automatically.
+   We use the interactive mode for illustration. For automatic mode,
+   run `auto` anytime in interactive mode, or delete the proof environment,
+   or use a `proof { auto }` proof environment. *)
+
+(*
+proof {
+  out_game "g01.ocv"; 
+  interactive;
+  crypto rom(hash);
+  out_game "g02.ocv";
+  crypto uf_cma(sign) *;
+  out_game "g03.ocv";
+  success;  
+  simplify; 
+  out_game "g04.ocv";
+  crypto cdh(exp);
+  out_game "g05.ocv";
+  success
+}
+*)
+
+
+proof {interactive}
+(* Signed Diffie-Hellman protocol *)
+param NA, NB, NK.
+
+type host [bounded].
+type keyseed [large,fixed].
+type pkey [bounded].
+type skey [bounded].
+type message [bounded].
+type signature [bounded].
+
+type Z [large,bounded].
+type G [large,bounded].
+type key [fixed].
+
+(* Basic Diffie-Hellman declarations *)
+expand DH_basic(G, Z, g, exp, exp', mult).
+
+(* This collision assumption is needed to prove an injective
+   correspondence, because we use ephemerals to distinguish sessions. *)
+proba PCollKey1.
+proba PCollKey2.
+
+(* DH_proba_collision says that
+   - the probability that exp(g, x) = Y for random x and Y independent of x
+   is at most PCollKey1, and
+   - the probability that exp(g, mult(x,y)) = Y where x and y are independent
+   random private keys and Y is independent of x or y is at most PCollKey2.
+*)
+expand DH_proba_collision(
+  G,        (* type of group elements *)
+  Z,        (* type of exponents *)
+  g,        (* group generator *)
+  exp,      (* exponentiation function *)
+  exp',     (* exp. func. after transformation *)
+  mult,     (* func. for exponent multiplication *)
+  PCollKey1,(*  *)
+  PCollKey2
+).
+
+(* CDH assumption *)
+proba pCDH.
+expand CDH(G, Z, g, exp, exp', mult, pCDH).
+
+
+(* Hash in the random oracle model *)
+type hashfunction [fixed].
+expand ROM_hash(
+  hashfunction, (* type for hash function choice *)
+  G,            (* type of input *)
+  key,          (* type of output *)
+  hash,         (* name of hash function *)
+  hashoracle,   (* process defining the hash oracle *)
+  qH            (* parameter: number of calls *)
+).
+
+(* Concatenation helper functions *)
+fun msg2(host, host, G, G):message [data].
+fun msg3(host, host, G, G):message [data].
+(* We assume the messages have a different encoding. *)
+equation forall x:host, y:host, z:G, t:G, x2:host, y2:host, z2:G, t2:G;
+  msg2(x,y,z,t) <> msg3(x2,y2,z2,t2).
+
+(* Signatures *)
+proba Psign.
+proba Psigncoll.
+(* expand UF_CMA_det_signature( *)
+expand UF_CMA_proba_signature(
+  (* types, to be defined outside the macro *)
+  keyseed,
+  pkey,
+  skey,
+  message,
+  signature,
+  (* names for functions defined by the macro *)
+  skgen,
+  pkgen,
+  sign,
+  verify,
+  (* probabilities, to be defined outside the macro *)
+  Psign,     (* breaking the UF-CMA property *)
+  Psigncoll  (* collision between independently gen. keys *)
+).
+
+table keys(host, pkey).
+
+(* The two honest peers *)
+const A,B:host.
+
+(* Queries and Events *)
+query secret keyA.
+query secret keyB.
+
+event endA(host, host, G, G).
+event beginB(host, host, G, G).
+event endB(host, host, G, G).
+
+query y: G, x: G;
+  inj-event(endA(A, B, x, y)) ==> inj-event(beginB(A, B, x, y))
+  public_vars keyA, keyB.
+query y: G, x: G;
+  inj-event(endB(A, B, x, y)) ==> inj-event(endA(A, B, x, y))
+  public_vars keyA, keyB.
+
+let processA(hf:hashfunction, skA:skey) =
+  OA1(hostX: host) :=
+    a <-R Z;
+    ga <- exp(g,a);
+    return(A, hostX, ga);
+
+  OA3(=A, =hostX, gb:G, s:signature) :=
+    get keys(=hostX, pkX) in
+    if verify(msg2(A, hostX, ga, gb), pkX, s) then
+    gba <- exp(gb, a);
+    kA <- hash(hf, gba);
+    event endA(A, hostX, ga, gb);
+    return(sign(msg3(A, hostX, ga, gb), skA));
+
+  OAfin() :=
+    if hostX = B then (
+      keyA:key <- kA
+    ) else
+      return(kA).
+
+let processB(hf:hashfunction, skB:skey) =
+  OB2(hostY:host, =B, ga:G) :=
+    b <-R Z;
+    gb <- exp(g,b);
+    event beginB(hostY, B, ga, gb);
+    return(hostY, B, gb, sign(msg2(hostY, B, ga, gb), skB));
+
+  OBfin(s:signature) :=
+    get keys(=hostY, pkY) in
+    if verify(msg3(hostY, B, ga, gb), pkY, s) then
+    gab <- exp(ga, b);
+    kB <- hash(hf, gab);
+    event endB(hostY, B, ga, gb);
+
+    if hostY = A then (
+      keyB:key <- kB
+    ) else
+      return(kB).
+
+let pki(pkA:pkey, pkB:pkey) =
+  Opki(hostZ: host, pkZ: pkey) :=
+    if hostZ = B then (insert keys(B, pkB); return)
+    else if hostZ = A then (insert keys(A, pkA); return)
+    else (insert keys(hostZ, pkZ); return)
+    .
+
+letfun keygen() =
+  rk <-R keyseed;
+  sk <- skgen(rk);
+  pk <- pkgen(rk);
+  (sk, pk).
+
+process
+  Ostart() :=
+    hf <-R hashfunction;
+    let (skA: skey, pkA: pkey) = keygen() in
+    let (skB: skey, pkB: pkey) = keygen() in
+    return(pkA, pkB);
+
+    (
+     (foreach iA <= NA do
+      run processA(hf, skA))
+     |
+     (foreach iB <= NB do
+      run processB(hf, skB))
+     |
+     (foreach iK <= NK do
+      run pki(pkA, pkB))
+     |
+      run hashoracle(hf)
+    )
+
+
+(* Bound discussion *)
+(*
+The bound obtained with Cryptoverif for the secrecy of keyA is as follows:
+
+RESULT Proved secrecy of keyA up to probability
+ (2 * qH * NA * NB + 2 * NB^2 * NA + 2 * NA^2 * NB) * pCDH(time_3)
+ + (2 * NB^2 + 4 * NA^2) * PCollKey1
+ + 4 * NB^2 * NA^2 * PCollKey2 
++ 2 * Psign(time_2, NB) 
++ 2 * Psigncoll 
++ 2 * Psign(time_1, NA)
+
+
+The intuitive expected bound is close to:
+  the adversary obtain the exponent of a group element +
+  the attacker forges one of the signature either on A or B side +
+  public keys collided +
+  two As or two Bs take the same ephemeral    +
+  two computed keys collide
+
+which yields
+ (number of possible DH elements)*pCDH + (2=A signature + B signature) pSign + (number of keys ) * PCollKey1 + (number of possible key pairs)* PCollKey + (a key collide) PsignColl
+
+
+
+
+*)

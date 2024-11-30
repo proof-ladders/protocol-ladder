@@ -1,0 +1,125 @@
+(* New file *)
+
+channel pub.
+
+type id.
+
+(* Elliptic Curve Diffie-Hellman *)
+type scalar.
+type point.
+
+const G:point.
+
+
+fun SMUL(scalar,point):point.
+equation forall y : scalar, z : scalar;
+         SMUL(y, SMUL(z, G)) = SMUL(z, SMUL(y, G)).
+
+fun smul(scalar,point):point.
+
+(*
+const Gneutral:point.
+reduc forall x:scalar;
+      smul(x,Gneutral) = Gneutral
+      otherwise forall x:scalar, y:point; smul(x,y) = SMUL(x,y).
+
+*)
+
+letfun s2p(s:scalar) = SMUL(s,G).
+letfun EXP(p:point,s:scalar) = SMUL(s,p).
+
+reduc forall p:point; KEYID(p) = p.
+
+
+(* Hash functions *)
+
+type hashkey.
+type hashout.
+
+const t_mac : hashkey.
+const t_key : hashkey.
+const t_verify  : hashkey.
+
+fun H(bitstring, hashkey) : hashout.
+
+(* Data formatter *)
+
+type string.
+
+const PROTOID:string.
+const Server:string.
+
+fun concat1(point, point, id, point,point, point, string):bitstring [data].
+fun concat2(hashout, id, point,point,point, string, string):bitstring [data].
+
+fun CREATE(id, point, point):bitstring [data].
+fun CREATED(point, hashout):bitstring [data].
+
+(* events *)
+event ServerKey(id, point).
+event ClientAccept(id, point, point, point, hashout).
+event ServerAccept(id, point, point, point, hashout).
+
+
+(* Sanity checks, accept events are reachable *)
+query ID:id, B,Y,X:point, KEY_SEED:hashout;
+      event(ClientAccept(ID,B,Y,X,KEY_SEED)).
+
+query ID:id, B,Y,X:point, KEY_SEED:hashout;
+      event(ServerAccept(ID,B,Y,X,KEY_SEED)).
+
+(* Authentication *)
+
+query ID:id, B,Y,X:point, KEY_SEED:hashout;
+         inj-event(ClientAccept(ID,B,Y,X,KEY_SEED)) ==>  inj-event(ServerAccept(ID,B,Y,X,KEY_SEED)).
+
+(* Secrecy *)
+
+query ID:id, B,Y,X:point, KEY_SEED:hashout;
+      event(ClientAccept(ID,B,Y,X,KEY_SEED)) && attacker(KEY_SEED) ==> false.
+
+
+
+(* Sanity check, secrecy on the server side should not hold, for dishonest clients. *)
+
+query ID:id, B,Y,X:point, KEY_SEED:hashout;
+      event(ServerAccept(ID,B,Y,X,KEY_SEED)) && attacker(KEY_SEED) ==> false.
+
+
+
+
+let client(ID: id, B:point)  =
+    new x : scalar;
+    let X = EXP(G,x) in
+    out(pub, CREATE( ID, B, X));
+    in(pub, CREATED( Y, AUTH));
+    
+    let secret_input =  concat1( EXP(Y,x), EXP(B,x), ID, B, X, Y, PROTOID) in
+    let KEY_SEED = H(secret_input, t_key) in
+    let verify = H(secret_input, t_verify) in
+    let auth_input = concat2( verify, ID, B, Y, X, PROTOID, Server) in
+    if H(auth_input, t_mac) = AUTH then
+       event ClientAccept(ID, B, Y, X, KEY_SEED).
+
+let serveur(ID: id, b:scalar, B:point) =
+    in(pub, CREATE(=ID, =B, X));
+    new y:scalar;
+    let Y = EXP(G,y) in
+    
+    let secret_input =  concat1( EXP(X,y), EXP(X,b), ID, B, X, Y, PROTOID) in
+    let KEY_SEED = H(secret_input, t_key) in
+    let verify = H(secret_input, t_verify) in
+    let auth_input = concat2( verify, ID, B, Y, X, PROTOID, Server) in
+    event ServerAccept(ID, B, Y, X, KEY_SEED);
+    out(pub, CREATED( Y, H(auth_input, t_mac) )).
+
+process
+	!
+	in(pub, ID:id);
+	new b : scalar;
+	let B = EXP(G,b) in
+	event ServerKey(ID,B);
+	out(pub, B);
+	! client(ID,B)
+	|
+	! serveur(ID,b,B)

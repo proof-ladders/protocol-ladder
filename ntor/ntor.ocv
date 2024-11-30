@@ -1,0 +1,150 @@
+(* New file *)
+
+set useKnownEqualitiesWithFunctionsInMatching = true.
+
+set elsefindFactsInSimplify = true.
+proof {
+
+insert after "OH_1(" "let concat2( veri, ids', gb', gy', gx', protid', servert', =t_mac) = x1_1 in"; 
+
+insert after "let CREATE(" "find ic <= NC suchthat defined(X_1[ic]) && X_1[ic] = X_2 then";
+SArename y;
+
+
+crypto rom(H1);
+
+crypto rom(H2);
+
+crypto gdh(EXP);
+success
+
+}
+
+type id.
+
+(* Elliptic Curve Diffie-Hellman *)
+
+
+type Z [bounded,large,nonuniform]. (* Exponents *)
+type G [bounded,large,nonuniform]. (* Diffie-Hellman group *)
+type subG [bounded,large,nonuniform]. (* Diffie-Hellman group *)
+
+
+expand DH_basic(G, Z, g, EXP, exp', mult).
+
+proba PCollKey1.
+proba PCollKey2.
+expand DH_proba_collision(G, Z, g, EXP, exp', mult, PCollKey1, PCollKey2) .
+
+proba pGDH.
+proba pDistRerandom.
+expand GDH(G, Z, g,EXP , exp', mult, pGDH, pDistRerandom).
+
+
+
+(* Data formatter *)
+
+type string.
+
+const PROTOID:string.
+const Server:string.
+
+(* Hash in the random oracle model *)
+
+type hashkey.
+const t_mac : hashkey.
+const t_key : hashkey.
+const t_verify  : hashkey.
+
+equation t_key <> t_verify.
+
+
+type romkey [large,fixed].
+type hashout [large,bounded].
+
+
+expand ROM_hash_large_8(romkey, G, G, id, G,G, G, string, hashkey, hashout, H1, hashoracle1, qH1).
+
+
+expand ROM_hash_large(romkey, bitstring, hashout, H2, hashoracle2, qH2).
+
+
+
+
+fun concat2(hashout, id, G,G,G, string, string, hashkey):bitstring [data].
+(*
+equation forall veri:hashout, protid, protid',servert':string, ids,ids':id, XY,XB,gx,gb,gy,gx',gb',gy':G, tag,tag':hashkey;
+ concat2( veri, ids', gb', gy', gx', protid', servert', tag') <> concat1( XY, XB , ids, gb, gx, gy, protid, tag).
+*)
+
+fun CREATE(id, G, G):bitstring [data].
+fun CREATED(G, hashout):bitstring [data].
+
+(* events *)
+event ServerKey(id, G).
+event ClientAccept(id, G, G, G, hashout).
+event ServerAccept(id, G, G, G, hashout).
+
+
+
+(* Authentication *)
+
+query ID:id, B,Y,X:G, KEY_SEED:hashout;
+         event(ClientAccept(ID,B,Y,X,KEY_SEED)) ==>  event(ServerAccept(ID,B,Y,X,KEY_SEED)).
+
+query secret KS.
+
+let client(romk1,romk2:romkey, ID: id, B:G)  =
+    OC1() :=
+    x <-R Z;
+    X : G <- EXP(g,x);
+    return(CREATE( ID, B, X));
+    OC3(m:bitstring) :=
+    let CREATED( Y, AUTH) = m in
+    
+    KEY_SEED <- H1(romk1, EXP(Y,x), EXP(B,x), ID, B, X, Y, PROTOID, t_key);
+    verify <- H1(romk1, EXP(Y,x), EXP(B,x), ID, B, X, Y, PROTOID, t_verify);
+    auth_input <- concat2( verify, ID, B, Y, X, PROTOID, Server, t_mac);
+    if H2(romk2, auth_input) = AUTH then
+       event ClientAccept(ID, B, Y, X, KEY_SEED);
+       KS : hashout <- KEY_SEED.
+       	    
+
+let server(romk1,romk2:romkey, ID: id, b:Z, B:G) =
+    OS1(m:bitstring) :=
+    let  CREATE(=ID, =B, X) = m in
+    y <-R Z;
+    Y :G <- EXP(g,y);
+
+    KEY_SEED <- H1(romk1,  EXP(X,y), EXP(X,b), ID, B, X, Y, PROTOID, t_key);
+    verify <- H1(romk1, EXP(X,y), EXP(X,b), ID, B, X, Y, PROTOID, t_verify);
+    auth_input <- concat2( verify, ID, B, Y, X, PROTOID, Server, t_mac);
+    event ServerAccept(ID, B, Y, X, KEY_SEED);    
+    	 return (CREATED(Y, H2(romk2,auth_input))).
+
+
+param NC.
+param NS.
+
+process
+	Ostart() :=
+
+	romk1 <-R romkey;
+	romk2 <-R romkey;	
+	return ();
+
+	OinitServ(ID:id) :=
+	b <-R Z;
+	B : G <- EXP(g,b);
+	event ServerKey(ID,B);
+	return(B);
+
+	(
+	(foreach i <= NC do run client(romk1, romk2, ID, B))
+	|
+	(foreach j <= NS do run server(romk1, romk2, ID, b, B))
+	|
+	run hashoracle1(romk1)
+	|
+	run hashoracle2(romk2)	
+	)

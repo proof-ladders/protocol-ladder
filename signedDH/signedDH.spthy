@@ -1,0 +1,71 @@
+/* From tamarin git examples repository */
+
+theory SignedDH_PFS
+begin
+
+section{* The Signed Diffie-Hellman Protocol *}
+
+/*
+ * Protocol:	Signed Diffie-Hellman
+ * Modeler: 	Simon Meier, Benedikt Schmidt
+ * Date: 	January 2012
+ *
+ * Status: 	working
+ */
+
+builtins: diffie-hellman, signing
+
+// Public key infrastructure
+rule Register_pk:
+  [ Fr(~ltk) ] 
+  --> 
+  [ !Ltk($A, ~ltk), !Pk($A, pk(~ltk)) ]
+
+rule Get_pk:
+  [ !Pk(A, pk) ] 
+  --> 
+  [ Out(pk) ]
+
+rule Reveal_ltk:
+    [ !Ltk(A, ltk) ]
+  --[ LtkReveal(A) ]->
+    [ Out(ltk) ]
+
+// Protocol
+rule Init_1:
+  [ Fr(~ekI), !Ltk($I, ltkI) ]
+  -->
+  [ Init_1( $I, $R, ~ekI )
+  , Out( <$I, $R, 'g' ^ ~ekI, sign{'1', $I, $R,'g' ^ ~ekI }ltkI> ) ]
+
+rule Init_2:
+    [ Init_1( $I, $R, ~ekI )
+    , !Pk($R, pk(ltkR))
+    , In( <$R, $I, Y, sign{'2', $R, $I, Y }ltkR> ) 
+    ]
+  --[ SessionKey($I,$R, Y ^ ~ekI) ]->
+    []
+
+rule Resp:
+    [ !Pk($I, pk(ltkI))
+    , !Ltk($R, ltkR)
+    , Fr(~ekR)
+    , In( <$I, $R, X, sign{'1', $I, $R, X }ltkI> ) 
+    ]
+  --[ SessionKey($I,$R, X ^ ~ekR) ]->
+    [
+      Out( <$R, $I, 'g' ^ ~ekR, sign{'2', $R, $I, 'g' ^ ~ekR }ltkR> ) 
+    ]
+
+lemma Perfect_Forward_Secrecy:
+  "All I R sessKey #i #k. 
+     SessionKey(I,R,sessKey) @ i &
+     K(sessKey) @ k
+     ==>
+     ( (Ex #r. LtkReveal(I) @ r & r < i)
+     | (Ex #r. LtkReveal(R) @ r & r < i)
+     )
+  "
+
+
+end

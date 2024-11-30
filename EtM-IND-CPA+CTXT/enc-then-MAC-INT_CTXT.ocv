@@ -1,0 +1,75 @@
+(* Example from CV tutorials
+
+https://bblanche.gitlabpages.inria.fr/CryptoVerif/tutorial/index.html
+edited for
+https://github.com/charlie-j/summer-school-2023/tree/master
+
+*)
+
+
+
+(* Encrypt-then-MAC is INT-CTXT *)
+
+param qEnc, qDec.
+
+type mkey [fixed].
+type key [fixed].
+type macs [fixed].
+
+(* Shared-key encryption (CPA Stream cipher) *)
+
+proba Penc.
+
+expand IND_CPA_sym_enc(key, bitstring, bitstring, enc, dec, injbot, Z, Penc).
+
+(* Mac *)
+
+proba Pmac.
+
+expand SUF_CMA_det_mac(mkey, bitstring, macs, mac, verify, Pmac).
+
+(* Queries *)
+
+event bad.
+query event(bad) ==> false.
+
+fun concat(bitstring, macs): bitstring [data].
+
+letfun full_enc(m: bitstring, k: key, mk: mkey) =
+  c1 <- enc(m,k);
+  concat(c1,mac(c1,mk)).
+
+letfun full_dec(c: bitstring, k: key, mk: mkey) =
+  let concat(c1, mac1) = c in
+  (
+     if verify(c1, mk, mac1) then
+        dec(c1, k)
+     else
+        bottom
+  )
+  else
+     bottom.
+
+table ciphertexts(bitstring).
+ 
+let Qenc(k: key, mk: mkey) = 
+        foreach ienc <= qEnc do
+	OEnc(m0: bitstring) :=
+	c0 <- full_enc(m0,k,mk);
+	insert ciphertexts(c0);
+	return(c0).
+
+let QdecTest(k: key, mk: mkey) =
+        foreach idec <= qDec do
+        ODec(c: bitstring) :=
+	get ciphertexts(=c) in return(true) else
+	if full_dec(c, k, mk) <> bottom
+	then event bad; return(true)
+	else return(false).
+
+process 
+	Ostart() :=
+	k <-R key;
+	mk <-R mkey;
+	return;
+	(run Qenc(k,mk) | run QdecTest(k,mk))
