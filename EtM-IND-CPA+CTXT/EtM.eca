@@ -1,0 +1,408 @@
+(* Unlike other tutorials, we'll use real-or-encryption-of-0 here; or
+   the result does not hold unless we assume the MAC is a PRF. *)
+theory NB_IND_CPA.
+require import FSet.
+
+type key, nonce, ptxt, ctxt.
+
+module type Scheme = {
+  proc keygen(): key
+  proc enc(k : key, n : nonce, p : ptxt): ctxt
+  proc dec(k : key, n : nonce, c : ctxt): ptxt option
+}.
+
+module type Oracle = {
+  proc enc(n : nonce, p : ptxt): ctxt option
+}.
+
+module type Oracle_i = {
+  proc init(): unit
+
+  include Oracle
+}.
+
+module type Adversary (O : Oracle) = {
+  proc distinguish(): bool
+}.
+
+module Exp (O : Oracle_i) (A : Adversary) = {
+  proc run() = {
+    var b;
+
+    O.init();
+    b <@ A(O).distinguish();
+    return b;
+  }
+}.
+
+module RealOracle (S : Scheme) = {
+  var k    : key
+  var nlog : nonce fset
+
+  proc init() = {
+    k <@ S.keygen();
+    nlog <- fset0;
+  }
+
+  proc enc(n, p) = {
+    var c;
+    var r <- None;
+
+    if (n \notin nlog) {
+      nlog <- nlog `|` fset1 n;
+      c <@ S.enc(k, n, p);
+      r <- Some c;
+    }
+    return r;
+  }
+}.
+
+module IdealOracle (S : Scheme) = {
+  var k : key
+  var nlog : nonce fset
+
+  proc init() = {
+    k <@ S.keygen();
+    nlog <- fset0;
+  }
+
+  proc enc(n, p : ptxt) = {
+    var c;
+    var r <- None;
+
+    if (n \notin nlog) {
+      nlog <- nlog `|` fset1 n;
+      c <@ S.enc(k, n, witness);
+      r <- Some c;
+    }
+    return r;
+  }
+}.
+end NB_IND_CPA.
+
+theory SEUF_CMA.
+require import FSet.
+
+type key, msg, tag.
+
+module type Scheme = {
+  proc keygen(): key
+  proc tag(k : key, m : msg): tag
+  proc verify(k : key, m : msg, t : tag): bool
+}.
+
+module type Oracle = {
+  proc tag(m : msg): tag
+}.
+
+module type Oracle_i = {
+  proc init(): unit
+
+  include Oracle
+}.
+
+module type Adversary (O : Oracle) = {
+  proc forge(): msg * tag
+}.
+
+module Exp (S : Scheme) (A : Adversary) = {
+  var k : key
+  var mlog : (msg * tag) fset
+
+  module O = {
+    proc tag(m) = {
+      var t;
+
+      t <@ S.tag(k, m);
+      mlog <- mlog `|` fset1 (m, t);
+      return t;
+    }
+  }
+
+  proc run() = {
+    var m, t, b;
+
+    mlog <- fset0;
+    k <@ S.keygen();
+    (m, t) <@ A(O).forge();
+    b <@ S.verify(k, m, t);
+
+    return b /\ (m, t) \notin mlog;
+  }
+}.
+end SEUF_CMA.
+
+theory NB_INT_CTXT.
+require import FMap.
+
+type key, nonce, ptxt, ctxt.
+
+module type Scheme = {
+  proc keygen(): key
+  proc enc(k : key, n : nonce, p : ptxt): ctxt
+  proc dec(k : key, n : nonce, c : ctxt): ptxt option
+}.
+
+module type Oracle = {
+  proc enc(n : nonce, p : ptxt): ctxt option
+}.
+
+module type Oracle_i = {
+  proc init(): unit
+
+  include Oracle
+}.
+
+module type Adversary (O : Oracle) = {
+  proc forge(): nonce * ctxt
+}.
+
+module Exp (S : Scheme) (A : Adversary) = {
+  var k : key
+  var elog : (nonce, ctxt) fmap
+
+  module O = {
+    proc enc(n, p) = {
+      var c;
+      var r <- None;
+
+      if (n \notin elog) {
+        c <@ S.enc(k, n, p);
+        elog.[n] <- c;
+        r <- Some c;
+      }
+      return r;
+    }
+  }
+
+  proc run() = {
+    var n, c, po;
+
+    elog <- empty;
+    k <@ S.keygen();
+    (n, c) <@ A(O).forge();
+    po <@ S.dec(k, n, c);
+
+    return po <> None /\ elog.[n] <> Some c;
+  }
+}.
+end NB_INT_CTXT.
+
+theory EtM.
+require import AllCore FSet FMap.
+
+type ekey, nonce, ptxt, ctxt.
+
+clone NB_IND_CPA as E_CPA with
+  type key <- ekey,
+  type nonce <- nonce,
+  type ptxt <- ptxt,
+  type ctxt <- ctxt.
+
+type akey, tag.
+
+clone SEUF_CMA as M_CMA with
+  type key <- akey,
+  type msg <- nonce * ctxt,
+  type tag <- tag.
+
+module EtM (E : E_CPA.Scheme) (M : M_CMA.Scheme) = {
+  proc keygen() = {
+    var ek, ak;
+    ek <@ E.keygen();
+    ak <@ M.keygen();
+    return (ek, ak);
+  }
+
+  proc enc(k, n, p) = {
+    var ek, ak, c, t;
+
+    (ek, ak) <- k;
+    c <@ E.enc(ek, n, p);
+    t <@ M.tag(ak, (n, c));
+    return (c, t);
+  }
+
+  proc dec(k, n, ct) = {
+    var ek, ak, c, t, b;
+    var p <- None;
+
+    (ek, ak) <- k;
+    (c, t) <- ct;
+    b <@ M.verify(ak, (n, c), t);
+    if (b) {
+      p <@ E.dec(ek, n, c);
+    }
+    return p;
+  }
+}.
+
+(* EtM is CPA *)
+clone NB_IND_CPA as EtM_CPA with
+  type key <- ekey * akey,
+  type nonce <- nonce,
+  type ptxt <- ptxt,
+  type ctxt <- ctxt * tag.
+
+module (Red_CPA_CPA (M : M_CMA.Scheme) (A : EtM_CPA.Adversary) : E_CPA.Adversary) (O : E_CPA.Oracle) = {
+  var ak : akey
+  
+  module O_EtM = {
+    proc enc(n, p) = {
+      var co, t;
+      var r <- None;
+
+      co <@ O.enc(n, p);
+      if (co is Some c) {
+        t <@ M.tag(ak, (n, c));
+        r <- Some (c, t);
+      }
+      return r;
+    }
+  }
+
+  proc distinguish() = {
+    var b;
+
+    ak <@ M.keygen();
+    b <@ A(O_EtM).distinguish();
+    return b;
+  }
+}.
+
+section.
+declare module E <: E_CPA.Scheme { -EtM_CPA.RealOracle, -EtM_CPA.IdealOracle, -E_CPA.RealOracle, -E_CPA.IdealOracle, -Red_CPA_CPA }.
+declare module M <: M_CMA.Scheme { -EtM_CPA.RealOracle, -EtM_CPA.IdealOracle, -E_CPA.RealOracle, -E_CPA.IdealOracle, -Red_CPA_CPA, -E }.
+declare module A <: EtM_CPA.Adversary { -EtM_CPA.RealOracle, -EtM_CPA.IdealOracle, -E_CPA.RealOracle, -E_CPA.IdealOracle, -Red_CPA_CPA, -E, -M }.
+
+lemma EtM_CPA &m:
+    Pr[EtM_CPA.Exp(EtM_CPA.RealOracle(EtM(E, M)), A).run() @ &m: res]
+  - Pr[EtM_CPA.Exp(EtM_CPA.IdealOracle(EtM(E, M)), A).run() @ &m: res]
+  =   Pr[E_CPA.Exp(E_CPA.RealOracle(E), Red_CPA_CPA(M, A)).run() @ &m: res]
+    - Pr[E_CPA.Exp(E_CPA.IdealOracle(E), Red_CPA_CPA(M, A)).run() @ &m: res].
+proof.
+have ->: Pr[EtM_CPA.Exp(EtM_CPA.RealOracle(EtM(E, M)), A).run() @ &m: res]
+       = Pr[E_CPA.Exp(E_CPA.RealOracle(E), Red_CPA_CPA(M, A)).run() @ &m: res].
++ byequiv=> //.
+  proc; inline *; wp.
+  call (: ={glob E, glob M}
+       /\ EtM_CPA.RealOracle.k.`1{1} = E_CPA.RealOracle.k{2}
+       /\ EtM_CPA.RealOracle.nlog{1} = E_CPA.RealOracle.nlog{2}
+       /\ EtM_CPA.RealOracle.k.`2{1} = Red_CPA_CPA.ak{2}).
+  + proc; inline *; sp; if=> //.
+    + match Some {2} 5.
+      + by auto; call (: true); auto=> /#.
+      wp; call (: true).
+      wp; call (: true).
+      by auto=> />.
+    match None {2} 2; 1:by auto.
+    by auto.
+  wp; call (: true).
+  wp; call (: true).
+  by auto=> />.
+have -> //: Pr[EtM_CPA.Exp(EtM_CPA.IdealOracle(EtM(E, M)), A).run() @ &m: res]
+          = Pr[E_CPA.Exp(E_CPA.IdealOracle(E), Red_CPA_CPA(M, A)).run() @ &m: res].
+byequiv=> //.
+proc; inline *; wp.
+call (: ={glob E, glob M}
+     /\ EtM_CPA.IdealOracle.k.`1{1} = E_CPA.IdealOracle.k{2}
+     /\ EtM_CPA.IdealOracle.nlog{1} = E_CPA.IdealOracle.nlog{2}
+     /\ EtM_CPA.IdealOracle.k.`2{1} = Red_CPA_CPA.ak{2}).
++ proc; inline *; sp; if=> //.
+  + match Some {2} 5.
+    + by auto; call (: true); auto=> /#.
+    wp; call (: true).
+    wp; call (: true).
+    by auto=> />.
+  match None {2} 2; 1:by auto.
+  by auto.
+wp; call (: true).
+wp; call (: true).
+by auto=> />.
+qed.
+end section.
+
+(* EtM is INT-CTXT *)
+clone import NB_INT_CTXT as EtM_CTXT with
+  type key <- ekey * akey,
+  type nonce <- nonce,
+  type ptxt <- ptxt,
+  type ctxt <- ctxt * tag.
+
+module (Red_CTXT_CMA (E : E_CPA.Scheme) (A : EtM_CTXT.Adversary) : M_CMA.Adversary) (O : M_CMA.Oracle) = {
+  var ek : ekey
+  var nlog : nonce fset
+  
+  module O_EtM = {
+    proc enc(n, p) = {
+      var c, t;
+      var r <- None;
+
+      if (n \notin nlog) {
+        c <@ E.enc(ek, n, p);
+        nlog <- nlog `|` fset1 n;
+        t <@ O.tag((n, c));
+        r <- Some (c, t);
+      }
+      return r;
+    }
+  }
+
+  proc forge() = {
+    var n, ct, c, t;
+
+    nlog <- fset0;
+    ek <@ E.keygen();
+    (n, ct) <@ A(O_EtM).forge();
+    (c, t) <- ct;
+    return ((n, c), t);
+  }
+}.
+
+section.
+declare module E <: E_CPA.Scheme { -EtM_CTXT.Exp, -M_CMA.Exp, -Red_CTXT_CMA }.
+declare module M <: M_CMA.Scheme { -EtM_CTXT.Exp, -M_CMA.Exp, -Red_CTXT_CMA, -E }.
+declare module A <: EtM_CTXT.Adversary { -EtM_CTXT.Exp, -M_CMA.Exp, -Red_CTXT_CMA, -E, -M }.
+
+declare axiom E_dec_ll _k _n _c:
+  phoare [E.dec: (k, n, c) = (_k, _n, _c) ==> res <> None] =1%r.
+
+lemma EtM_CTXT &m:
+    Pr[EtM_CTXT.Exp(EtM(E, M), A).run() @ &m: res]
+  = Pr[M_CMA.Exp(M, Red_CTXT_CMA(E, A)).run() @ &m: res].
+proof.
+byequiv=> //.
+proc; inline *; wp.
+(* This only works if decryption always terminates, and never fails
+   — we could encode this in the type, but this would duplicate a
+   definition *)
+seq -1 8: (p{1} = None
+        /\ ={b}
+        /\ ((Exp.elog.[n] <> Some c){1} <=> ((m, t) \notin M_CMA.Exp.mlog){2})); last first.
++ if {1}; auto=> />.
+  ecall {1} (E_dec_ll ek0{1} n0{1} c0{1}).
+  by auto=> /#. (* somehow  !_ <=> !_ simplified out the !, but we don't do it for = *)
+call (: true); wp.
+call (: ={glob E, glob M}
+     /\ Exp.k.`1{1} = Red_CTXT_CMA.ek{2}
+     /\ Exp.k.`2{1} = M_CMA.Exp.k{2}
+     /\ (forall n, n \in Exp.elog{1} <=> n \in Red_CTXT_CMA.nlog{2})
+     /\ (forall n c t, Exp.elog{1}.[n] = Some (c, t) <=> ((n, c), t) \in M_CMA.Exp.mlog{2})).
++ proc; inline *; sp; if; auto.
+  + by auto=> /> &1 &2 ->.
+  call (: true); wp.
+  call (: true); wp.
+  auto=> /> &1 &2 eq_nlog eq_mlog n_notin_nlog c0 t0.
+  split.
+  + by move=> n1; rewrite !mem_set !in_fsetU !in_fset1 eq_nlog.
+  + by move=> n1 c1 t1; rewrite in_fsetU in_fset1 get_setE /#.
+swap {1} 2 1.
+wp; call (: true); wp; call (: true); auto=> />.
+split.
++ smt(emptyE in_fset0).
+move=> _ _ [] n [] c t elog nlog mlog eq_nlog eq_mlog //=.
+by rewrite eq_mlog.
+qed.
+end section.
+
+end EtM.
