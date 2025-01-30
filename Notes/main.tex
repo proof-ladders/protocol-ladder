@@ -1,0 +1,247 @@
+\documentclass{article}
+
+
+\usepackage{msc}
+
+%% prot syntax
+\newcommand{\store}{\leftarrow}
+\newcommand{\getR}{\stackrel{R}{\store}}
+
+%% symbols
+\newcommand{\sfsk}{\mathit{sk}}
+\newcommand{\sfpk}{\mathit{pk}}
+\newcommand{\sfss}{\mathit{ss}}
+\newcommand{\sfct}{\mathit{ct}}
+
+%% functions
+\newcommand{\kwf}[1]{\mathrm{#1}}
+\newcommand{\dhkeygen}{\kwf{DH.keygen()}}
+\newcommand{\kemkeygen}{\kwf{KEM.keygen()}}
+\newcommand{\encaps}{\kwf{encaps}}
+\newcommand{\encapsr}{\kwf{encaps\_r}}
+\newcommand{\decaps}{\kwf{decaps}}
+\newcommand{\dprf}{\kwf{dPRF}}
+\newcommand{\kdf}{\kwf{KDF}}
+\newcommand{\sign}{\kwf{sign}}
+\newcommand{\verify}{\kwf{verify}}
+
+\begin{document}
+
+
+
+\begin{figure}
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{4cm}
+        \setlength{\topheaddist}{0cm}
+
+        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+              $\sfpk_B $\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Alex} \;\;}}
+            \end{tabular}}{}%
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $\sfsk_B $ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{Blake} \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+           (a,g^a) \getR \dhkeygen 
+          \end{array}$}{initiator}
+        \nextlevel[4]
+        \mess{$g^a$}{initiator}{receiver}
+        \nextlevel[1]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+           (b,g^b) \getR \dhkeygen \\
+            sig= \sign( (g^a,g^b), \sfsk_B)\\
+                        k_B = \kdf((g^a)^b)
+          \end{array}$}{receiver}
+        \nextlevel[5.7]                
+        \mess{$g^b,sig, {\sfct}$}{receiver}{initiator}
+        \nextlevel[1]                        
+        \action*{$
+          \begin{array}{@{}l@{}}
+           \texttt{Abort if not } \verify(sig,\sfpk_B) \\
+            k_A = \kdf((g^b)^a)
+          \end{array}$}{initiator}
+        
+        
+      \end{msc}
+          \end{center}
+      \caption{signed Diffie-Hellman key exchange}\label{fig:dh}
+\end{figure}
+
+
+
+\begin{figure}
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{4cm}
+        \setlength{\topheaddist}{0cm}
+
+        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+              $\sfpk_B $\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Alex} \;\;}}
+            \end{tabular}}{}%
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $\sfsk_B $ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{Blake} \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+           (a,g^a) \getR \dhkeygen \\
+        { \sfsk_e,\sfpk_e \getR \kemkeygen }
+          \end{array}$}{initiator}
+        \nextlevel[4]
+        \mess{$g^a, {\sfpk_e}$}{initiator}{receiver}
+        \nextlevel[1]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+           (b,g^b) \getR \dhkeygen \\
+            { \sfct,\sfss  \getR \encaps(\sfpk_e) }\\
+            sig= \sign( (g^a,g^b{,\sfpk_e,\sfct}), \sfsk_B)\\
+                        k_B = \dprf((g^a)^b{,\sfss})
+          \end{array}$}{receiver}
+        \nextlevel[5.7]                
+        \mess{$g^b,sig, {\sfct}$}{receiver}{initiator}
+        \nextlevel[1]                        
+        \action*{$
+          \begin{array}{@{}l@{}}
+           \texttt{Abort if not } \verify(sig,\sfpk_B) \\
+            {\sfss  \getR \decaps(\sfct,\sfsk_e) }\\
+            k_A = \dprf((g^b)^a{,\sfss})
+          \end{array}$}{initiator}
+        
+        
+      \end{msc}
+          \end{center}
+      \caption{Hybridization of a signed Diffie-Hellman key exchange}\label{fig:hybrid}
+\end{figure}
+
+
+
+
+\begin{figure}
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{4cm}
+        \setlength{\topheaddist}{0cm}
+
+        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+              $g^b$\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Alex} \;\;}}
+            \end{tabular}}{}%
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $b $ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{Blake} \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+           (x,g^x) \getR \dhkeygen 
+          \end{array}$}{initiator}
+        \nextlevel[4]
+        \mess{$g^x,g^b$}{initiator}{receiver}
+        \nextlevel[1]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            (y,g^y) \getR \dhkeygen \\
+            sec = (g^x)^y || (g^x)^b\\
+            auth = H( sec || g^x || g^y || g^b ) \\
+             k_B = \kdf(sec)
+          \end{array}$}{receiver}
+        \nextlevel[5.7]                
+        \mess{$g^y,auth$}{receiver}{initiator}
+        \nextlevel[1]                        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            sec =(g^y)^x || (g^b)^x\\
+           \texttt{Abort if not }             auth = H( sec || g^x || g^y || g^b )  \\
+            k_A = \kdf(sec)
+          \end{array}$}{initiator}
+        
+        
+      \end{msc}
+          \end{center}
+      \caption{Simplified NTOR}\label{fig:ntor}
+\end{figure}
+
+\begin{figure}
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{4cm}
+        \setlength{\topheaddist}{0cm}
+
+        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+              $key_A$\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Alex} \;\;}}
+            \end{tabular}}{}%
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $\{key_i\}_{i \in I}$ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{Blake} \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            nT \getR \{0,1\}^\eta\\
+            hv = h(nT,key_A)
+          \end{array}$}{initiator}
+        \nextlevel[4]
+        \mess{$nT, hv$}{initiator}{receiver}
+        \nextlevel[1]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            res =\\
+            \quad            \texttt{if }\exists i,  h(nT,key_i) = hv\texttt{ then } \\
+            \qquad ok \\
+            \quad \texttt{else} \\
+            \qquad ko
+          \end{array}$}{receiver}
+        \nextlevel[5.7]                
+        \mess{$res$}{receiver}{initiator}
+        
+        
+      \end{msc}
+    \end{center}
+      \caption{Basic Hash}\label{fig:basic-hash}    
+\end{figure}
+
+
+
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: LaTeX
+%%% TeX-master: t
+%%% End:
