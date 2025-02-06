@@ -30,6 +30,7 @@ TODO: For each tool, an indicative difficulty ranking between the multiple case 
 
 Current primitive examples:
 * Encrypt-Then-Mac is IND-CPA + INT-CTXT
+* KEM+DEM is semantically secure as a PKE
 
 Possible ideas:
 * IND-CPA KEM from DH + ROM 
@@ -46,8 +47,15 @@ subolder: [EtM-IND-CPA+CTXT](EtM-IND-CPA+CTXT/)
 
 | Squirrel | CryptoVerif | EasyCrypt |
 | --------:| ----------- |:--------- |
-|  Medium? | Easy        | Easy?     |
+|  Medium? | Easy        | Easy     |
 
+## KEM+DEM is semantically secure as a PKE
+
+subfolder: [kemdem](kemdem/)
+
+| Squirrel | CryptoVerif | EasyCrypt |
+| --------:| ----------- |:--------- |
+|  Medium? | Easy        | Easy     |
 
 
 # Protocols
