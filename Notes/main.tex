@@ -15,17 +15,121 @@
 
 %% functions
 \newcommand{\kwf}[1]{\mathrm{#1}}
-\newcommand{\dhkeygen}{\kwf{DH.keygen()}}
-\newcommand{\kemkeygen}{\kwf{KEM.keygen()}}
-\newcommand{\encaps}{\kwf{encaps}}
+\newcommand{\dhkeygen}{\kwf{DH.Keygen()}}
+\newcommand{\kemkeygen}{\kwf{KEM.Keygen()}}
+\newcommand{\encaps}{\kwf{KEM.Encaps}}
 \newcommand{\encapsr}{\kwf{encaps\_r}}
-\newcommand{\decaps}{\kwf{decaps}}
+\newcommand{\decaps}{\kwf{KEM.Decaps}}
 \newcommand{\dprf}{\kwf{dPRF}}
+\newcommand{\hash}{\kwf{H}}
 \newcommand{\kdf}{\kwf{KDF}}
-\newcommand{\sign}{\kwf{sign}}
-\newcommand{\verify}{\kwf{verify}}
+\newcommand{\sign}{\kwf{SIG.Sign}}
+\newcommand{\verify}{\kwf{SIG.Verify}}
 
 \begin{document}
+
+
+\section{Protocols problem set}
+
+This document presents four possible protocols that we propose to use for the protocol side of the crypto ladder. The proposed protocols are, ordered by increasing proof difficulty in the crypto world:
+\begin{itemize}
+\item Basic-Hash (Example~\ref{fig:basic-hash}), a RFID tag/reader access protocol, meant to provide unlinkability, a strong notion of anonymity, between the tags. This is the base pattern for electronic passport authentication.
+\item Signed DH (Example~\ref{fig:dh}), a simple key-exchange providing secrecy and authentication,  which is the historic pattern for SSH/TLS.
+\item  Signed DH+KEM (Example~\ref{fig:hybrid}), a variant of the previous one with a KEM added into the mix,  following the pattern for the ongoing hybridization of SSH/TLS.
+\item A simplified NTOR protocol (Example~\ref{fig:ntor}), a DH key-exchange using long term DH keys for authentication instead of signatures, which is the base pattern for Wireguard and PQXDH.
+\end{itemize}
+
+Rational behind this current set:
+\begin{itemize}
+\item provide a variety of security properties (secrecy, authentication, privacy);
+\item have examples linked with widely deployed real-world applications;
+\item start with a very simple example and increase difficulty.  
+\end{itemize}
+
+Open questions:
+\begin{itemize}
+\item should we formalize the expected security properties for each problem ? The issue is that no common formalism might make sense for both the ProVerif/Tamarin side and the more crypto like tools.
+\item should we consider advanced compromise scenarios for the key-exchanges (long term key compromise, ephemeral key compromise) ?
+\item is this too many examples ? too few ?  
+  
+\end{itemize}
+
+
+\subsection{Basic-Hash}
+
+The protocol is given in Figure~\ref{fig:basic-hash}
+
+\paragraph{Description} For a set I of valid identities, a RFID reader has a database of valid secret keys $\{k_i\}_{i \in I}$. A RFID tag with identity $A$ authenticates to the reader by sampling a fresh challenge $n$,
+and sending the pair $(n,\hash(n,k_A))$ to the reader, which looks into its database to see if the hash can be mapped to a valid identity and then answers true or false.
+
+
+\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
+\begin{itemize}
+\item authentication - if the reader accepts for some identity, the corresponding tag did act.
+\item unlinkability - it should be impossible to decide whether two sessions of the protocol correspond to the same tag or not. That is, it should be impossible to distinguish a scenario where there is a single tag executing $n$ times the protocol in sequence with a scenario where $n$ distinct tags all execute the protocol each a single time. 
+\end{itemize}
+
+
+\subsection{DH/KEM based key exchanges}
+
+The three protocols are given in Figures~\ref{fig:dh},\ref{fig:hybrid},\ref{fig:ntor}.
+
+ \paragraph{Description}In all the three key-exchanges, Blake has a long term secret keypair $b_\sfsk,b_\sfpk$. (which is a signature key for Examples~\ref{fig:dh},\ref{fig:hybrid} and a DH key for Example~\ref{fig:ntor}).
+This key is used to authenticate Blake, while Alex and Blake exchange fresh DH or KEM values to derive a shared secret key.
+
+\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
+\begin{itemize}
+\item authentication - if a client Alex derives a key with some parameters (the set of public keys), a corresponding server session Blake derived the same key with the same parameters.
+\item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
+\end{itemize}
+
+
+\begin{figure}
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{4cm}
+        \setlength{\topheaddist}{0cm}
+
+        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+              $k_A$\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Alex} \;\;}}
+            \end{tabular}}{}%
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $\{k_i\}_{i \in I}$ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{Blake} \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            n \getR \{0,1\}^\eta\\
+            h = \hash(n,k_A)
+          \end{array}$}{initiator}
+        \nextlevel[4]
+        \mess{$n, h$}{initiator}{receiver}
+        \nextlevel[1]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            res =\\
+            \quad            \texttt{if }\exists i \in I, \hash(n,k_i) = h\texttt{ then } \\
+            \qquad true \\
+            \quad \texttt{else} \\
+            \qquad false
+          \end{array}$}{receiver}
+        \nextlevel[5.7]                
+        \mess{$res$}{receiver}{initiator}
+        
+        
+      \end{msc}
+    \end{center}
+      \caption{Basic Hash}\label{fig:basic-hash}    
+\end{figure}
 
 
 
@@ -42,35 +146,35 @@
 
         \declinst{initiator}{
             \begin{tabular}[c]{c}
-              $\sfpk_B $\\
+              $b_\sfpk $\\
               \fcolorbox{black}{white}{{\;\; \textsc{Alex} \;\;}}
             \end{tabular}}{}%
         \declinst{receiver}{
           \begin{tabular}[c]{c}
-            $\sfsk_B $ \\
+            $b_\sfsk $ \\
             \fcolorbox{black}{white}{{\;\;  \textsc{Blake} \;\;}}
           \end{tabular}}{}%
         \nextlevel[0]        
         \action*{$
           \begin{array}{@{}l@{}}
-           (a,g^a) \getR \dhkeygen 
+           x_\sfsk, x_\sfpk \getR \dhkeygen 
           \end{array}$}{initiator}
         \nextlevel[4]
-        \mess{$g^a$}{initiator}{receiver}
+        \mess{$x_\sfpk$}{initiator}{receiver}
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}
-           (b,g^b) \getR \dhkeygen \\
-            sig= \sign( (g^a,g^b), \sfsk_B)\\
-                        k_B = \kdf((g^a)^b)
+           y_\sfsk,y_\sfpk \getR \dhkeygen \\
+            sig= \sign( (x_\sfpk, y_\sfpk), b_\sfsk)\\
+                        k_B = \hash((x_\sfpk)^{y_\sfsk})
           \end{array}$}{receiver}
         \nextlevel[5.7]                
-        \mess{$g^b,sig, {\sfct}$}{receiver}{initiator}
+        \mess{$y_\sfpk,sig$}{receiver}{initiator}
         \nextlevel[1]                        
         \action*{$
           \begin{array}{@{}l@{}}
-           \texttt{Abort if not } \verify(sig,\sfpk_B) \\
-            k_A = \kdf((g^b)^a)
+           \texttt{Abort if not } \verify(sig,  (x_\sfpk, y_\sfpk)  ,b_\sfpk) \\
+            k_A = \hash((y_\sfpk)^{x_\sfsk})
           \end{array}$}{initiator}
         
         
@@ -94,38 +198,38 @@
 
         \declinst{initiator}{
             \begin{tabular}[c]{c}
-              $\sfpk_B $\\
+              $b_\sfpk $\\
               \fcolorbox{black}{white}{{\;\; \textsc{Alex} \;\;}}
             \end{tabular}}{}%
         \declinst{receiver}{
           \begin{tabular}[c]{c}
-            $\sfsk_B $ \\
+            $b_\sfsk $ \\
             \fcolorbox{black}{white}{{\;\;  \textsc{Blake} \;\;}}
           \end{tabular}}{}%
         \nextlevel[0]        
         \action*{$
           \begin{array}{@{}l@{}}
-           (a,g^a) \getR \dhkeygen \\
-        { \sfsk_e,\sfpk_e \getR \kemkeygen }
+           x_\sfsk,x_\sfpk \getR \dhkeygen \\
+        { z_\sfsk,z_\sfpk \getR \kemkeygen }
           \end{array}$}{initiator}
         \nextlevel[4]
-        \mess{$g^a, {\sfpk_e}$}{initiator}{receiver}
+        \mess{$x_\sfpk, z_\sfpk$}{initiator}{receiver}
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}
-           (b,g^b) \getR \dhkeygen \\
-            { \sfct,\sfss  \getR \encaps(\sfpk_e) }\\
-            sig= \sign( (g^a,g^b{,\sfpk_e,\sfct}), \sfsk_B)\\
-                        k_B = \dprf((g^a)^b{,\sfss})
+           y_\sfsk, y_\sfpk \getR \dhkeygen \\
+            { \sfct,\sfss  \getR \encaps(z_\sfpk) }\\
+            sig= \sign( (x_\sfpk, y_\sfpk, z_\sfpk, ,\sfct), b_\sfsk)\\
+                        k_B = \hash((x_\sfpk)^{y_\sfsk}{,\sfss})
           \end{array}$}{receiver}
         \nextlevel[5.7]                
-        \mess{$g^b,sig, {\sfct}$}{receiver}{initiator}
+        \mess{$y_\sfpk,sig, {\sfct}$}{receiver}{initiator}
         \nextlevel[1]                        
         \action*{$
           \begin{array}{@{}l@{}}
-           \texttt{Abort if not } \verify(sig,\sfpk_B) \\
-            {\sfss  \getR \decaps(\sfct,\sfsk_e) }\\
-            k_A = \dprf((g^b)^a{,\sfss})
+           \texttt{Abort if not } \verify(sig, (x_\sfpk, y_\sfpk, z_\sfpk, ,\sfct), b_\sfpk) \\
+            {\sfss  \getR \decaps(\sfct,z_\sfsk) }\\
+            k_A = \hash((y_\sfpk)^{x_\sfsk}{,\sfss})
           \end{array}$}{initiator}
         
         
@@ -150,90 +254,43 @@
 
         \declinst{initiator}{
             \begin{tabular}[c]{c}
-              $g^b$\\
+              $b_\sfsk$\\
               \fcolorbox{black}{white}{{\;\; \textsc{Alex} \;\;}}
             \end{tabular}}{}%
         \declinst{receiver}{
           \begin{tabular}[c]{c}
-            $b $ \\
+            $b_\sfpk $ \\
             \fcolorbox{black}{white}{{\;\;  \textsc{Blake} \;\;}}
           \end{tabular}}{}%
         \nextlevel[0]        
         \action*{$
           \begin{array}{@{}l@{}}
-           (x,g^x) \getR \dhkeygen 
+           x_\sfsk,x_\sfpk \getR \dhkeygen 
           \end{array}$}{initiator}
         \nextlevel[4]
-        \mess{$g^x,g^b$}{initiator}{receiver}
+        \mess{$x_\sfpk,b_\sfpk$}{initiator}{receiver}
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}
-            (y,g^y) \getR \dhkeygen \\
-            sec = (g^x)^y || (g^x)^b\\
-            auth = H( sec || g^x || g^y || g^b ) \\
-             k_B = \kdf(sec)
+            y_\sfsk, y_\sfpk \getR \dhkeygen \\
+            k_B = (x_\sfpk)^{y_\sfsk} || (x_\sfpk)^{b_\sfsk}\\
+            auth = \hash( k_B|| x_\sfpk || y_\sfpk || b_\sfpk ) \\
+             mk_B = \hash(k_B)
           \end{array}$}{receiver}
         \nextlevel[5.7]                
-        \mess{$g^y,auth$}{receiver}{initiator}
+        \mess{$y_\sfpk,auth$}{receiver}{initiator}
         \nextlevel[1]                        
         \action*{$
           \begin{array}{@{}l@{}}
-            sec =(g^y)^x || (g^b)^x\\
-           \texttt{Abort if not }             auth = H( sec || g^x || g^y || g^b )  \\
-            k_A = \kdf(sec)
+            k_A =(y_\sfpk)^{x_\sfsk} || (b_\sfpk)^{x_\sfsk}\\
+           \texttt{Abort if not }             auth = \hash( k_A ||  x_\sfpk || y_\sfpk || b_\sfpk)  \\
+            mk_A = \hash(k_A)
           \end{array}$}{initiator}
         
         
       \end{msc}
           \end{center}
       \caption{Simplified NTOR}\label{fig:ntor}
-\end{figure}
-
-\begin{figure}
-
- % \setlength{\belowcaptionskip}{-15pt}
-    \setmsckeyword{} \drawframe{no}
-    \begin{center}
-    \begin{msc}{}
-
-        \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
-        \setlength{\topheaddist}{0cm}
-
-        \declinst{initiator}{
-            \begin{tabular}[c]{c}
-              $key_A$\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Alex} \;\;}}
-            \end{tabular}}{}%
-        \declinst{receiver}{
-          \begin{tabular}[c]{c}
-            $\{key_i\}_{i \in I}$ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{Blake} \;\;}}
-          \end{tabular}}{}%
-        \nextlevel[0]        
-        \action*{$
-          \begin{array}{@{}l@{}}
-            nT \getR \{0,1\}^\eta\\
-            hv = h(nT,key_A)
-          \end{array}$}{initiator}
-        \nextlevel[4]
-        \mess{$nT, hv$}{initiator}{receiver}
-        \nextlevel[1]        
-        \action*{$
-          \begin{array}{@{}l@{}}
-            res =\\
-            \quad            \texttt{if }\exists i,  h(nT,key_i) = hv\texttt{ then } \\
-            \qquad ok \\
-            \quad \texttt{else} \\
-            \qquad ko
-          \end{array}$}{receiver}
-        \nextlevel[5.7]                
-        \mess{$res$}{receiver}{initiator}
-        
-        
-      \end{msc}
-    \end{center}
-      \caption{Basic Hash}\label{fig:basic-hash}    
 \end{figure}
 
 
