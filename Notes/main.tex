@@ -49,18 +49,19 @@ Rational behind this current set:
 Open questions:
 \begin{itemize}
 \item should we formalize the expected security properties for each problem ? The issue is that no common formalism might make sense for both the ProVerif/Tamarin side and the more crypto like tools.
-\item should we consider advanced compromise scenarios for the key-exchanges (long term key compromise, ephemeral key compromise) ?
+\item should we consider advanced compromise scenarios for the key-exchanges (long term key compromise, ephemeral key compromise) ?  
 \item is this too many examples ? too few ?  
   
 \end{itemize}
 
 
+\paragraph{Notations} Secret keys and key pairs are denoted either with a capital letter for long term secrets or a lowercase letter for short term secrets, and using the subscripts $\sfsk$/$\sfpk$ to distinguish between secret/public parts. We rely on usual algorithms for KEM, signatures and DH. We use a generic hash function $\hash$ without a fixed arity, modelers may use the most canonical way to represent those computations in their tools.
+
 \subsection{Basic-Hash}
 
 The protocol is given in Figure~\ref{fig:basic-hash}
 
-\paragraph{Description} For a set I of valid identities, a RFID reader has a database of valid secret keys $\{k_i\}_{i \in I}$. A RFID tag with identity $A$ authenticates to the reader by sampling a fresh challenge $n$,
-and sending the pair $(n,\hash(n,k_A))$ to the reader, which looks into its database to see if the hash can be mapped to a valid identity and then answers true or false.
+\paragraph{Description} For a set $\mathcal{T}$ of valid identities, a RFID reader has a database of valid secret keys $\{T_\sfsk\}_{T \in \mathcal{T}}$. A RFID tag with identity $T$ and key $T_\sfsk$ authenticates to the reader by sampling a fresh challenge $n$, and sending the pair $(n,\hash(n,T_\sfsk))$ to the reader, which looks into its database to see if the hash can be mapped to a valid identity and then answers true or false.
 
 
 \paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
@@ -69,17 +70,16 @@ and sending the pair $(n,\hash(n,k_A))$ to the reader, which looks into its data
 \item unlinkability - it should be impossible to decide whether two sessions of the protocol correspond to the same tag or not. That is, it should be impossible to distinguish a scenario where there is a single tag executing $n$ times the protocol in sequence with a scenario where $n$ distinct tags all execute the protocol each a single time. 
 \end{itemize}
 
-
 \subsection{DH/KEM based key exchanges}
 
 The three protocols are given in Figures~\ref{fig:dh},\ref{fig:hybrid},\ref{fig:ntor}.
 
- \paragraph{Description}In all the three key-exchanges, Blake has a long term secret keypair $b_\sfsk,b_\sfpk$. (which is a signature key for Examples~\ref{fig:dh},\ref{fig:hybrid} and a DH key for Example~\ref{fig:ntor}).
-This key is used to authenticate Blake, while Alex and Blake exchange fresh DH or KEM values to derive a shared secret key.
+ \paragraph{Description}In all the three key-exchanges, the server has a long term secret keypair $S_\sfsk,S_\sfpk$. (which is a signature key for Examples~\ref{fig:dh},\ref{fig:hybrid} and a DH key for Example~\ref{fig:ntor}).
+This key is used to authenticate the server, while the client and the server exchange fresh DH or KEM values to derive a shared secret key.
 
 \paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
 \begin{itemize}
-\item authentication - if a client Alex derives a key with some parameters (the set of public keys), a corresponding server session Blake derived the same key with the same parameters.
+\item authentication - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
 \item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
 \end{itemize}
 
@@ -97,19 +97,19 @@ This key is used to authenticate Blake, while Alex and Blake exchange fresh DH o
 
         \declinst{initiator}{
             \begin{tabular}[c]{c}
-              $k_A$\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Alex} \;\;}}
+              $T_\sfsk$\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Tag} \;\;}}
             \end{tabular}}{}%
         \declinst{receiver}{
           \begin{tabular}[c]{c}
-            $\{k_i\}_{i \in I}$ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{Blake} \;\;}}
+            $\{T_\sfsk\}_{T \in \mathcal{T}}$ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{Reader} \;\;}}
           \end{tabular}}{}%
         \nextlevel[0]        
         \action*{$
           \begin{array}{@{}l@{}}
             n \getR \{0,1\}^\eta\\
-            h = \hash(n,k_A)
+            h = \hash(n,T_\sfsk)
           \end{array}$}{initiator}
         \nextlevel[4]
         \mess{$n, h$}{initiator}{receiver}
@@ -117,7 +117,7 @@ This key is used to authenticate Blake, while Alex and Blake exchange fresh DH o
         \action*{$
           \begin{array}{@{}l@{}}
             res =\\
-            \quad            \texttt{if }\exists i \in I, \hash(n,k_i) = h\texttt{ then } \\
+            \quad            \texttt{if }\exists T \in \mathcal{T}, \hash(n,T_\sfsk) = h\texttt{ then } \\
             \qquad true \\
             \quad \texttt{else} \\
             \qquad false
@@ -146,13 +146,13 @@ This key is used to authenticate Blake, while Alex and Blake exchange fresh DH o
 
         \declinst{initiator}{
             \begin{tabular}[c]{c}
-              $b_\sfpk $\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Alex} \;\;}}
+              $S_\sfpk $\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
             \end{tabular}}{}%
         \declinst{receiver}{
           \begin{tabular}[c]{c}
-            $b_\sfsk $ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{Blake} \;\;}}
+            $S_\sfsk $ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
           \end{tabular}}{}%
         \nextlevel[0]        
         \action*{$
@@ -165,16 +165,16 @@ This key is used to authenticate Blake, while Alex and Blake exchange fresh DH o
         \action*{$
           \begin{array}{@{}l@{}}
            y_\sfsk,y_\sfpk \getR \dhkeygen \\
-            sig= \sign( (x_\sfpk, y_\sfpk), b_\sfsk)\\
-                        k_B = \hash((x_\sfpk)^{y_\sfsk})
+            sig= \sign( (x_\sfpk, y_\sfpk), S_\sfsk)\\
+                        k_S = \hash((x_\sfpk)^{y_\sfsk})
           \end{array}$}{receiver}
         \nextlevel[5.7]                
         \mess{$y_\sfpk,sig$}{receiver}{initiator}
         \nextlevel[1]                        
         \action*{$
           \begin{array}{@{}l@{}}
-           \texttt{Abort if not } \verify(sig,  (x_\sfpk, y_\sfpk)  ,b_\sfpk) \\
-            k_A = \hash((y_\sfpk)^{x_\sfsk})
+           \texttt{Abort if not } \verify(sig,  (x_\sfpk, y_\sfpk)  ,S_\sfpk) \\
+            k_C = \hash((y_\sfpk)^{x_\sfsk})
           \end{array}$}{initiator}
         
         
@@ -198,13 +198,13 @@ This key is used to authenticate Blake, while Alex and Blake exchange fresh DH o
 
         \declinst{initiator}{
             \begin{tabular}[c]{c}
-              $b_\sfpk $\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Alex} \;\;}}
+              $S_\sfpk $\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
             \end{tabular}}{}%
         \declinst{receiver}{
           \begin{tabular}[c]{c}
-            $b_\sfsk $ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{Blake} \;\;}}
+            $S_\sfsk $ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
           \end{tabular}}{}%
         \nextlevel[0]        
         \action*{$
@@ -219,17 +219,17 @@ This key is used to authenticate Blake, while Alex and Blake exchange fresh DH o
           \begin{array}{@{}l@{}}
            y_\sfsk, y_\sfpk \getR \dhkeygen \\
             { \sfct,\sfss  \getR \encaps(z_\sfpk) }\\
-            sig= \sign( (x_\sfpk, y_\sfpk, z_\sfpk, ,\sfct), b_\sfsk)\\
-                        k_B = \hash((x_\sfpk)^{y_\sfsk}{,\sfss})
+            sig= \sign( (x_\sfpk, y_\sfpk, z_\sfpk, \sfct), S_\sfsk)\\
+                        k_S = \hash((x_\sfpk)^{y_\sfsk}{,\sfss})
           \end{array}$}{receiver}
         \nextlevel[5.7]                
         \mess{$y_\sfpk,sig, {\sfct}$}{receiver}{initiator}
         \nextlevel[1]                        
         \action*{$
           \begin{array}{@{}l@{}}
-           \texttt{Abort if not } \verify(sig, (x_\sfpk, y_\sfpk, z_\sfpk, ,\sfct), b_\sfpk) \\
+           \texttt{Abort if not } \verify(sig, (x_\sfpk, y_\sfpk, z_\sfpk, \sfct), S_\sfpk) \\
             {\sfss  \getR \decaps(\sfct,z_\sfsk) }\\
-            k_A = \hash((y_\sfpk)^{x_\sfsk}{,\sfss})
+            k_C = \hash((y_\sfpk)^{x_\sfsk}{,\sfss})
           \end{array}$}{initiator}
         
         
@@ -254,13 +254,13 @@ This key is used to authenticate Blake, while Alex and Blake exchange fresh DH o
 
         \declinst{initiator}{
             \begin{tabular}[c]{c}
-              $b_\sfsk$\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Alex} \;\;}}
+              $S_\sfpk$\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
             \end{tabular}}{}%
         \declinst{receiver}{
           \begin{tabular}[c]{c}
-            $b_\sfpk $ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{Blake} \;\;}}
+            $S_\sfsk $ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
           \end{tabular}}{}%
         \nextlevel[0]        
         \action*{$
@@ -268,23 +268,23 @@ This key is used to authenticate Blake, while Alex and Blake exchange fresh DH o
            x_\sfsk,x_\sfpk \getR \dhkeygen 
           \end{array}$}{initiator}
         \nextlevel[4]
-        \mess{$x_\sfpk,b_\sfpk$}{initiator}{receiver}
+        \mess{$x_\sfpk,S_\sfpk$}{initiator}{receiver}
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}
             y_\sfsk, y_\sfpk \getR \dhkeygen \\
-            k_B = (x_\sfpk)^{y_\sfsk} || (x_\sfpk)^{b_\sfsk}\\
-            auth = \hash( k_B|| x_\sfpk || y_\sfpk || b_\sfpk ) \\
-             mk_B = \hash(k_B)
+            mk_S = \hash( x_\sfpk , y_\sfpk , S_\sfpk, (x_\sfpk)^{y_\sfsk}, (x_\sfpk)^{S_\sfsk})\\
+            auth = \hash(mk_S, 0 ) \\
+             k_S = \hash(mk_S, 1)
           \end{array}$}{receiver}
         \nextlevel[5.7]                
         \mess{$y_\sfpk,auth$}{receiver}{initiator}
         \nextlevel[1]                        
         \action*{$
           \begin{array}{@{}l@{}}
-            k_A =(y_\sfpk)^{x_\sfsk} || (b_\sfpk)^{x_\sfsk}\\
-           \texttt{Abort if not }             auth = \hash( k_A ||  x_\sfpk || y_\sfpk || b_\sfpk)  \\
-            mk_A = \hash(k_A)
+            mk_C =\hash( x_\sfpk , y_\sfpk , S_\sfpk, (y_\sfpk)^{x_\sfsk}, (S_\sfpk)^{x_\sfsk})\\
+           \texttt{Abort if not }             auth = \hash( mk_C ,0)  \\
+            k_C = \hash(mk_C, 1)
           \end{array}$}{initiator}
         
         
