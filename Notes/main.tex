@@ -21,10 +21,11 @@
 \newcommand{\encapsr}{\kwf{encaps\_r}}
 \newcommand{\decaps}{\kwf{KEM.Decaps}}
 \newcommand{\dprf}{\kwf{dPRF}}
-\newcommand{\hash}{\kwf{H}}
+\newcommand{\hash}{\kwf{Hash}}
 \newcommand{\kdf}{\kwf{KDF}}
 \newcommand{\sign}{\kwf{SIG.Sign}}
 \newcommand{\verify}{\kwf{SIG.Verify}}
+\newcommand{\tagset}{\kwf{TAGS}}
 
 \begin{document}
 
@@ -55,13 +56,13 @@ Open questions:
 \end{itemize}
 
 
-\paragraph{Notations} Secret keys and key pairs are denoted either with a capital letter for long term secrets or a lowercase letter for short term secrets, and using the subscripts $\sfsk$/$\sfpk$ to distinguish between secret/public parts. We rely on usual algorithms for KEM, signatures and DH. We use a generic hash function $\hash$ without a fixed arity, modelers may use the most canonical way to represent those computations in their tools.
+\paragraph{Notations} Secret keys and key pairs are denoted by using the subscripts $\sfsk$/$\sfpk$ to distinguish between secret/public parts. We rely on usual algorithms for KEM, signatures and DH. We use a generic hash function $\hash$ without a fixed arity, modelers may use the most canonical way to represent those computations in their tools.
 
 \subsection{Basic-Hash}
 
 The protocol is given in Figure~\ref{fig:basic-hash}
 
-\paragraph{Description} For a set $\mathcal{T}$ of valid identities, a RFID reader has a database of valid secret keys $\{T_\sfsk\}_{T \in \mathcal{T}}$. A RFID tag with identity $T$ and key $T_\sfsk$ authenticates to the reader by sampling a fresh challenge $n$, and sending the pair $(n,\hash(n,T_\sfsk))$ to the reader, which looks into its database to see if the hash can be mapped to a valid identity and then answers true or false.
+\paragraph{Description} For a set $\tagset$ of valid identities, a RFID reader has a database of valid secret keys $\{t_\sfsk\}_{T \in \tagset}$. A RFID tag with identity $T$ and key $t_\sfsk$ authenticates to the reader by sampling a fresh challenge $n$, and sending the pair $(n,\hash(n,t_\sfsk))$ to the reader, which looks into its database to see if the hash can be mapped to a valid identity and then answers true or false.
 
 
 \paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
@@ -69,20 +70,6 @@ The protocol is given in Figure~\ref{fig:basic-hash}
 \item authentication - if the reader accepts for some identity, the corresponding tag did act.
 \item unlinkability - it should be impossible to decide whether two sessions of the protocol correspond to the same tag or not. That is, it should be impossible to distinguish a scenario where there is a single tag executing $n$ times the protocol in sequence with a scenario where $n$ distinct tags all execute the protocol each a single time. 
 \end{itemize}
-
-\subsection{DH/KEM based key exchanges}
-
-The three protocols are given in Figures~\ref{fig:dh},\ref{fig:hybrid},\ref{fig:ntor}.
-
- \paragraph{Description}In all the three key-exchanges, the server has a long term secret keypair $S_\sfsk,S_\sfpk$. (which is a signature key for Examples~\ref{fig:dh},\ref{fig:hybrid} and a DH key for Example~\ref{fig:ntor}).
-This key is used to authenticate the server, while the client and the server exchange fresh DH or KEM values to derive a shared secret key.
-
-\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
-\begin{itemize}
-\item authentication - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
-\item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
-\end{itemize}
-
 
 \begin{figure}
 
@@ -97,27 +84,27 @@ This key is used to authenticate the server, while the client and the server exc
 
         \declinst{initiator}{
             \begin{tabular}[c]{c}
-              $T_\sfsk$\\
+              $t_\sfsk$\\
               \fcolorbox{black}{white}{{\;\; \textsc{Tag} \;\;}}
             \end{tabular}}{}%
         \declinst{receiver}{
           \begin{tabular}[c]{c}
-            $\{T_\sfsk\}_{T \in \mathcal{T}}$ \\
+            $\{t_\sfsk\}_{T \in \tagset}$ \\
             \fcolorbox{black}{white}{{\;\;  \textsc{Reader} \;\;}}
           \end{tabular}}{}%
         \nextlevel[0]        
         \action*{$
           \begin{array}{@{}l@{}}
-            n \getR \{0,1\}^\eta\\
-            h = \hash(n,T_\sfsk)
+            n \getR \{0,1\}^\lambda\\
+            auth = \hash(n,t_\sfsk)
           \end{array}$}{initiator}
         \nextlevel[4]
-        \mess{$n, h$}{initiator}{receiver}
+        \mess{$n, auth$}{initiator}{receiver}
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}
             res =\\
-            \quad            \texttt{if }\exists T \in \mathcal{T}, \hash(n,T_\sfsk) = h\texttt{ then } \\
+            \quad            \texttt{if }\exists T \in \tagset, \hash(n,t_\sfsk) = auth\texttt{ then } \\
             \qquad true \\
             \quad \texttt{else} \\
             \qquad false
@@ -133,6 +120,22 @@ This key is used to authenticate the server, while the client and the server exc
 
 
 
+\subsection{DH/KEM based key exchanges}
+
+The three protocols are given in Figures~\ref{fig:dh},\ref{fig:hybrid},\ref{fig:ntor}.
+
+ \paragraph{Description}In all the three key-exchanges, the server has a long term secret keypair $s_\sfsk,s_\sfpk$. (which is a signature key for Examples~\ref{fig:dh},\ref{fig:hybrid} and a DH key for Example~\ref{fig:ntor}).
+This key is used to authenticate the server, while the client and the server exchange fresh DH or KEM values to derive a shared secret key.
+
+\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
+\begin{itemize}
+\item authentication - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
+\item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
+\end{itemize}
+
+
+
+
 \begin{figure}
 
  % \setlength{\belowcaptionskip}{-15pt}
@@ -146,12 +149,12 @@ This key is used to authenticate the server, while the client and the server exc
 
         \declinst{initiator}{
             \begin{tabular}[c]{c}
-              $S_\sfpk $\\
+              $s_\sfpk $\\
               \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
             \end{tabular}}{}%
         \declinst{receiver}{
           \begin{tabular}[c]{c}
-            $S_\sfsk $ \\
+            $s_\sfsk $ \\
             \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
           \end{tabular}}{}%
         \nextlevel[0]        
@@ -165,7 +168,7 @@ This key is used to authenticate the server, while the client and the server exc
         \action*{$
           \begin{array}{@{}l@{}}
            y_\sfsk,y_\sfpk \getR \dhkeygen \\
-            sig= \sign( (x_\sfpk, y_\sfpk), S_\sfsk)\\
+            sig= \sign( (x_\sfpk, y_\sfpk), s_\sfsk)\\
                         k_S = \hash((x_\sfpk)^{y_\sfsk})
           \end{array}$}{receiver}
         \nextlevel[5.7]                
@@ -173,7 +176,7 @@ This key is used to authenticate the server, while the client and the server exc
         \nextlevel[1]                        
         \action*{$
           \begin{array}{@{}l@{}}
-           \texttt{Abort if not } \verify(sig,  (x_\sfpk, y_\sfpk)  ,S_\sfpk) \\
+           \texttt{Abort if not } \verify(sig,  (x_\sfpk, y_\sfpk)  ,s_\sfpk) \\
             k_C = \hash((y_\sfpk)^{x_\sfsk})
           \end{array}$}{initiator}
         
@@ -198,12 +201,12 @@ This key is used to authenticate the server, while the client and the server exc
 
         \declinst{initiator}{
             \begin{tabular}[c]{c}
-              $S_\sfpk $\\
+              $s_\sfpk $\\
               \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
             \end{tabular}}{}%
         \declinst{receiver}{
           \begin{tabular}[c]{c}
-            $S_\sfsk $ \\
+            $s_\sfsk $ \\
             \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
           \end{tabular}}{}%
         \nextlevel[0]        
@@ -219,7 +222,7 @@ This key is used to authenticate the server, while the client and the server exc
           \begin{array}{@{}l@{}}
            y_\sfsk, y_\sfpk \getR \dhkeygen \\
             { \sfct,\sfss  \getR \encaps(z_\sfpk) }\\
-            sig= \sign( (x_\sfpk, y_\sfpk, z_\sfpk, \sfct), S_\sfsk)\\
+            sig= \sign( (x_\sfpk, y_\sfpk, z_\sfpk, \sfct), s_\sfsk)\\
                         k_S = \hash((x_\sfpk)^{y_\sfsk}{,\sfss})
           \end{array}$}{receiver}
         \nextlevel[5.7]                
@@ -227,7 +230,7 @@ This key is used to authenticate the server, while the client and the server exc
         \nextlevel[1]                        
         \action*{$
           \begin{array}{@{}l@{}}
-           \texttt{Abort if not } \verify(sig, (x_\sfpk, y_\sfpk, z_\sfpk, \sfct), S_\sfpk) \\
+           \texttt{Abort if not } \verify(sig, (x_\sfpk, y_\sfpk, z_\sfpk, \sfct), s_\sfpk) \\
             {\sfss  \getR \decaps(\sfct,z_\sfsk) }\\
             k_C = \hash((y_\sfpk)^{x_\sfsk}{,\sfss})
           \end{array}$}{initiator}
@@ -254,12 +257,12 @@ This key is used to authenticate the server, while the client and the server exc
 
         \declinst{initiator}{
             \begin{tabular}[c]{c}
-              $S_\sfpk$\\
+              $s_\sfpk$\\
               \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
             \end{tabular}}{}%
         \declinst{receiver}{
           \begin{tabular}[c]{c}
-            $S_\sfsk $ \\
+            $s_\sfsk $ \\
             \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
           \end{tabular}}{}%
         \nextlevel[0]        
@@ -268,12 +271,12 @@ This key is used to authenticate the server, while the client and the server exc
            x_\sfsk,x_\sfpk \getR \dhkeygen 
           \end{array}$}{initiator}
         \nextlevel[4]
-        \mess{$x_\sfpk,S_\sfpk$}{initiator}{receiver}
+        \mess{$x_\sfpk,s_\sfpk$}{initiator}{receiver}
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}
             y_\sfsk, y_\sfpk \getR \dhkeygen \\
-            mk_S = \hash( x_\sfpk , y_\sfpk , S_\sfpk, (x_\sfpk)^{y_\sfsk}, (x_\sfpk)^{S_\sfsk})\\
+            mk_S = \hash( x_\sfpk , y_\sfpk , s_\sfpk, (x_\sfpk)^{y_\sfsk}, (x_\sfpk)^{s_\sfsk})\\
             auth = \hash(mk_S, 0 ) \\
              k_S = \hash(mk_S, 1)
           \end{array}$}{receiver}
@@ -282,7 +285,7 @@ This key is used to authenticate the server, while the client and the server exc
         \nextlevel[1]                        
         \action*{$
           \begin{array}{@{}l@{}}
-            mk_C =\hash( x_\sfpk , y_\sfpk , S_\sfpk, (y_\sfpk)^{x_\sfsk}, (S_\sfpk)^{x_\sfsk})\\
+            mk_C =\hash( x_\sfpk , y_\sfpk , s_\sfpk, (y_\sfpk)^{x_\sfsk}, (s_\sfpk)^{x_\sfsk})\\
            \texttt{Abort if not }             auth = \hash( mk_C ,0)  \\
             k_C = \hash(mk_C, 1)
           \end{array}$}{initiator}

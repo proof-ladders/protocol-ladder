@@ -4,6 +4,9 @@
 
 This repository aims to accumulate a set of examples, for the formal analysis of crypto primitives and protocols.
 
+The README is a bit messy and mostly refers to examples already modeled in some multiple tools. For the current status of the more general presentation of what protocols we hope to integrate here, please refer to [https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/main.pdf].
+
+
 All difficult levels are subjective: easy, medium, hard, extreme, with an additional Out-Of-Scope (OOS)(impossible to model for some reasons).
 
 TODO: give an intuition/criterion of what each difficulty levels should reflect?
@@ -112,9 +115,15 @@ Notes:
 subolder: [basic-hash](basic-hash/)
 
 
-| Proverif  |   Tamarin | DY* | Squirrel | CryptoVerif | EasyCrypt |
-| --------- | ---------:| --- |:-------- | ----------- | --------- |
-| HARD/OOS? | HARD/OOS? | ?   | Easy     | Medium      | Medium    |
+### Authentication 
+
+We hope that authentication is easy for all tools, it is the simplest use of a MAC we can think of.
+
+### Unlinkability 
+
+| Proverif  | Tamarin    | DY* | Squirrel  | CryptoVerif | EasyCrypt |
+| --------- | ---------: | --- | :-------- | ----------- | --------- |
+| HARD/OOS? | HARD/OOS?  | ?   | Easy      | Medium      | Medium    |
 
 Possible extensions:
  * several flavours of such protocols exists that have internal states, to store a counter or a timestamp. Only Squirrel manages this.
