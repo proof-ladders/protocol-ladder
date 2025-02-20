@@ -18,6 +18,7 @@
 \newcommand{\dhkeygen}{\kwf{DH.Keygen()}}
 \newcommand{\kemkeygen}{\kwf{KEM.Keygen()}}
 \newcommand{\encaps}{\kwf{KEM.Encaps}}
+\newcommand{\aenckem}{\kwf{KEM.AEnc}}
 \newcommand{\encapsr}{\kwf{encaps\_r}}
 \newcommand{\decaps}{\kwf{KEM.Decaps}}
 \newcommand{\dprf}{\kwf{dPRF}}
@@ -36,7 +37,8 @@ This document presents four possible protocols that we propose to use for the pr
 \begin{itemize}
 \item Basic-Hash (Example~\ref{fig:basic-hash}), a RFID tag/reader access protocol, meant to provide unlinkability, a strong notion of anonymity, between the tags. This is the base pattern for electronic passport authentication.
 \item Signed DH (Example~\ref{fig:dh}), a simple key-exchange providing secrecy and authentication,  which is the historic pattern for SSH/TLS.
-\item  Signed DH+KEM (Example~\ref{fig:hybrid}), a variant of the previous one with a KEM added into the mix,  following the pattern for the ongoing hybridization of SSH/TLS.
+\item Signed KEM (Example~\ref{fig:kem}), a client side authenticated variant relying on KEMs. 
+\item  Signed DH+KEM (Example~\ref{fig:hybrid}), a hybrid variant with both KEM and DH following the pattern for the ongoing hybridization of SSH/TLS.
 \item A simplified NTOR protocol (Example~\ref{fig:ntor}), a DH key-exchange using long term DH keys for authentication instead of signatures, which is the base pattern for Wireguard and PQXDH.
 \end{itemize}
 
@@ -67,9 +69,12 @@ The protocol is given in Figure~\ref{fig:basic-hash}
 
 \paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
 \begin{itemize}
-\item authentication - if the reader accepts for some identity, the corresponding tag did act.
+\item non-injective authentication - if the reader accepts some message as coming from some tag, the corresponding tag did send this message at some point in the past.
 \item unlinkability - it should be impossible to decide whether two sessions of the protocol correspond to the same tag or not. That is, it should be impossible to distinguish a scenario where there is a single tag executing $n$ times the protocol in sequence with a scenario where $n$ distinct tags all execute the protocol each a single time. 
 \end{itemize}
+
+
+Bonus: Show that injective authentication does not hold. The corresponding attack trace is given in Appendix~\ref{app:attacks}, Figure~\ref{fig:basic-hash-att}..
 
 \begin{figure}
 
@@ -120,19 +125,18 @@ The protocol is given in Figure~\ref{fig:basic-hash}
 
 
 
-\subsection{DH/KEM based key exchanges}
+\subsection{signed DH key exchanges}
 
-The three protocols are given in Figures~\ref{fig:dh},\ref{fig:hybrid},\ref{fig:ntor}.
+The protocol is given in Figure~\ref{fig:dh}.
 
- \paragraph{Description}In all the three key-exchanges, the server has a long term secret keypair $s_\sfsk,s_\sfpk$. (which is a signature key for Examples~\ref{fig:dh},\ref{fig:hybrid} and a DH key for Example~\ref{fig:ntor}).
-This key is used to authenticate the server, while the client and the server exchange fresh DH or KEM values to derive a shared secret key.
+ \paragraph{Description} The server has a long term signature keypair $s_\sfsk,s_\sfpk$.
+This key is used to authenticate the server, while the client and the server exchange fresh DH values to derive a shared secret key.
 
 \paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
 \begin{itemize}
-\item authentication - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
+\item injective unilateral client-side authentication - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
 \item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
 \end{itemize}
-
 
 
 
@@ -185,6 +189,91 @@ This key is used to authenticate the server, while the client and the server exc
           \end{center}
       \caption{signed Diffie-Hellman key exchange}\label{fig:dh}
 \end{figure}
+
+
+\subsection{signed KEM key exchanges}
+
+The protocol is given in Figure~\ref{fig:kem}.
+
+ \paragraph{Description} The client has a long term signature keypair $c_\sfsk,c_\sfpk$.
+This key is used to authenticate the client, while the client and the server exchange fresh KEM values to derive a shared secret key.
+
+\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
+\begin{itemize}
+\item implicit server-side authentication - if a server derives a key with some parameters (the set of public keys), only a corresponding client session may derive the same key with the same parameters.
+\item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
+\end{itemize}
+
+Bonus: when allowing attackers to compromise ephemeral keys $x_\sfsk$, we should on a good protocol still be able to prove that whenever a client session and a server session derive the same secret key, then if the corresponding client session $x_\sfsk$ was not compromised, the key is secret. This corresponds to session independence, where allowing to compromise the material of other sessions does not impact the security of uncomprommised sessions. Shows that when instantiating the KEM with an asymmetric encryption of a fresh secret, this property does not hold. The corresponding attack trace is given in Appendix~\ref{app:attacks}, Figure~\ref{fig:kem-att}.
+
+
+\begin{figure}
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{4cm}
+        \setlength{\topheaddist}{0cm}
+
+        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+              $c_\sfsk $\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
+            \end{tabular}}{}%
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $c_\sfpk $ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            x_\sfsk, x_\sfpk \getR \kemkeygen \\
+            sig= \sign( x_\sfpk, c_\sfsk)
+          \end{array}$}{initiator}
+        \nextlevel[4]
+        \mess{$x_\sfpk, sig$}{initiator}{receiver}
+        \nextlevel[1]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+           \texttt{Abort if not } \verify(sig, x_\sfpk, c_\sfpk) \\
+            { \sfct,\sfss  \getR \encaps(x_\sfpk) }\\
+            k_S = ss
+          \end{array}$}{receiver}
+        \nextlevel[5.7]                
+        \mess{$\sfct$}{receiver}{initiator}
+        \nextlevel[1]                        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            {\sfss  \getR \decaps(\sfct,x_\sfsk) }\\
+            k_C = ss
+          \end{array}$}{initiator}
+        
+        
+      \end{msc}
+          \end{center}
+      \caption{signed KEM key exchange}\label{fig:kem}
+\end{figure}
+
+
+
+\subsection{signed DH+KEM key exchanges}
+
+The protocol is given in Figure~\ref{fig:hybrid}.
+
+ \paragraph{Description} The server has a long term signature keypair $s_\sfsk,s_\sfpk$. 
+This key is used to authenticate the server, while the client and the server exchange fresh DH and KEM values to derive a shared secret key.
+
+\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
+\begin{itemize}
+\item authentication - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
+\item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
+\end{itemize}
+
+Bonus: provides proofs where only either the KEM or the DH part is assumed secure.
 
 
 
@@ -243,6 +332,21 @@ This key is used to authenticate the server, while the client and the server exc
 
 
 
+\subsection{full DH key exchanges}
+
+The protocol is given in Figure~\ref{fig:ntor}.
+
+ \paragraph{Description}The server has a long term DH keypar $s_\sfsk,s_\sfpk$.
+This key is used to authenticate the server, while the client and the server exchange fresh DH values to derive a shared secret key. 
+
+\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
+\begin{itemize}
+\item injective authentication - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
+\item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
+\end{itemize}
+
+
+
 
 \begin{figure}
 
@@ -297,8 +401,141 @@ This key is used to authenticate the server, while the client and the server exc
 \end{figure}
 
 
+\appendix
+
+\section{Attack traces}\label{app:attacks}
 
 
+
+
+\begin{figure}
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{4cm}
+        \setlength{\topheaddist}{0cm}
+
+        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+              $t_\sfsk$\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Tag} \;\;}}
+            \end{tabular}}{}%
+
+        \declinst{attacker}{
+            \begin{tabular}[c]{c}
+              \\
+              \fcolorbox{black}{white}{{\;\; \textsc{Attacker} \;\;}}
+            \end{tabular}}{}%
+          
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $\{t_\sfsk\}_{T \in \tagset}$ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{Reader} \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            n \getR \{0,1\}^\lambda\\
+            auth = \hash(n,t_\sfsk)
+          \end{array}$}{initiator}
+        \nextlevel[4]
+        \mess{$n, auth$}{initiator}{attacker}
+        \mess{$n, auth$}{attacker}{receiver}        
+        \nextlevel[1]                      
+        \mess{$true$}{receiver}{attacker}
+        \mess{$true$}{attacker}{initiator}
+        \nextlevel[1]
+        \mess{$n, auth$}{attacker}{receiver}
+        \nextlevel[1]        
+                \mess{$true$}{receiver}{attacker}
+        
+        
+      \end{msc}
+    \end{center}
+      \caption{Basic Hash - basic replay attack breaking injective authentication}\label{fig:basic-hash-att}    
+\end{figure}
+
+
+
+\begin{figure}
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{4cm}
+        \setlength{\topheaddist}{0cm}
+
+\        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+              $c_\sfsk $\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
+            \end{tabular}}{}%
+        \declinst{attacker}{
+            \begin{tabular}[c]{c}
+              $ $\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Attacker} \;\;}}
+            \end{tabular}}{}%          
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $c_\sfpk $ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]                
+        \action*{$
+          \begin{array}{@{}l@{}}
+            x_\sfsk^c, x_\sfpk^c \getR \kemkeygen \\
+            sig^c= \sign( x_\sfpk, c_\sfsk)            \\
+            \textit{Continue execution of this session as usual\dots}
+          \end{array}$}{initiator}
+        \nextlevel[5.5]           
+       \mess{Compromise $x_\sfsk^c, sig^c$}{initiator}{attacker}
+        \nextlevel[1]        
+        \action*{$
+          \begin{array}{@{}l@{}}\
+            \textit{Starting a fresh session}            \\
+            x_\sfsk, x_\sfpk \getR \kemkeygen \\
+            sig= \sign( x_\sfpk, c_\sfsk)
+          \end{array}$}{initiator}
+        \nextlevel[4.5]
+        \mess{$x_\sfpk, sig$}{initiator}{attacker}
+        \mess{$x_\sfpk^c, sig^c$}{attacker}{receiver}        
+        \nextlevel[1]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+           \texttt{Abort if not } \verify(sig^c, x_\sfpk^c, c_\sfpk) \\
+            { \sfct,\sfss  \getR \encaps(x_\sfpk^c) }\\
+            k_S = ss
+          \end{array}$}{receiver}
+        \nextlevel[5.7]                
+        \mess{$\sfct$}{receiver}{attacker}
+        \nextlevel[1]
+        \nextlevel[1]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            { \sfss  \getR \decaps(x_\sfsk^c) }\\
+            \sfct'  \getR \aenckem(\sfss, x_\sfpk)
+          \end{array}$}{attacker}
+        \nextlevel[3.7]
+        \mess{$\sfct'$}{attacker}{initiator}
+        \nextlevel[1]                
+        \action*{$
+          \begin{array}{@{}l@{}}
+            {\sfss  \getR \decaps(\sfct',x_\sfsk) }\\
+            k_C = ss
+          \end{array}$}{initiator}
+        
+        
+      \end{msc}
+          \end{center}
+      \caption{signed KEM key exchange - reencapsulation attack}\label{fig:kem-att}
+\end{figure}
 \end{document}
 
 %%% Local Variables:
