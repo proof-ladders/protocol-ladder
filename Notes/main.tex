@@ -27,6 +27,7 @@
 \newcommand{\sign}{\kwf{SIG.Sign}}
 \newcommand{\verify}{\kwf{SIG.Verify}}
 \newcommand{\tagset}{\kwf{TAGS}}
+\newcommand{\return}{\kwf{return}}
 
 \begin{document}
 
@@ -37,7 +38,7 @@ This document presents four possible protocols that we propose to use for the pr
 \begin{itemize}
 \item Basic-Hash (Example~\ref{fig:basic-hash}), a RFID tag/reader access protocol, meant to provide unlinkability, a strong notion of anonymity, between the tags. This is the base pattern for electronic passport authentication.
 \item Signed DH (Example~\ref{fig:dh}), a simple key-exchange providing secrecy and authentication,  which is the historic pattern for SSH/TLS.
-\item Signed KEM (Example~\ref{fig:kem}), a client side authenticated variant relying on KEMs. 
+\item Signed KEM (Example~\ref{fig:kem}), a bilateral authenticated variant relying on KEMs, illustrating subtle attacks against key-exchanges. 
 \item  Signed DH+KEM (Example~\ref{fig:hybrid}), a hybrid variant with both KEM and DH following the pattern for the ongoing hybridization of SSH/TLS.
 \item A simplified NTOR protocol (Example~\ref{fig:ntor}), a DH key-exchange using long term DH keys for authentication instead of signatures, which is the base pattern for Wireguard and PQXDH.
 \end{itemize}
@@ -45,8 +46,8 @@ This document presents four possible protocols that we propose to use for the pr
 Rational behind this current set:
 \begin{itemize}
 \item provide a variety of security properties (secrecy, authentication, privacy);
-\item have examples linked with widely deployed real-world applications;
-\item start with a very simple example and increase difficulty.  
+\item have examples linked with widely deployed real-world applications or real-world attacks;
+\item start with a very simple example and increase difficulty. 
 \end{itemize}
 
 Open questions:
@@ -60,7 +61,7 @@ Open questions:
 
 \paragraph{Notations} Secret keys and key pairs are denoted by using the subscripts $\sfsk$/$\sfpk$ to distinguish between secret/public parts. We rely on usual algorithms for KEM, signatures and DH. We use a generic hash function $\hash$ without a fixed arity, modelers may use the most canonical way to represent those computations in their tools.
 
-\subsection{Basic-Hash}
+\subsection{Basic-Hash}\label{prob:basic-hash}
 
 The protocol is given in Figure~\ref{fig:basic-hash}
 
@@ -200,11 +201,20 @@ This key is used to authenticate the client, while the client and the server exc
 
 \paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
 \begin{itemize}
-\item implicit server-side authentication - if a server derives a key with some parameters (the set of public keys), only a corresponding client session may derive the same key with the same parameters.
+\item bilateral authentication - TODO
 \item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
 \end{itemize}
 
-Bonus: when allowing attackers to compromise ephemeral keys $x_\sfsk$, we should on a good protocol still be able to prove that whenever a client session and a server session derive the same secret key, then if the corresponding client session $x_\sfsk$ was not compromised, the key is secret. This corresponds to session independence, where allowing to compromise the material of other sessions does not impact the security of uncomprommised sessions. Shows that when instantiating the KEM with an asymmetric encryption of a fresh secret, this property does not hold. The corresponding attack trace is given in Appendix~\ref{app:attacks}, Figure~\ref{fig:kem-att}.
+
+We want to consider in this problem a KEM that is just IND-CCA, the KEM may thus be implemented using an asymmetric encryption function $\aenckem$, and with
+$$\encaps(x_\sfpk) := \sfss \getR \{0,1\}^\lambda; \sfct \getR \aenckem(\sfss,x_\sfpk); \return~(\sfct,\sfss)  $$
+
+Shows that when instantiating the KEM with an asymmetric encryption of a fresh secret, this property does not hold.
+
+Bonus: when considering a scenario where some clients are willing to talk to dishonest parties, this protocol suffers from an Unknown Key Share attack. The corresponding attack trace is given in Appendix~\ref{app:attacks}, Figure~\ref{fig:kem-uks}.
+
+
+Bonus: when allowing attackers to compromise ephemeral keys $x_\sfsk$, we should on a good protocol still be able to prove that whenever a client session and a server session derive the same secret key, then if the corresponding client session $x_\sfsk$ was not compromised, the key is fully secret. This corresponds to session independence, where allowing to compromise the material of other sessions does not impact the security of uncomprommised sessions.  The corresponding attack trace is given in Appendix~\ref{app:attacks}, Figure~\ref{fig:kem-si}.
 
 
 \begin{figure}
@@ -258,6 +268,60 @@ Bonus: when allowing attackers to compromise ephemeral keys $x_\sfsk$, we should
       \caption{signed KEM key exchange}\label{fig:kem}
 \end{figure}
 
+
+
+\begin{figure}
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{4cm}
+        \setlength{\topheaddist}{0cm}
+
+        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+              $c_\sfsk, s_\sfpk $\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
+            \end{tabular}}{}%
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $c_\sfpk, s_\sfsk $ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            x_\sfsk, x_\sfpk \getR \kemkeygen \\
+            { \sfct_1,\sfss_1  \getR \encaps(s_\sfpk) }\\            
+            sig= \sign( x_\sfpk, c_\sfsk)
+          \end{array}$}{initiator}
+        \nextlevel[5]
+        \mess{$x_\sfpk, sig, \sfct_1$}{initiator}{receiver}
+        \nextlevel[1]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            \texttt{Abort if not } \verify(sig, x_\sfpk, c_\sfpk) \\
+            {\sfss_1  \getR \decaps(\sfct_1,s_\sfsk) }\\            
+            { \sfct_2,\sfss_2  \getR \encaps(x_\sfpk) }\\
+            k_S = \sfss_1 \| \sfss_2
+          \end{array}$}{receiver}
+        \nextlevel[5.7]                
+        \mess{$\sfct_2$}{receiver}{initiator}
+        \nextlevel[1]                        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            {\sfss_2  \getR \decaps(\sfct_2,x_\sfsk) }\\
+            k_C  = \sfss_1 \| \sfss_2
+          \end{array}$}{initiator}
+        
+        
+      \end{msc}
+          \end{center}
+      \caption{signed KEM key exchange}\label{fig:kem}
+\end{figure}
 
 
 \subsection{signed DH+KEM key exchanges}
@@ -461,6 +525,84 @@ This key is used to authenticate the server, while the client and the server exc
 
 
 
+% \begin{figure}
+
+%  % \setlength{\belowcaptionskip}{-15pt}
+%     \setmsckeyword{} \drawframe{no}
+%     \begin{center}
+%     \begin{msc}{}
+
+%         \setlength{\instwidth}{0\mscunit}
+%         \setlength{\instdist}{4cm}
+%         \setlength{\topheaddist}{0cm}
+
+% \        \declinst{initiator}{
+%             \begin{tabular}[c]{c}
+%               $c_\sfsk $\\
+%               \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
+%             \end{tabular}}{}%
+%         \declinst{attacker}{
+%             \begin{tabular}[c]{c}
+%               $ $\\
+%               \fcolorbox{black}{white}{{\;\; \textsc{Attacker} \;\;}}
+%             \end{tabular}}{}%          
+%         \declinst{receiver}{
+%           \begin{tabular}[c]{c}
+%             $c_\sfpk $ \\
+%             \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
+%           \end{tabular}}{}%
+%         \nextlevel[0]                
+%         \action*{$
+%           \begin{array}{@{}l@{}}
+%             x_\sfsk^c, x_\sfpk^c \getR \kemkeygen \\
+%             sig^c= \sign( x_\sfpk, c_\sfsk)            \\
+%             \textit{Continue execution of this session\dots}
+%           \end{array}$}{initiator}
+%         \nextlevel[5.5]           
+%        \mess{Compromise $x_\sfsk^c, sig^c$}{initiator}{attacker}
+%         \nextlevel[1]        
+%         \action*{$
+%           \begin{array}{@{}l@{}}\
+%             \textit{Starting a fresh session}            \\
+%             x_\sfsk, x_\sfpk \getR \kemkeygen \\
+%             sig= \sign( x_\sfpk, c_\sfsk)
+%           \end{array}$}{initiator}
+%         \nextlevel[4.5]
+%         \mess{$x_\sfpk, sig$}{initiator}{attacker}
+%         \mess{$x_\sfpk^c, sig^c$}{attacker}{receiver}        
+%         \nextlevel[1]        
+%         \action*{$
+%           \begin{array}{@{}l@{}}
+%            \texttt{Abort if not } \verify(sig^c, x_\sfpk^c, c_\sfpk) \\
+%             { \sfct,\sfss  \getR \encaps(x_\sfpk^c) }\\
+%             k_S = ss
+%           \end{array}$}{receiver}
+%         \nextlevel[5.7]                
+%         \mess{$\sfct$}{receiver}{attacker}
+%         \nextlevel[1]
+%         \nextlevel[1]        
+%         \action*{$
+%           \begin{array}{@{}l@{}}
+%             { \sfss  \getR \decaps(x_\sfsk^c) }\\
+%             \sfct'  \getR \aenckem(\sfss, x_\sfpk)
+%           \end{array}$}{attacker}
+%         \nextlevel[3.7]
+%         \mess{$\sfct'$}{attacker}{initiator}
+%         \nextlevel[1]                
+%         \action*{$
+%           \begin{array}{@{}l@{}}
+%             {\sfss  \getR \decaps(\sfct',x_\sfsk) }\\
+%             k_C = ss
+%           \end{array}$}{initiator}
+        
+        
+%       \end{msc}
+%           \end{center}
+%       \caption{signed KEM key exchange - reencapsulation attack}\label{fig:kem-att}
+%     \end{figure}
+
+
+
 \begin{figure}
 
  % \setlength{\belowcaptionskip}{-15pt}
@@ -472,9 +614,91 @@ This key is used to authenticate the server, while the client and the server exc
         \setlength{\instdist}{4cm}
         \setlength{\topheaddist}{0cm}
 
-\        \declinst{initiator}{
+        \declinst{initiator}{
             \begin{tabular}[c]{c}
-              $c_\sfsk $\\
+              $c_\sfsk, a_\sfpk $\\
+              \fcolorbox{black}{white}{{\;\;
+              \begin{tabular}{c}
+              \textsc{Client} \\ \textit{\footnotesize wants to talk to dishonest party}                
+              \end{tabular}
+ \;\;}}
+            \end{tabular}}{}%
+        \declinst{attacker}{
+            \begin{tabular}[c]{c}
+              $a_\sfsk $\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Attacker} \;\;}}
+            \end{tabular}}{}%          
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $c_\sfpk, s_\sfpk $ \\
+            \fcolorbox{black}{white}{{\;\;
+            \begin{tabular}{c}
+            \textsc{Server} \\ \textit{\footnotesize wants to talk to honest client}              
+            \end{tabular}
+ \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]                
+        \action*{$
+          \begin{array}{@{}l@{}}\
+            x_\sfsk, x_\sfpk \getR \kemkeygen \\
+            { \sfct_1,\sfss_1  \getR \encaps(a_\sfpk) }\\                        
+            sig= \sign( x_\sfpk, c_\sfsk)
+          \end{array}$}{initiator}
+        \nextlevel[5.5]
+        \mess{$x_\sfpk, sig, \sfct_1$}{initiator}{attacker}
+        \action*{$
+          \begin{array}{@{}l@{}}
+            { \sfss_1  \getR \decaps(\sfct_1, a_\sfsk) }\\
+            \sfct_1'  \getR \aenckem(\sfss_1, s_\sfpk)
+          \end{array}$}{attacker}
+        \nextlevel[4.7]        
+        \mess{$x_\sfpk, sig, \sfct_1'$}{attacker}{receiver}        
+        \nextlevel[1]        
+        \action*{$
+          \begin{array}{@{}l@{}}
+            \texttt{Abort if not } \verify(sig^c, x_\sfpk^c, c_\sfpk) \\
+            {\sfss_1  \getR \decaps(\sfct_1',s_\sfsk) }\\             
+            { \sfct_2,\sfss_2  \getR \encaps(x_\sfpk^c) }\\
+            k_S =  \sfss_1 \| \sfss_2
+          \end{array}$}{receiver}
+        \nextlevel[5.7]                
+        \mess{$\sfct_2$}{receiver}{attacker}
+        \nextlevel[1]
+        \nextlevel[1]        
+
+        \mess{$\sfct_2$}{attacker}{initiator}
+        \nextlevel[1]                
+        \action*{$
+          \begin{array}{@{}l@{}}
+            {\sfss_2  \getR \decaps(\sfct_2',x_\sfsk) }\\
+            k_C =  \sfss_1\| \sfss_2
+          \end{array}$}{initiator}
+        
+        
+      \end{msc}
+          \end{center}
+          \caption{signed KEM key exchange - Unknown Key-share Attack through reencapsulation attack . \\
+            Both honest client and honest server derive the same key, but do not believe to be talking together.
+}\label{fig:kem-uks}
+\end{figure}
+
+
+
+
+\begin{figure}
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{4cm}
+        \setlength{\topheaddist}{0cm}
+
+        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+              $c_\sfsk, s_\sfpk $\\
               \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
             \end{tabular}}{}%
         \declinst{attacker}{
@@ -484,58 +708,67 @@ This key is used to authenticate the server, while the client and the server exc
             \end{tabular}}{}%          
         \declinst{receiver}{
           \begin{tabular}[c]{c}
-            $c_\sfpk $ \\
+            $c_\sfpk, s_\sfpk $ \\
             \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
           \end{tabular}}{}%
         \nextlevel[0]                
         \action*{$
           \begin{array}{@{}l@{}}
             x_\sfsk^c, x_\sfpk^c \getR \kemkeygen \\
+            { \sfct_1^c,\sfss_1^c  \getR \encaps(s_\sfpk) }\\                        
             sig^c= \sign( x_\sfpk, c_\sfsk)            \\
             \textit{Continue execution of this session as usual\dots}
           \end{array}$}{initiator}
-        \nextlevel[5.5]           
+        \nextlevel[6.5]           
        \mess{Compromise $x_\sfsk^c, sig^c$}{initiator}{attacker}
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}\
             \textit{Starting a fresh session}            \\
             x_\sfsk, x_\sfpk \getR \kemkeygen \\
+            { \sfct_1,\sfss_1  \getR \encaps(s_\sfpk) }\\                        
             sig= \sign( x_\sfpk, c_\sfsk)
           \end{array}$}{initiator}
-        \nextlevel[4.5]
-        \mess{$x_\sfpk, sig$}{initiator}{attacker}
-        \mess{$x_\sfpk^c, sig^c$}{attacker}{receiver}        
+        \nextlevel[5.5]
+        \mess{$x_\sfpk, sig, \sfct_1$}{initiator}{attacker}
+        \mess{$x_\sfpk^c, sig^c, \sfct_1$}{attacker}{receiver}        
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}
-           \texttt{Abort if not } \verify(sig^c, x_\sfpk^c, c_\sfpk) \\
-            { \sfct,\sfss  \getR \encaps(x_\sfpk^c) }\\
-            k_S = ss
+            \texttt{Abort if not } \verify(sig^c, x_\sfpk^c, c_\sfpk) \\
+            {\sfss_1  \getR \decaps(\sfct_1,s_\sfsk) }\\             
+            { \sfct_2,\sfss_2  \getR \encaps(x_\sfpk^c) }\\
+            k_S =  \sfss_1 \| \sfss_2
           \end{array}$}{receiver}
         \nextlevel[5.7]                
-        \mess{$\sfct$}{receiver}{attacker}
+        \mess{$\sfct_2$}{receiver}{attacker}
         \nextlevel[1]
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}
-            { \sfss  \getR \decaps(x_\sfsk^c) }\\
-            \sfct'  \getR \aenckem(\sfss, x_\sfpk)
+            { \sfss_2  \getR \decaps(\sfct_2, x_\sfsk^c) }\\
+            \sfct_2'  \getR \aenckem(\sfss_2, x_\sfpk)
           \end{array}$}{attacker}
-        \nextlevel[3.7]
-        \mess{$\sfct'$}{attacker}{initiator}
+        \nextlevel[4.7]
+        \mess{$\sfct_2'$}{attacker}{initiator}
         \nextlevel[1]                
         \action*{$
           \begin{array}{@{}l@{}}
-            {\sfss  \getR \decaps(\sfct',x_\sfsk) }\\
-            k_C = ss
+            {\sfss_2  \getR \decaps(\sfct_2',x_\sfsk) }\\
+            k_C =  \sfss_1\| \sfss_2
           \end{array}$}{initiator}
         
         
       \end{msc}
           \end{center}
-      \caption{signed KEM key exchange - reencapsulation attack}\label{fig:kem-att}
+          \caption{signed KEM key exchange - Reencapsulation attack against session independence. \\
+            The attacker learns half of the key of a fresh session by compromising material from an independent session.}\label{fig:kem-si}
 \end{figure}
+
+
+
+
+
 \end{document}
 
 %%% Local Variables:
