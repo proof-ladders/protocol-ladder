@@ -31,9 +31,10 @@ Model features:
  * Primitives: IND-CCA/UF-CMA/.../signature/signature with DEO/...
    // if approach is computational, this contains the list of assumptions
    // if it is symbolic, it contains the list of primitives with eventual advanced capabilities
- * Properties: Prop1, ... Propn, ..., Prop1' (⚡)
+ * Properties: Prop1, ..., ⚡Propi, ..., Propn
   // provide here the properties or class of attacks covered by the tool.
-  // by default, giving a property means it is proved, but for tools that enable attack finding, a found attack on a property is given using the ⚡ emoji.
+  // by default, giving a property means it is proved.
+  // for tools that enable attack finding, a found attack on a property is given by prefixing the property with the  ⚡ emoji.
   
 
 Analysis features:
@@ -67,8 +68,8 @@ subolder: [basic-hash](basic-hash/)
 | Squirrel    |   Active | Unbounded | Unbounded | None        | Computational  | PRF        | Auth, Unli    | Easy                                | ✅     |
 | CryptoVerif |   Active | Unbounded | Unbounded | None        | Computational  | PRF        | Auth, Unli    | Easy                                | ✅     |
 | EasyCrypt   |   Active | Unbounded | Unbounded | None        | Computational  | PRF        | Auth, Unli    | Hard                                | ✅     |
-| Tamarin     |   Active | Unbounded | Unbounded | None        | Symbolic       | Hash       | Auth, RA (⚡) | Easy (Auth,RA), Hard (Unli)         | WIP    |
-| Proverif    |   Active | Unbounded | Unbounded | None        | Symbolic       | Hash       | Auth, RA (⚡) | Easy (Auth,RA), Hard (Unlo)         | WIP    |
+| Tamarin     |   Active | Unbounded | Unbounded | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unli)         | WIP    |
+| Proverif    |   Active | Unbounded | Unbounded | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unlo)         | WIP    |
 
 
 ## Signed Diffie-Hellman
