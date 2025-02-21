@@ -217,60 +217,60 @@ Bonus: when considering a scenario where some clients are willing to talk to dis
 Bonus: when allowing attackers to compromise ephemeral keys $x_\sfsk$, we should on a good protocol still be able to prove that whenever a client session and a server session derive the same secret key, then if the corresponding client session $x_\sfsk$ was not compromised, the key is fully secret. This corresponds to session independence, where allowing to compromise the material of other sessions does not impact the security of uncomprommised sessions.  The corresponding attack trace is given in Appendix~\ref{app:attacks}, Figure~\ref{fig:kem-si}.
 
 
-\begin{figure}
+%\begin{figure}
+%
+% % \setlength{\belowcaptionskip}{-15pt}
+%    \setmsckeyword{} \drawframe{no}
+%    \begin{center}
+%    \begin{msc}{}
+%
+%        \setlength{\instwidth}{0\mscunit}
+%        \setlength{\instdist}{4cm}
+%        \setlength{\topheaddist}{0cm}
+%
+%        \declinst{initiator}{
+%            \begin{tabular}[c]{c}
+%              $c_\sfsk $\\
+%              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
+%            \end{tabular}}{}%
+%        \declinst{receiver}{
+%          \begin{tabular}[c]{c}
+%            $c_\sfpk $ \\
+%            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
+%          \end{tabular}}{}%
+%        \nextlevel[0]        
+%        \action*{$
+%          \begin{array}{@{}l@{}}
+%            x_\sfsk, x_\sfpk \getR \kemkeygen \\
+%            sig= \sign( x_\sfpk, c_\sfsk)
+%          \end{array}$}{initiator}
+%        \nextlevel[4]
+%        \mess{$x_\sfpk, sig$}{initiator}{receiver}
+%        \nextlevel[1]        
+%        \action*{$
+%          \begin{array}{@{}l@{}}
+%           \texttt{Abort if not } \verify(sig, x_\sfpk, c_\sfpk) \\
+%            { \sfct,\sfss  \getR \encaps(x_\sfpk) }\\
+%            k_S = ss
+%          \end{array}$}{receiver}
+%        \nextlevel[5.7]                
+%        \mess{$\sfct$}{receiver}{initiator}
+%        \nextlevel[1]                        
+%        \action*{$
+%          \begin{array}{@{}l@{}}
+%            {\sfss  \getR \decaps(\sfct,x_\sfsk) }\\
+%            k_C = ss
+%          \end{array}$}{initiator}
+%        
+%        
+%      \end{msc}
+%          \end{center}
+%      \caption{signed KEM key exchange}\label{fig:kem}
+%\end{figure}
 
- % \setlength{\belowcaptionskip}{-15pt}
-    \setmsckeyword{} \drawframe{no}
-    \begin{center}
-    \begin{msc}{}
-
-        \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
-        \setlength{\topheaddist}{0cm}
-
-        \declinst{initiator}{
-            \begin{tabular}[c]{c}
-              $c_\sfsk $\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
-            \end{tabular}}{}%
-        \declinst{receiver}{
-          \begin{tabular}[c]{c}
-            $c_\sfpk $ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
-          \end{tabular}}{}%
-        \nextlevel[0]        
-        \action*{$
-          \begin{array}{@{}l@{}}
-            x_\sfsk, x_\sfpk \getR \kemkeygen \\
-            sig= \sign( x_\sfpk, c_\sfsk)
-          \end{array}$}{initiator}
-        \nextlevel[4]
-        \mess{$x_\sfpk, sig$}{initiator}{receiver}
-        \nextlevel[1]        
-        \action*{$
-          \begin{array}{@{}l@{}}
-           \texttt{Abort if not } \verify(sig, x_\sfpk, c_\sfpk) \\
-            { \sfct,\sfss  \getR \encaps(x_\sfpk) }\\
-            k_S = ss
-          \end{array}$}{receiver}
-        \nextlevel[5.7]                
-        \mess{$\sfct$}{receiver}{initiator}
-        \nextlevel[1]                        
-        \action*{$
-          \begin{array}{@{}l@{}}
-            {\sfss  \getR \decaps(\sfct,x_\sfsk) }\\
-            k_C = ss
-          \end{array}$}{initiator}
-        
-        
-      \end{msc}
-          \end{center}
-      \caption{signed KEM key exchange}\label{fig:kem}
-\end{figure}
 
 
-
-\begin{figure}
+\begin{figure}[ht]
 
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
@@ -316,8 +316,7 @@ Bonus: when allowing attackers to compromise ephemeral keys $x_\sfsk$, we should
             {\sfss_2  \getR \decaps(\sfct_2,x_\sfsk) }\\
             k_C  = \sfss_1 \| \sfss_2
           \end{array}$}{initiator}
-        
-        
+        \nextlevel
       \end{msc}
           \end{center}
       \caption{signed KEM key exchange}\label{fig:kem}
