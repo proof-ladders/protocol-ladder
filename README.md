@@ -21,8 +21,8 @@ We also expect that each solution comes with a quick standardized decription, fo
 ```
 Model features:
  * attacker: active/passive    // whether the attacker is active or passive
- * sessions: bounded/unbounded // whether there is a bounded or unbounded number of possible session
- * agents: bounded/unbounded //  there is a bounded or unbounded number of agents
+ * sessions: n/∞ // whether there is a bounded (precise number n) or unbounded number (∞) of possible session
+ * agents: n/∞ //  there is a bounded or unbounded number of agents
  * compromises: none/LTK/EK/EK+LTK
   // LTK means that there is only long term key compromise
   // EK means that there is only only ephemeral key compromise
@@ -63,13 +63,13 @@ WIP
 
 subolder: [basic-hash](basic-hash/)
 
-| Tool        | Attacker |  Sessions | Agents    | Compromises | Attacker Class | Primitives | Properties    | Difficulty ratings                  | Status |
-|:----------- | --------:| ---------:| --------- | ----------- | -------------- | ---------- | ------------- |:----------------------------------- |:------ |
-| Squirrel    |   Active | Unbounded | Unbounded | None        | Computational  | PRF        | Auth, Unli    | Easy                                | ✅     |
-| CryptoVerif |   Active | Unbounded | Unbounded | None        | Computational  | PRF        | Auth, Unli    | Easy                                | ✅     |
-| EasyCrypt   |   Active | Unbounded | Unbounded | None        | Computational  | PRF        | Auth, Unli    | Hard                                | ✅     |
-| Tamarin     |   Active | Unbounded | Unbounded | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unli)         | WIP    |
-| Proverif    |   Active | Unbounded | Unbounded | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unlo)         | WIP    |
+| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties | Difficulty ratings          | Status |
+|:----------- | -------- | :--------: | :------: | ----------- | -------------- | ---------- | ---------- | --------------------------- | :------: |
+| Squirrel    | Active   | ∞        | ∞      | None        | Computational  | PRF        | Auth, Unli | Easy                        | ✅     |
+| CryptoVerif | Active   | ∞        | ∞      | None        | Computational  | PRF        | Auth, Unli | Easy                        | ✅     |
+| EasyCrypt   | Active   | ∞        | ∞      | None        | Computational  | PRF        | Auth, Unli | Hard                        | ✅     |
+| Tamarin     | Active   | ∞        | ∞      | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unli) | WIP    |
+| Proverif    | Active   | ∞        | ∞      | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unlo) | WIP    |
 
 
 ## Signed Diffie-Hellman
