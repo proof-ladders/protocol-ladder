@@ -3,6 +3,10 @@
 
 \usepackage{msc}
 \usepackage{url}
+
+\usepackage{hyperref}
+\usepackage[capitalize,nameinlink]{cleveref}
+
 %% prot syntax
 \newcommand{\store}{\leftarrow}
 \newcommand{\getR}{\stackrel{R}{\store}}
@@ -29,27 +33,35 @@
 \newcommand{\tagset}{\kwf{TAGS}}
 \newcommand{\return}{\kwf{return}}
 
+\title{A ladder of cryptographic protocol problems for illustrating formal verification}
+
 \begin{document}
 
+\maketitle
+
+This document and its companion repository\footnote{\url{https://github.com/charlie-j/fm-crypto-lib}} provide a set of cryptographic problems dedicated to protocols. It aims to help understand how the multiple approaches fit and compare together in the formal verification landscape. This document specifies the problems and expected format of solutions, while the repository aims to collect the solutions and provide nice summary table.
+
+This initiative was pushed forward for the HACS workshop. See here\footnote{\url{https://github.com/charlie-j/fm-crypto-lib/blob/main/README.md#acknowledgments}} for acknowledgments and how to cite this work.
 
 \section{Protocols problem set}
 
 This document presents several protocols that we propose to use for the protocol side of the crypto ladder. The proposed protocols are, roughly ordered by increasing proof difficulty in the crypto world:
 \begin{itemize}
-\item Basic-Hash (Example~\ref{fig:basic-hash}), a RFID tag/reader access protocol, meant to provide unlinkability, a strong notion of anonymity, between the tags. This is the base pattern for electronic passport authentication.
-\item Signed DH (Example~\ref{fig:dh}), a simple key-exchange providing secrecy and authentication,  which is the historic pattern for SSH/TLS.
-\item Signed KEM (Example~\ref{fig:kem}), a bilateral authenticated variant relying on KEMs, illustrating subtle attacks against key-exchanges. 
-\item  Signed DH+KEM (Example~\ref{fig:hybrid}), a hybrid variant with both KEM and DH following the pattern for the ongoing hybridization of SSH/TLS.
-\item A simplified NTOR protocol (Example~\ref{fig:ntor}), a DH key-exchange using long term DH keys for authentication instead of signatures, which is the base pattern for Wireguard and PQXDH.
+\item Basic-Hash (\cref{prob:basic-hash}), a RFID tag/reader access protocol, meant to provide unlinkability, a strong notion of anonymity, between the tags. This is the base pattern for electronic passport authentication.
+\item Signed DH (\cref{prob:dh}), a simple key-exchange providing secrecy and authentication,  which is the historic pattern for SSH/TLS.
+\item Signed KEM (\cref{prob:kem}), a bilateral authenticated variant relying on KEMs, illustrating subtle attacks against key-exchanges. 
+\item  Signed DH+KEM (\cref{prob:hybrid}), a hybrid variant with both KEM and DH following the pattern for the ongoing hybridization of SSH/TLS.
+\item A simplified NTOR protocol (\cref{prob:ntor}), a DH key-exchange using long term DH keys for authentication instead of signatures, which is the base pattern for Wireguard and PQXDH.
 \end{itemize}
 
 The rational behind this set:
 \begin{itemize}
 \item provide a variety of security properties (secrecy, authentication, privacy);
-\item have examples linked with widely deployed real-world applications or real-world attacks;
+\item have examples linked with widely deployed real-world applications or real-world attacks;  
 \item start with a very simple example and increase difficulty. 
 \end{itemize}
 
+Multi-party protocols and e-voting protocols are not included in this set, as verification for those problem is for the moment scarce.
 
 \paragraph{Notations} In this document, secret keys and key pairs are denoted by using the subscripts $\sfsk$/$\sfpk$ to distinguish between secret/public parts. We rely on usual algorithms for KEM, signatures and DH. We use a generic hash function $\hash$ without a fixed arity, modelers may use the most canonical way to represent those computations in their tools.
 
@@ -71,7 +83,7 @@ We thus have the following options:
 
 \paragraph{Threat model}
 
-We consider that the attacker is at the level of the network communications. Its power may vary depending on the following 
+We consider that the attacker is at the level of the network communications. Its power may vary depending on the following:
 
 \begin{itemize}
 \item \textbf{passive vs active attacker} - a passive attacker can intercept and read all messages sent over the network, but it cannot tamper with them. An active attacker in addition modify at will any message sent over the network and add its own.
@@ -110,28 +122,27 @@ In the problem set, we will have a particular focus on key-exchanges, which have
 We invite tool developers and users to contribute to this project. For each tool we thus encourage developpers to have a dedicated public repository containing in whatever format they wish, some full or partial solutions, along with tutorials or any other desired material.
 
 
-In addition, we hope to aggregate in a repository (\url{https://github.com/charlie-j/fm-crypto-lib}) the full solutions file for each problem and tool, to enable for a quick browsing of the files, as well as provide for each problem a table summarizing all the existing contributions and giving some comparison points. To be able to build such a table, we ask that each solution for a particular problem comes with a standardized description summarizing the features of the model and analysis. See the README of the repository for the template description, as well as the tables.
+In addition, we hope to aggregate in the companion repository\footnote{\url{https://github.com/charlie-j/fm-crypto-lib}} the full solutions file for each problem and tool, to enable for a quick browsing of the files, as well as provide for each problem a table summarizing all the existing contributions and giving some comparison points. To be able to build such a table, we ask that each solution for a particular problem comes with a standardized description summarizing the features of the model and analysis. See the README of the repository for the template description, as well as the tables.
 
 \section{Protocol problems}
 
 
 \subsection{Basic-Hash}\label{prob:basic-hash}
 
-The protocol is given in Figure~\ref{fig:basic-hash}
+The protocol is given in \cref{fig:basic-hash}. 
 
 \paragraph{Description} For a set $\tagset$ of valid identities, a RFID reader has a database of valid secret keys $\{t_\sfsk\}_{T \in \tagset}$. A RFID tag with identity $T$ and key $t_\sfsk$ authenticates to the reader by sampling a fresh challenge $n$, and sending the pair $(n,\hash(n,t_\sfsk))$ to the reader, which looks into its database to see if the hash can be mapped to a valid identity and then answers true or false.
 
 
 \paragraph{Properties} This protocol should provide two guarantees against an active attacker:
 \begin{itemize}
-\item non-injective authentication - if the reader accepts some message as coming from some tag, the corresponding tag did send this message at some point in the past.
+\item non-injective unilateral authentication - if the reader accepts some message as coming from some tag, the corresponding tag did send this message at some point in the past.
 \item unlinkability - it should be impossible to decide whether two sessions of the protocol correspond to the same tag or not. That is, it should be impossible to distinguish a scenario where there is a single tag executing $n$ times the protocol in sequence with a scenario where $n$ distinct tags all execute the protocol each a single time. 
 \end{itemize}
 
+\paragraph{Scenarios} The core scenario we wish to target is one reader and many tags with many sessions for each tag. Multiple readers do not really increase the relevance of the model, as readers never process anything from them. Compromises of material is not of particular interest here.
 
-Bonus: Show that injective authentication does not hold due to a replay attack. The corresponding attack trace is given in Appendix~\ref{app:attacks}, Figure~\ref{fig:basic-hash-att}.
-
-Not that enabling compromise of material for this problem is not particularly relevant, as no particular security properties are preserved.
+\paragraph{Bonus} Show that injective authentication does not hold due to a replay attack. The corresponding attack trace is given in \cref{app:attacks}, \cref{fig:basic-hash-att}.
 
 \begin{figure}
 
@@ -182,20 +193,20 @@ Not that enabling compromise of material for this problem is not particularly re
 
 
 
-\subsection{signed DH key exchanges}
+\subsection{Signed DH key exchanges}\label{prob:dh}
 
-The protocol is given in Figure~\ref{fig:dh}.
+The protocol is given in \cref{fig:dh}.
 
  \paragraph{Description} The server has a long term signature keypair $s_\sfsk,s_\sfpk$.
 This key is used to authenticate the server, while the client and the server exchange fresh DH values to derive a shared secret key.
 
-\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
+\paragraph{Properties} This protocol should provide two guarantees against an active attacker:
 \begin{itemize}
 \item injective unilateral client-side authentication - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
-\item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
+\item forward secrecy - nobody except the two matching sessions can derive the key of this session, and this even if the long term key of the server is compromised in the future.
 \end{itemize}
 
-
+\paragraph{Scenarios} Scenarios as strong are possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
 
 \begin{figure}
 
@@ -244,86 +255,34 @@ This key is used to authenticate the server, while the client and the server exc
         
       \end{msc}
           \end{center}
-      \caption{signed Diffie-Hellman key exchange}\label{fig:dh}
+      \caption{Signed Diffie-Hellman key exchange}\label{fig:dh}
 \end{figure}
 
 
-\subsection{signed KEM key exchanges}
+\subsection{Signed KEM key exchanges}\label{prob:kem}
 
-The protocol is given in Figure~\ref{fig:kem}.
+The protocol is given in \cref{fig:kem}.
 
  \paragraph{Description} The client has a long term signature keypair $c_\sfsk,c_\sfpk$.
 This key is used to authenticate the client, while the client and the server exchange fresh KEM values to derive a shared secret key.
 
 \paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
 \begin{itemize}
-\item bilateral authentication - TODO
-\item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
+\item bilateral injective authentication -  if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters, and conversely.
+\item forward secrecy - nobody except the two matching sessions can derive the key of this session, and this even if the long term key of the client is compromised in the future. Note that compromising the server keys breaks the forward secrecy of half of the key.
 \end{itemize}
 
-
+\paragraph{Scenario} The target is scenario is unbounded parties and unbounded session, with compromise of long term keys.
+ 
 We want to consider in this problem a KEM that is just IND-CCA, the KEM may thus be implemented using an asymmetric encryption function $\aenckem$, and with
 $$\encaps(x_\sfpk) := \sfss \getR \{0,1\}^\lambda; \sfct \getR \aenckem(\sfss,x_\sfpk); \return~(\sfct,\sfss)  $$
 
-Shows that when instantiating the KEM with an asymmetric encryption of a fresh secret, this property does not hold.
 
-Bonus: when considering a scenario where some clients are willing to talk to dishonest parties, this protocol suffers from an Unknown Key Share attack. The corresponding attack trace is given in Appendix~\ref{app:attacks}, Figure~\ref{fig:kem-uks}.
-
-
-Bonus: when allowing attackers to compromise ephemeral keys $x_\sfsk$, we should on a good protocol still be able to prove that whenever a client session and a server session derive the same secret key, then if the corresponding client session $x_\sfsk$ was not compromised, the key is fully secret. This corresponds to session independence, where allowing to compromise the material of other sessions does not impact the security of uncomprommised sessions.  The corresponding attack trace is given in Appendix~\ref{app:attacks}, Figure~\ref{fig:kem-si}.
-
-
-%\begin{figure}
-%
-% % \setlength{\belowcaptionskip}{-15pt}
-%    \setmsckeyword{} \drawframe{no}
-%    \begin{center}
-%    \begin{msc}{}
-%
-%        \setlength{\instwidth}{0\mscunit}
-%        \setlength{\instdist}{4cm}
-%        \setlength{\topheaddist}{0cm}
-%
-%        \declinst{initiator}{
-%            \begin{tabular}[c]{c}
-%              $c_\sfsk $\\
-%              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
-%            \end{tabular}}{}%
-%        \declinst{receiver}{
-%          \begin{tabular}[c]{c}
-%            $c_\sfpk $ \\
-%            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
-%          \end{tabular}}{}%
-%        \nextlevel[0]        
-%        \action*{$
-%          \begin{array}{@{}l@{}}
-%            x_\sfsk, x_\sfpk \getR \kemkeygen \\
-%            sig= \sign( x_\sfpk, c_\sfsk)
-%          \end{array}$}{initiator}
-%        \nextlevel[4]
-%        \mess{$x_\sfpk, sig$}{initiator}{receiver}
-%        \nextlevel[1]        
-%        \action*{$
-%          \begin{array}{@{}l@{}}
-%           \texttt{Abort if not } \verify(sig, x_\sfpk, c_\sfpk) \\
-%            { \sfct,\sfss  \getR \encaps(x_\sfpk) }\\
-%            k_S = ss
-%          \end{array}$}{receiver}
-%        \nextlevel[5.7]                
-%        \mess{$\sfct$}{receiver}{initiator}
-%        \nextlevel[1]                        
-%        \action*{$
-%          \begin{array}{@{}l@{}}
-%            {\sfss  \getR \decaps(\sfct,x_\sfsk) }\\
-%            k_C = ss
-%          \end{array}$}{initiator}
-%        
-%        
-%      \end{msc}
-%          \end{center}
-%      \caption{signed KEM key exchange}\label{fig:kem}
-%\end{figure}
-
+\paragraph{Bonus}
+\begin{enumerate}
+\item under compromise of long term keys and thus attacker controlled servers, this protocol suffers from an Unknown Key Share attack. The corresponding attack trace is given in \cref{app:attacks}, \cref{fig:kem-uks}.
+\item  even when allowing attackers to compromise ephemeral keys $x_\sfsk$, we should on a good protocol still be able to prove that whenever a client session and a server session derive the same secret key, then if the corresponding client session $x_\sfsk$ was not compromised, the key is fully secret. This corresponds to session independence, where allowing to compromise the material of other sessions does not impact the security of uncomprommised sessions.  The corresponding attack trace is given in \cref{app:attacks}, \cref{fig:kem-si}.  
+\end{enumerate}
 
 
 \begin{figure}[ht]
@@ -379,21 +338,22 @@ Bonus: when allowing attackers to compromise ephemeral keys $x_\sfsk$, we should
 \end{figure}
 
 
-\subsection{signed DH+KEM key exchanges}
+\subsection{Signed DH+KEM key exchanges}\label{prob:hybrid}
 
-The protocol is given in Figure~\ref{fig:hybrid}.
+The protocol is given in \cref{fig:hybrid}.
 
  \paragraph{Description} The server has a long term signature keypair $s_\sfsk,s_\sfpk$. 
 This key is used to authenticate the server, while the client and the server exchange fresh DH and KEM values to derive a shared secret key.
 
-\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
+\paragraph{Properties} This protocol should provide two guarantees against an active attacker:
 \begin{itemize}
-\item authentication - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
-\item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
+\item injective unilateral client-side authentication - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
+\item forward secrecy - nobody except the two matching sessions can derive the key of this session, and this even if the long term key of the server is compromised in the future.
 \end{itemize}
 
-Bonus: provides proofs where only either the KEM or the DH part is assumed secure.
+\paragraph{Scenarios} Scenarios as strong are possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
 
+\paragraph{Bonus} Provides proofs for the secrecy where the signature is secure, but only either the KEM or the DH part is assumed secure, and the other primitive is completely broken.
 
 
 \begin{figure}
@@ -451,9 +411,9 @@ Bonus: provides proofs where only either the KEM or the DH part is assumed secur
 
 
 
-\subsection{full DH key exchanges}
+\subsection{DH key exchanges}\label{prob:ntor}
 
-The protocol is given in Figure~\ref{fig:ntor}.
+The protocol is given in \cref{fig:ntor}.
 
  \paragraph{Description}The server has a long term DH keypar $s_\sfsk,s_\sfpk$.
 This key is used to authenticate the server, while the client and the server exchange fresh DH values to derive a shared secret key. 
@@ -464,7 +424,7 @@ This key is used to authenticate the server, while the client and the server exc
 \item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
 \end{itemize}
 
-
+\paragraph{Scenarios} Scenarios as strong are possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
 
 
 \begin{figure}
@@ -519,6 +479,9 @@ This key is used to authenticate the server, while the client and the server exc
       \caption{Simplified NTOR}\label{fig:ntor}
 \end{figure}
 
+\subsection{Showcase}\label{prob:showcase}
+
+To give an idea of the specific capabilities of their tools, we finally invite for this problem just submissions of interesting case-studies made in the tool. Those solutions do not need to come with the model files nor follow the full template, as comparison will be less relevant. This can typically be based on recently published verification work. The format should simply be the name of the case-study, a short description with the salient point, and eventually a link to a paper or models.
 
 \appendix
 
@@ -577,85 +540,6 @@ This key is used to authenticate the server, while the client and the server exc
     \end{center}
       \caption{Basic Hash - basic replay attack breaking injective authentication}\label{fig:basic-hash-att}    
 \end{figure}
-
-
-
-% \begin{figure}
-
-%  % \setlength{\belowcaptionskip}{-15pt}
-%     \setmsckeyword{} \drawframe{no}
-%     \begin{center}
-%     \begin{msc}{}
-
-%         \setlength{\instwidth}{0\mscunit}
-%         \setlength{\instdist}{4cm}
-%         \setlength{\topheaddist}{0cm}
-
-% \        \declinst{initiator}{
-%             \begin{tabular}[c]{c}
-%               $c_\sfsk $\\
-%               \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
-%             \end{tabular}}{}%
-%         \declinst{attacker}{
-%             \begin{tabular}[c]{c}
-%               $ $\\
-%               \fcolorbox{black}{white}{{\;\; \textsc{Attacker} \;\;}}
-%             \end{tabular}}{}%          
-%         \declinst{receiver}{
-%           \begin{tabular}[c]{c}
-%             $c_\sfpk $ \\
-%             \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
-%           \end{tabular}}{}%
-%         \nextlevel[0]                
-%         \action*{$
-%           \begin{array}{@{}l@{}}
-%             x_\sfsk^c, x_\sfpk^c \getR \kemkeygen \\
-%             sig^c= \sign( x_\sfpk, c_\sfsk)            \\
-%             \textit{Continue execution of this session\dots}
-%           \end{array}$}{initiator}
-%         \nextlevel[5.5]           
-%        \mess{Compromise $x_\sfsk^c, sig^c$}{initiator}{attacker}
-%         \nextlevel[1]        
-%         \action*{$
-%           \begin{array}{@{}l@{}}\
-%             \textit{Starting a fresh session}            \\
-%             x_\sfsk, x_\sfpk \getR \kemkeygen \\
-%             sig= \sign( x_\sfpk, c_\sfsk)
-%           \end{array}$}{initiator}
-%         \nextlevel[4.5]
-%         \mess{$x_\sfpk, sig$}{initiator}{attacker}
-%         \mess{$x_\sfpk^c, sig^c$}{attacker}{receiver}        
-%         \nextlevel[1]        
-%         \action*{$
-%           \begin{array}{@{}l@{}}
-%            \texttt{Abort if not } \verify(sig^c, x_\sfpk^c, c_\sfpk) \\
-%             { \sfct,\sfss  \getR \encaps(x_\sfpk^c) }\\
-%             k_S = ss
-%           \end{array}$}{receiver}
-%         \nextlevel[5.7]                
-%         \mess{$\sfct$}{receiver}{attacker}
-%         \nextlevel[1]
-%         \nextlevel[1]        
-%         \action*{$
-%           \begin{array}{@{}l@{}}
-%             { \sfss  \getR \decaps(x_\sfsk^c) }\\
-%             \sfct'  \getR \aenckem(\sfss, x_\sfpk)
-%           \end{array}$}{attacker}
-%         \nextlevel[3.7]
-%         \mess{$\sfct'$}{attacker}{initiator}
-%         \nextlevel[1]                
-%         \action*{$
-%           \begin{array}{@{}l@{}}
-%             {\sfss  \getR \decaps(\sfct',x_\sfsk) }\\
-%             k_C = ss
-%           \end{array}$}{initiator}
-        
-        
-%       \end{msc}
-%           \end{center}
-%       \caption{signed KEM key exchange - reencapsulation attack}\label{fig:kem-att}
-%     \end{figure}
-
 
 
 \begin{figure}
@@ -820,7 +704,8 @@ This key is used to authenticate the server, while the client and the server exc
             The attacker learns half of the key of a fresh session by compromising material from an independent session.}\label{fig:kem-si}
 \end{figure}
 
-
+% \bibliographystyle{plain}
+% \bibliography{biblio}
 
 
 
