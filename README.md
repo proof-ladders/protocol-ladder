@@ -4,7 +4,7 @@ This repository aims to accumulate a set of examples, for the formal analysis of
 
 ## Protocols
 
-This README is not standalone, the problem sets and possible modeling options are detailed in the [pdf notes](https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/main.pdf).
+This README is not standalone, the problem sets and possible modeling options are detailed in the [pdf notes](https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/main.pdf) which should be read first.
 
 For each problem, this repository contain a corresponding subfolder. The corresponding problem folder contains for each tool that proposed a solution a corresponding subfolder with the name of the tool, subfolder that contains the corresponding modeling files for the solution. 
 
