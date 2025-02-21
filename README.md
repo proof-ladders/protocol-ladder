@@ -2,33 +2,118 @@
 
 # Intro
 
-This repository aims to accumulate a set of examples, for the formal analysis of crypto primitives and protocols.
-
-The README is a bit messy and mostly refers to examples already modeled in some multiple tools. For the current status of the more general presentation of what protocols we hope to integrate here, please refer to [https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/main.pdf].
+This repository aims to accumulate a set of examples, for the formal analysis of cryptographic primitives and protocols.
 
 
-All difficult levels are subjective: easy, medium, hard, extreme, with an additional Out-Of-Scope (OOS)(impossible to model for some reasons).
+## Protocols
 
-TODO: give an intuition/criterion of what each difficulty levels should reflect?
-
-Question marks indicate that a proof file remains to be completed for the corresponding case.
-
-All completed files can be found in corresponding subdirectories.
-
-Tools:
- * ProVerif: `.pv` files
- * Tamarin: `.spthy` files
- * DY*: ?
- * Squirrel: `.sp` files
- * Cryptoverif: `.ocv` files
- * EasyCrypt: `.ec` files
+This README is not standalone, the problem sets and possible modeling options are detailed in the [pdf notes](https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/main.pdf).
 
 
-TODO: For each tool, an indicative difficulty ranking between the multiple case studies could be proposed?
+For each problem, this repository contain a corresponding subfolder. The corresponding problem folder contains for each tool that proposed a solution a corresponding subfolder with the name of the tool, subfolder that contains the corresponding modeling files for the solution. 
+
+We encourage tool developers to in addition to the solution files to provide in a dedicated repository more detailed versions of the solutions, potentially with a full incremental tutorial, or partial solutions with corrections.
+The corresponding repositories are listed as:
+* Tamarin: https://github.com/auroranaska/hacs-tamarin-2025
+
+
+We also expect that each solution comes with a quick standardized decription, following the template provided here: (see the pdf notes to better understand the terminology)
+```
+Model features:
+ * attacker: active/passive    // whether the attacker is active or passive
+ * sessions: bounded/unbounded // whether there is a bounded or unbounded number of possible session
+ * agents: bounded/unbounded //  there is a bounded or unbounded number of agents
+ * compromises: none/LTK/EK/EK+LTK
+  // LTK means that there is only long term key compromise
+  // EK means that there is only only ephemeral key compromise
+  // EK+LTK enables both
+ * Attacker class: computational/symbolic
+ * Primitives: IND-CCA/UF-CMA/.../signature/signature with DEO/...
+   // if approach is computational, this contains the list of assumptions
+   // if it is symbolic, it contains the list of primitives with eventual advanced capabilities
+ * Properties: Prop1, ... Propn, ..., Prop1' (⚡)
+  // provide here the properties or class of attacks covered by the tool.
+  // by default, giving a property means it is proved, but for tools that enable attack finding, a found attack on a property is given using the ⚡ emoji.
+  
+
+Analysis features:
+  * difficulty ratings:	easy/medium/hard/possible/impossible (X), easy/medium/hard/possible/impossible (Y), ...
+    // relative difficulty of the analysis (in case of WIP, this is of course an expected difficulty rating)
+	// possible means that it is theoretically possible, but would require for the moment unreasonable effort
+	// if relevant, several disting ratings may be given, for example X might be a set of easy properties to prove
+	// and Y a set of hard properties
+  * status: ✅/WIP/❎
+    // status of the solution, if the model and proofs are fully complete (✅), do not exist at all (❎), or is partially completed (WIP)	
+``` 
+
+This standardized description can be extended at will be the authors, for instance in a dedicated README in the solution subfolder or in their own repository. We provide tables agregating those standardized description for each problem below.
+
+As of now, only the Basic Hash problem provides the begining of what we hope to provide for all problems.
+
+## Primitives
+
+WIP
+
+
+
+# Protocols
+
+## Problem 1: Basic Hash
+
+subolder: [basic-hash](basic-hash/)
+
+| Tool        | Attacker |  Sessions | Agents    | Compromises | Attacker Class | Primitives | Properties    | Difficulty ratings                  | Status |
+|:----------- | --------:| ---------:| --------- | ----------- | -------------- | ---------- | ------------- |:----------------------------------- |:------ |
+| Tamarin     |   Active | Unbounded | Unbounded | None        | Symbolic       | Hash       | Auth, RA (⚡) | Easy (Auth,RA), Hard (Unli)         | WIP    |
+| Proverif    |   Active | Unbounded | Unbounded | None        | Symbolic       | Hash       | Auth, RA (⚡) | Easy (Auth,RA), Hard (Unlo)         | WIP    |
+| Squirrel    |   Active | Unbounded | Unbounded | None        | Computational  | PRF        | Auth, Unli    | Easy                                | ✅     |
+| CryptoVerif |   Active | Unbounded | Unbounded | None        | Computational  | PRF        | Auth, Unli    | Easy                                | ✅     |
+| EasyCrypt   |   Active | Unbounded | Unbounded | None        | Computational  | PRF        | Auth, Unli    | Hard                                | ✅     |
+
+
+## Signed Diffie-Hellman
+
+WIP
+
+subolder: [signedDH](signedDH/)
+
+| Proverif | Tamarin | DY* | Squirrel | CryptoVerif | EasyCrypt |
+| -------- | -------:| --- | -------- | ----------- | --------- |
+| Easy     |    Easy | ?   | Easy  | Easy        | HARD      |
+
+Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
+
+* LTK compromise: does not really increase difficulty
+* Ephemeral compromise: OOS for CryptoVerif.
+
+
+TODO: harmonize files
+
+## NTOR protocol
+
+subolder: [ntor](ntor/)
+
+
+WIP 
+
+spec: https://spec.torproject.org/proposals/216-ntor-handshake.html
+
+
+| Proverif | Tamarin | DY* | Squirrel | CryptoVerif | EasyCrypt |
+| -------- | -------:| --- | -------- | ----------- | --------- |
+| Easy     |    Easy | ?   | Medium?  | Easy        | HARD      |
+
+
+Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
+
+* LTK compromise: does not really increase difficulty
+* Ephemeral compromise: OOS for CryptoVerif.
+
+Notes:
+* shows that ntor is "harder" than signedDH, due to authentication through static DH keys, which implies authentication based on gDH+ROM.
 
 
 # Primitives
-
 
 
 Current primitive examples:
@@ -59,75 +144,3 @@ subfolder: [kemdem](kemdem/)
 | Squirrel | CryptoVerif | EasyCrypt |
 | --------:| ----------- |:--------- |
 |  Medium? | Easy        | Easy     |
-
-
-# Protocols
-
-Current protocols:
-* signed Diffe-Hellam (auth+secrecy)
-* NTOR (auth+secrecy)
-* basic-hash (auth+unlinkability)
-
-
-Possible ideas:
-* PQXDH? (highlight PQ sound capabilities, existing model in ProVerif and CryptoVerif, but quite similar to NTOR, so probably redundant)
-* a signed hybrid KEM instead?
-
-
-## Signed Diffie-Hellman
-
-subolder: [signedDH](signedDH/)
-
-| Proverif | Tamarin | DY* | Squirrel | CryptoVerif | EasyCrypt |
-| -------- | -------:| --- | -------- | ----------- | --------- |
-| Easy     |    Easy | ?   | Easy  | Easy        | HARD      |
-
-Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
-
-* LTK compromise: does not really increase difficulty
-* Ephemeral compromise: OOS for CryptoVerif.
-
-
-TODO: harmonize files
-
-## NTOR protocol
-
-subolder: [ntor](ntor/)
-
-spec: https://spec.torproject.org/proposals/216-ntor-handshake.html
-
-
-| Proverif | Tamarin | DY* | Squirrel | CryptoVerif | EasyCrypt |
-| -------- | -------:| --- | -------- | ----------- | --------- |
-| Easy     |    Easy | ?   | Medium?  | Easy        | HARD      |
-
-
-Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
-
-* LTK compromise: does not really increase difficulty
-* Ephemeral compromise: OOS for CryptoVerif.
-
-Notes:
-* shows that ntor is "harder" than signedDH, due to authentication through static DH keys, which implies authentication based on gDH+ROM.
-
-## Basic Hash
-
-subolder: [basic-hash](basic-hash/)
-
-
-### Authentication 
-
-We hope that authentication is easy for all tools, it is the simplest use of a MAC we can think of.
-
-### Unlinkability 
-
-| Proverif  | Tamarin    | DY* | Squirrel  | CryptoVerif | EasyCrypt |
-| --------- | ---------: | --- | :-------- | ----------- | --------- |
-| HARD/OOS? | HARD/OOS?  | ?   | Easy      | Medium      | Medium    |
-
-Possible extensions:
- * several flavours of such protocols exists that have internal states, to store a counter or a timestamp. Only Squirrel manages this.
-
-Notes:
-* the privacy based unlinkability property makes it hard to manage for symbolic tools (dedicated tools like DeepSec are often needed in such a case).
-

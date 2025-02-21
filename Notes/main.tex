@@ -34,7 +34,7 @@
 
 \section{Protocols problem set}
 
-This document presents four possible protocols that we propose to use for the protocol side of the crypto ladder. The proposed protocols are, ordered by increasing proof difficulty in the crypto world:
+This document presents several protocols that we propose to use for the protocol side of the crypto ladder. The proposed protocols are, roughly ordered by increasing proof difficulty in the crypto world:
 \begin{itemize}
 \item Basic-Hash (Example~\ref{fig:basic-hash}), a RFID tag/reader access protocol, meant to provide unlinkability, a strong notion of anonymity, between the tags. This is the base pattern for electronic passport authentication.
 \item Signed DH (Example~\ref{fig:dh}), a simple key-exchange providing secrecy and authentication,  which is the historic pattern for SSH/TLS.
@@ -43,23 +43,77 @@ This document presents four possible protocols that we propose to use for the pr
 \item A simplified NTOR protocol (Example~\ref{fig:ntor}), a DH key-exchange using long term DH keys for authentication instead of signatures, which is the base pattern for Wireguard and PQXDH.
 \end{itemize}
 
-Rational behind this current set:
+The rational behind this set:
 \begin{itemize}
 \item provide a variety of security properties (secrecy, authentication, privacy);
 \item have examples linked with widely deployed real-world applications or real-world attacks;
 \item start with a very simple example and increase difficulty. 
 \end{itemize}
 
-Open questions:
+
+\paragraph{Notations} In this document, secret keys and key pairs are denoted by using the subscripts $\sfsk$/$\sfpk$ to distinguish between secret/public parts. We rely on usual algorithms for KEM, signatures and DH. We use a generic hash function $\hash$ without a fixed arity, modelers may use the most canonical way to represent those computations in their tools.
+
+
+\subsection{Modeling protocols}
+
+Protocols are asynchronous programs executed between several parties over an often untrusted network. Due to the variety of possible modeling choices for both execution models and security properties, we do not commit in this presentation to a single particular one. Each problem will be specified at a high-level by giving a message sequence chart of an expected run between two (or more) honest agents. An agent can be characterized by a role and some long term material. Typically, for a key-exchange setting we can denote by $S(s_\sfsk,s_\sfpk)$ a server  owning the signing key $s_\sfsk$ and $C(s_\sfpk)$ a client that already knows the corresponding public and thus wants to talk to this particular server.
+
+
+Each problem may be ``solved'' in a variety of way based on many different modeling choices. We detail those choices below.
+
+\paragraph{Execution scenario} The simplest execution scenario for each protocol is where there a single party for each possible role, and each party only participates in a single session. However, we want to consider scenarios closer to real world executions, with an unbounded number of sessions and possible parties.
+We thus have the following options:
 \begin{itemize}
-\item should we formalize the expected security properties for each problem ? The issue is that no common formalism might make sense for both the ProVerif/Tamarin side and the more crypto like tools.
-\item should we consider advanced compromise scenarios for the key-exchanges (long term key compromise, ephemeral key compromise) ?  
-\item is this too many examples ? too few ?  
-  
+\item \textbf{bounded vs unbounded number of sessions} - Scenarios with a bounded number of sessions corresponds to some $C(s_\sfpk)$ interacting at most a bounded fixed number of times with the corresponding $S(s_\sfsk,s_\sfpk)$. However, we may want to allow this $C$ and $S$ to execute between themselves the protocol an unbounded number of time, which corresponds to an unbounded number of sessions settings.
+\item \textbf{bounded vs unbounded number of agents} - In basic scenarios, we may only consider a bounded number of possible identities, and typically consider that there is a single server. But we may also want to consider the case where there are for each role an unbounded number of possible agents/identities. This means that there typically would be a set of possible public keys $\{s_\sfpk^i\}$ for all the possible identities.
 \end{itemize}
 
 
-\paragraph{Notations} Secret keys and key pairs are denoted by using the subscripts $\sfsk$/$\sfpk$ to distinguish between secret/public parts. We rely on usual algorithms for KEM, signatures and DH. We use a generic hash function $\hash$ without a fixed arity, modelers may use the most canonical way to represent those computations in their tools.
+\paragraph{Threat model}
+
+We consider that the attacker is at the level of the network communications. Its power may vary depending on the following 
+
+\begin{itemize}
+\item \textbf{passive vs active attacker} - a passive attacker can intercept and read all messages sent over the network, but it cannot tamper with them. An active attacker in addition modify at will any message sent over the network and add its own.
+  \item \textbf{compromise of ephemeral and/or long term material} - the attacker might be able to target some users, and partially or fully corrupt them. In the basic scenario, the attacker cannot do any such compromise. It may then be able to corrupt the long term material of an agent, typically the $s_\sfsk$ of a server (not that in the previous key exchange scenario, $C$ did not have any long term secret material).  The attacker might also be able to compromise the ephemeral material of a particular sessions of an agent, essentially leaking the ephemeral secret keys of this session.
+ \end{itemize}
+
+ \paragraph{Modeling of  primitives} For protocol analysis, primitives are most of the time abstracted away as abstract function calls. 
+
+ \begin{itemize}
+ \item \textbf{computational vs symbolic approach} - in the computational approach, hardness assumptions are made over the primitives, like IND-CCA for encryption, and the attacker is in effect restricted by what it cannot do w.r.t. to the primitives. In the symbolic approach, primitives are idealized, and typically, an encryption perfectly hides its content and we get nothing out of it unless we know the corresponding secret keys \footnote{In more details, equations define their only possible behaviours, a perfect encryption is for instance 
+\item \textbf{primitive characterization} - each primitive might be modeled in a variety of way, with weaker or stronger assumptions over it. In the computational approach, we may model the encryption as IND-CPA or IND-CCA1 or IND-CCA2. The symbolic approach may consider a signature as perfect, as leaking the signed message, as suffering from  DEO attacks and so on.    
+\end{itemize}
+
+\paragraph{Security properties}
+
+Finally, security properties can themselves be expressed in a variety of way, without always a clear consensus in the community. Rather than commit to a specific notion, we detail below some classes of attacks that are relevant in our setting.
+
+Some very generic properties are:
+\begin{itemize}
+\item \textbf{Replay Attacks} - a message sent by a party can be replayed successfully several times to another party. (note that this is only meaningful in a multiple session scenario)
+\item \textbf{Data agreement} - several parties are expected to agree on a set of data at the end of an execution.
+\end{itemize}
+
+In the problem set, we will have a particular focus on key-exchanges, which have a variety of properties/attacks:
+\begin{itemize}
+\item \textbf{Authentication} - whenever a party expect to be talking to a given agent, it is indeed the case. Authentication might be \textbf{unilateral} (at the end of the key-exchange the client knows it is talking to  the server owning $s_\sfpk$ but the server has no guarantee about the client), or \textbf{bilateral} (the client also owns some long term key, and the server is sure of which client it is talking to). In addition, authentication might be \textbf{injective or non-injective}, where it is injective if for each session of a client believing to be talking with some server, there is a single and distinct corresponding session on the server. If the authentication is non-injective, a single server session may validate authentication for several sessions of the client, which can typically happen in case of replay attacks.
+\item \textbf{Secrecy} - the key derived at the end of a session between two uncompromised participants should be secret. A strengthen variant is \textbf{Forward Secrecy}, where even if at some point the long term material of an agent is compromised, this does not affect the secrecy of all the previously completed exchanges.
+\item \textbf{Session independence} - for a given agent, compromising the ephemeral material of all sessions but one should not affect the security of the uncompromised session.
+\item \textbf{Unkown Key-Share attacks} -  this class of attacks occurs when two honest agent might derive the same key, but in effect did not expect to be talking together, this typically may occur with a client C willing to talk to a compromised server A, and the attacker makes it so that another server S derives the same key as C.
+\item \textbf{Key-Compromised impersonation} - in a scenario with a bilateral authenticated key exchange, when we compromise the long-term material of a given agent C, the attacker can of course impersonate C to some honest server S. However, it should not be the case that for later honest sessions of C that may run with unconpromised ephemeral material, an attacker can impersonate S.  A classical scenario where this occurs is when two parties share a symmetric pre-shared (PSK) key used for authentication, leaking this PSK on the side of C allows to both impersonate C to S and S to C.
+\end{itemize}
+
+
+\subsection{Problem solutions}
+
+We invite tool developers and users to contribute to this project. For each tool we thus encourage developpers to have a dedicated public repository containing in whatever format they wish, some full or partial solutions, along with tutorials or any other desired material.
+
+
+In addition, we hope to aggregate in a repository (\url{https://github.com/charlie-j/fm-crypto-lib}) the full solutions file for each problem and tool, to enable for a quick browsing of the files, as well as provide for each problem a table summarizing all the existing contributions and giving some comparison points. To be able to build such a table, we ask that each solution for a particular problem comes with a standardized description summarizing the features of the model and analysis. See the README of the repository for the template description, as well as the tables.
+
+\section{Protocol problems}
+
 
 \subsection{Basic-Hash}\label{prob:basic-hash}
 
@@ -68,14 +122,16 @@ The protocol is given in Figure~\ref{fig:basic-hash}
 \paragraph{Description} For a set $\tagset$ of valid identities, a RFID reader has a database of valid secret keys $\{t_\sfsk\}_{T \in \tagset}$. A RFID tag with identity $T$ and key $t_\sfsk$ authenticates to the reader by sampling a fresh challenge $n$, and sending the pair $(n,\hash(n,t_\sfsk))$ to the reader, which looks into its database to see if the hash can be mapped to a valid identity and then answers true or false.
 
 
-\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
+\paragraph{Properties} This protocol should provide two guarantees against an active attacker:
 \begin{itemize}
 \item non-injective authentication - if the reader accepts some message as coming from some tag, the corresponding tag did send this message at some point in the past.
 \item unlinkability - it should be impossible to decide whether two sessions of the protocol correspond to the same tag or not. That is, it should be impossible to distinguish a scenario where there is a single tag executing $n$ times the protocol in sequence with a scenario where $n$ distinct tags all execute the protocol each a single time. 
 \end{itemize}
 
 
-Bonus: Show that injective authentication does not hold. The corresponding attack trace is given in Appendix~\ref{app:attacks}, Figure~\ref{fig:basic-hash-att}..
+Bonus: Show that injective authentication does not hold due to a replay attack. The corresponding attack trace is given in Appendix~\ref{app:attacks}, Figure~\ref{fig:basic-hash-att}.
+
+Not that enabling compromise of material for this problem is not particularly relevant, as no particular security properties are preserved.
 
 \begin{figure}
 
