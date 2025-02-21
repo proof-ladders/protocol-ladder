@@ -64,11 +64,11 @@ subolder: [basic-hash](basic-hash/)
 
 | Tool        | Attacker |  Sessions | Agents    | Compromises | Attacker Class | Primitives | Properties    | Difficulty ratings                  | Status |
 |:----------- | --------:| ---------:| --------- | ----------- | -------------- | ---------- | ------------- |:----------------------------------- |:------ |
-| Tamarin     |   Active | Unbounded | Unbounded | None        | Symbolic       | Hash       | Auth, RA (⚡) | Easy (Auth,RA), Hard (Unli)         | WIP    |
-| Proverif    |   Active | Unbounded | Unbounded | None        | Symbolic       | Hash       | Auth, RA (⚡) | Easy (Auth,RA), Hard (Unlo)         | WIP    |
 | Squirrel    |   Active | Unbounded | Unbounded | None        | Computational  | PRF        | Auth, Unli    | Easy                                | ✅     |
 | CryptoVerif |   Active | Unbounded | Unbounded | None        | Computational  | PRF        | Auth, Unli    | Easy                                | ✅     |
 | EasyCrypt   |   Active | Unbounded | Unbounded | None        | Computational  | PRF        | Auth, Unli    | Hard                                | ✅     |
+| Tamarin     |   Active | Unbounded | Unbounded | None        | Symbolic       | Hash       | Auth, RA (⚡) | Easy (Auth,RA), Hard (Unli)         | WIP    |
+| Proverif    |   Active | Unbounded | Unbounded | None        | Symbolic       | Hash       | Auth, RA (⚡) | Easy (Auth,RA), Hard (Unlo)         | WIP    |
 
 
 ## Signed Diffie-Hellman
