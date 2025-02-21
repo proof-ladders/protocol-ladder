@@ -1,14 +1,10 @@
-[TOC]
-
 # Intro
 
 This repository aims to accumulate a set of examples, for the formal analysis of cryptographic primitives and protocols.
 
-
 ## Protocols
 
-This README is not standalone, the problem sets and possible modeling options are detailed in the [pdf notes](https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/main.pdf).
-
+This README is not standalone, the problem sets and possible modeling options are detailed in the [pdf notes](https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/main.pdf) which should be read first.
 
 For each problem, this repository contain a corresponding subfolder. The corresponding problem folder contains for each tool that proposed a solution a corresponding subfolder with the name of the tool, subfolder that contains the corresponding modeling files for the solution. 
 
@@ -114,6 +110,13 @@ Notes:
 * shows that ntor is "harder" than signedDH, due to authentication through static DH keys, which implies authentication based on gDH+ROM.
 
 
+## Showcase
+
+| Tool      | Case-study | Description | Link |     |
+| --------- | ---------- | ----------- | ---- | --- |
+| EasyCrypt | Kyber      | WIP         | WIP  |     |
+| Tamarin   | WIP        | WIP         | WIP  |     | 
+
 # Primitives
 
 
@@ -145,3 +148,9 @@ subfolder: [kemdem](kemdem/)
 | Squirrel | CryptoVerif | EasyCrypt |
 | --------:| ----------- |:--------- |
 |  Medium? | Easy        | Easy     |
+
+# Acknowledgments
+
+This initiative was pushed forward by the HACS workshop. The main contributors for the design of the problems set are: Manuel Barbosa (primitives), Cas Cremers (protocols), François Dupressoir (primitives and protocols), Charlie Jacommme (protocols), Aurora Naska (protocols), Trevor Perrin (main coordinator), Mike Rosulek (primitives). We additionally thanks the following for their valuable feedback: Karthikean Barghavan, Jonathan Katz, Devon Tuma, Bas Spitters,Théophile Wallez. We expect that each solution and tool repository comes with additional authoring mentions.
+
+
