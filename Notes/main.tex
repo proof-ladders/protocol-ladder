@@ -115,7 +115,7 @@ In the problem set, we will have a particular focus on key-exchanges, which have
 \item \textbf{Authentication} - Whenever a party expects to be talking to a given agent, it is indeed the case. Authentication might be \emph{unilateral} (at the end of the key-exchange the client knows it is talking to  the server owning $s_\sfpk$ but the server has no guarantee about the client), or \emph{bilateral} (the client also owns some long-term key, and the server is sure about the identity of the client). In addition, authentication might be \emph{injective or non-injective}, where it is injective if for each session of a client believing to be talking with some server, there is a single and distinct corresponding session on the server. If the authentication is non-injective, a single server session may validate authentication for several sessions of the client, which can typically happen in case of replay attacks.
 \item \textbf{Secrecy} - The key derived at the end of a session between two uncompromised participants should be secret. A stronger variant is \textbf{Forward Secrecy (FS)}, where even if at some point the long-term material of an agent is compromised, this does not affect the secrecy of all the previously completed exchanges.
 \item \textbf{Session independence} - For a given agent, compromising the ephemeral material of all sessions but one should not affect the security of the uncompromised session.
-\item \textbf{Unknown Key-Share (UKC) attacks} -  This class of attacks occurs when two honest agent might derive the same key, but in effect did not expect to be talking together, this typically may occur with a client C willing to talk to a compromised server A, and the attacker makes it so that another server S derives the same key as C.
+\item \textbf{Unknown Key-Share (UKS) attacks} -  This class of attacks occurs when two honest agent might derive the same key, but in effect did not expect to be talking together, this typically may occur with a client C willing to talk to a compromised server A, and the attacker makes it so that another server S derives the same key as C.
 \item \textbf{Key-Compromised Impersonation (KCI)} - in a scenario with a bilateral authenticated key exchange, when we compromise the long-term material of a given agent C, the attacker can of course impersonate C to some honest server S. However, it should not be the case that for later honest sessions of C that may run with unconpromised ephemeral material, an attacker can impersonate S.  A classical scenario where this occurs is when two parties share a symmetric pre-shared (PSK) key used for authentication, leaking this PSK on the side of C allows to both impersonate C to S and S to C.
 \end{itemize}
 
@@ -338,7 +338,7 @@ $$\encaps(x_\sfpk) := \sfss \getR \{0,1\}^\lambda; \sfct \getR \aenckem(\sfss,x_
 
 \paragraph{Bonus}
 \begin{enumerate}
-\item Under compromise of long-term keys, i.e., attacker controlled servers, this protocol suffers from an Unknown Key Share (UKS) attack. The corresponding attack trace is illustrated in \cref{app:attacks}, \cref{fig:kem-uks}.
+\item Under compromise of long-term keys, i.e., attacker controlled servers, this protocol suffers from an Unknown Key-Share (UKS) attack. The corresponding attack trace is illustrated in \cref{app:attacks}, \cref{fig:kem-uks}.
 \item  Under compromise of ephemeral keys $x_\sfsk$, we should on a good protocol still be able to prove that whenever a client session and a server session derive the same secret key, then if the corresponding client session $x_\sfsk$ was not compromised, the key is fully secret. This corresponds to \emph{session independence}, where allowing to compromise the material of other sessions does not impact the security of uncompromised sessions.  The corresponding attack trace is illustrated in \cref{app:attacks}, \cref{fig:kem-si}.  
 \end{enumerate}
 
@@ -702,7 +702,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
       \end{msc}
       }
       \end{center}
-       \caption{Signed KEM key exchange - \emph{Unknown Key Share (UKS)} attack through re-encapsulation attack.
+       \caption{Signed KEM key exchange - \emph{Unknown Key-Share (UKS)} attack through re-encapsulation attack.
        Both honest client and honest server derive the same key, but do not believe to be talking together.
 }\label{fig:kem-uks}
 \end{figure}
