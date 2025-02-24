@@ -13,7 +13,7 @@ The corresponding repositories are listed as:
 * Tamarin: https://github.com/auroranaska/hacs-tamarin-2025
 
 
-We also expect that each solution comes with a quick standardized decription, following the template provided here: (see the pdf notes to better understand the terminology)
+We also expect that each solution comes with a quick standardized description, following the template provided here: (see the pdf notes to better understand the terminology)
 ```
 Model features:
  * attacker: active/passive    // whether the attacker is active or passive
@@ -37,15 +37,15 @@ Analysis features:
   * difficulty ratings:	easy/medium/hard/possible/impossible (X), easy/medium/hard/possible/impossible (Y), ...
     // relative difficulty of the analysis (in case of WIP, this is of course an expected difficulty rating)
 	// possible means that it is theoretically possible, but would require for the moment unreasonable effort
-	// if relevant, several disting ratings may be given, for example X might be a set of easy properties to prove
+	// if relevant, several distinct ratings may be given, for example X might be a set of easy properties to prove
 	// and Y a set of hard properties
   * status: ✅/WIP/❎
     // status of the solution, if the model and proofs are fully complete (✅), do not exist at all (❎), or is partially completed (WIP)	
 ``` 
 
-This standardized description can be extended at will be the authors, for instance in a dedicated README in the solution subfolder or in their own repository. We provide tables agregating those standardized description for each problem below.
+This standardized description can be extended at will be the authors, for instance in a dedicated README in the solution subfolder or in their own repository. We provide tables aggregating those standardized description for each problem below.
 
-As of now, only the Basic Hash problem provides the begining of what we hope to provide for all problems.
+As of now, only the Basic Hash problem provides the beginning of what we hope to provide for all problems.
 
 ## Primitives
 
@@ -72,7 +72,7 @@ subolder: [basic-hash](basic-hash/)
 
 WIP
 
-subolder: [signedDH](signedDH/)
+subfolder: [signedDH](signedDH/)
 
 | Proverif | Tamarin | DY* | Squirrel | CryptoVerif | EasyCrypt |
 | -------- | -------:| --- | -------- | ----------- | --------- |
@@ -151,6 +151,6 @@ subfolder: [kemdem](kemdem/)
 
 # Acknowledgments
 
-This initiative was pushed forward by the HACS workshop. The main contributors for the design of the problems set are: Manuel Barbosa (primitives), Cas Cremers (protocols), François Dupressoir (primitives and protocols), Charlie Jacommme (protocols), Aurora Naska (protocols), Trevor Perrin (main coordinator), Mike Rosulek (primitives). We additionally thanks the following for their valuable feedback: Karthikean Barghavan, Jonathan Katz, Devon Tuma, Bas Spitters,Théophile Wallez. We expect that each solution and tool repository comes with additional authoring mentions.
+This initiative was pushed forward by the HACS workshop. The main contributors for the design of the problems set are: Manuel Barbosa (primitives), Cas Cremers (protocols), François Dupressoir (primitives and protocols), Charlie Jacommme (protocols), Aurora Naska (protocols), Trevor Perrin (main coordinator), Mike Rosulek (primitives). We additionally thank the following for their valuable feedback: Karthikeyan Bhargavan, Jonathan Katz, Devon Tuma, Bas Spitters, and Théophile Wallez. We expect that each solution and tool repository comes with additional authoring mentions.
 
 
