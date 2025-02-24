@@ -187,7 +187,7 @@ The protocol is illustrated in \cref{fig:basic-hash}.
 
 \paragraph{Properties} This protocol should provide two guarantees against an active attacker:
 \begin{itemize}
-\item \emph{non-injective unilateral authentication} - if the reader accepts some message as coming from some tag, the corresponding tag did send this message at some point in the past.
+\item \emph{unilateral non-injective authentication} - if the reader accepts some message as coming from some tag, the corresponding tag did send this message at some point in the past.
 \item \emph{unlinkability} - it should be impossible to decide whether two sessions of the protocol correspond to the same tag or not. That is, it should be impossible to distinguish a scenario where there is a single tag executing $n$ times the protocol in sequence with a scenario where $n$ distinct tags all execute the protocol each a single time. 
 \end{itemize}
 
@@ -256,7 +256,7 @@ This key is used to authenticate the server, while the client and the server exc
 
 \paragraph{Properties} This protocol should provide two guarantees against an active attacker:
 \begin{itemize}
-\item \emph{injective unilateral client-side authentication} - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
+\item \emph{unilateral client-side injective authentication} - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
 \item \emph{forward secrecy} - nobody except the two matching sessions can derive the key of this session, even if the long-term key of the server is compromised in the future.
 \end{itemize}
 
@@ -327,7 +327,9 @@ This key is used to authenticate the client, while the client and the server exc
 
 \paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
 \begin{itemize}
-\item \emph{bilateral injective authentication} -  if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters, and conversely.
+%AN: This property does not hold.
+%\item \emph{bilateral injective authentication} -  if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters, and conversely.
+\item \emph{implicit authentication} -  if both client and server derive the same key with the same parameters (the set of public keys), and they are talking to honest partners, then they are indeed talking to one another.
 \item \emph{forward secrecy} - nobody except the two matching sessions can derive the key of this session, even if the long-term key of the client is compromised in the future. Note that compromising the server keys breaks the forward secrecy of half of the key.
 \end{itemize}
 
@@ -338,7 +340,7 @@ $$\encaps(x_\sfpk) := \sfss \getR \{0,1\}^\lambda; \sfct \getR \aenckem(\sfss,x_
 
 \paragraph{Bonus}
 \begin{enumerate}
-\item Under compromise of long-term keys, i.e., attacker controlled servers, this protocol suffers from an Unknown Key-Share (UKS) attack. The corresponding attack trace is illustrated in \cref{app:attacks}, \cref{fig:kem-uks}.
+\item If the attacker can claim their own long-term keypair, this protocol suffers from an Unknown Key-Share (UKS) attack. The corresponding attack trace is illustrated in \cref{app:attacks}, \cref{fig:kem-uks}.
 \item  Under compromise of ephemeral keys $x_\sfsk$, we should on a good protocol still be able to prove that whenever a client session and a server session derive the same secret key, then if the corresponding client session $x_\sfsk$ was not compromised, the key is fully secret. This corresponds to \emph{session independence}, where allowing to compromise the material of other sessions does not impact the security of uncompromised sessions.  The corresponding attack trace is illustrated in \cref{app:attacks}, \cref{fig:kem-si}.  
 \end{enumerate}
 
@@ -407,7 +409,7 @@ This key is used to authenticate the server, while the client and the server exc
 
 \paragraph{Properties} This protocol should provide two guarantees against an active attacker:
 \begin{itemize}
-\item \emph{injective unilateral client-side authentication} - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
+\item \emph{unilateral injective client-side authentication} - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
 \item \emph{forward secrecy} - nobody except the two matching sessions can derive the key of this session, even if the long-term key of the server is compromised in the future.
 \end{itemize}
 
@@ -478,7 +480,7 @@ This key is used to authenticate the server, while the client and the server exc
 
 \paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
 \begin{itemize}
-\item \emph{injective authentication} - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
+\item \emph{unilateral injective authentication} - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
 \item \emph{secrecy} - nobody except the two matching sessions can derive the key. The key might be proven to be indistinguishable from a random value.
 \end{itemize}
 
@@ -648,7 +650,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
             \end{tabular}}{}%
         \declinst{attacker}{
             \begin{tabular}[c]{c}
-              $a_\sfsk $\\
+             \textcolor{red}{ $a_\sfsk $}\\
               \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
             \end{tabular}}{}%          
         \declinst{receiver}{
