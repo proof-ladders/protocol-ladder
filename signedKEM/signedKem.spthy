@@ -1,0 +1,229 @@
+/*
+ * Protocol:	  Signed KEM
+ * Modeler: 	  Aurora Naska
+ * Date: 	      February 2025
+ *
+ * Status:  	  Finished
+ * 
+ * attacker:    active
+ * sessions:    unbounded ∞ 
+ * agents:      unbounded ∞ 
+ * compromises: long-term keys (LTK) + emphemeral keys (EK), 
+ *              generates malicious long-term keys, and Dolev Yao
+ * primitives:  signatures, diffie-hellman, asymetric encryption
+ * properties:  executability, uks attack, forward_secrecy, implicit_authentication
+ *              reencapsulation_attack
+ * difficulty:  easy
+ *
+ ==============================================================================
+  summary of summaries: 
+
+  processing time: 0.75s (-D=compromise)
+
+  ExecutabilityClient (exists-trace): verified (4 steps)
+  ExecutabilityServer (exists-trace): verified (7 steps)
+  ExecutabilityClientEnd (exists-trace): verified (4 steps)
+  Implicit_MutualAuthentication (all-traces): falsified - found trace (13 steps)
+  Implicit_MutualAuthentication_withCompromise (all-traces): verified (28 steps)
+  SessionKey_ForwardSecrecy (all-traces): verified (13 steps)
+  Reancanpsulation_against_SessionIndependence (all-traces): falsified - found trace (12 steps)
+==============================================================================
+  processing time: 7.31s (-D=uks)
+  
+  ExecutabilityClient (exists-trace): verified (4 steps)
+  ExecutabilityServer (exists-trace): verified (7 steps)
+  ExecutabilityClientEnd (exists-trace): verified (4 steps)
+  UKS_Attack_MutualAuthentication (all-traces): falsified - found trace (11 steps)
+  Implicit_MutualAuthentication (all-traces): falsified - found trace (11 steps)
+==============================================================================
+ *
+ *
+ * Note: The file contains 3 different threat models, which can be executed in Tamarin by adding the flag -D:
+ *       - No compromise (no flag): The mutual authentication property holds.
+ *       - Generate malicious long-term keys (-D=uks): UKS attack
+ *       - Compromise LTK/EK (-D=compromise): reencaps attack, mutual_authentication, forward secrecy
+ */
+ 
+theory SignedKem
+begin
+
+builtins: diffie-hellman, signing, asymmetric-encryption
+functions: h/2
+
+/* This is a restriction that ensures in any rule with the Eq(x,y) action, the terms
+matched by the variables x and y are the same. The modeler can then add an Eq action to 
+any rule where such an equality is desired, e.g., check that signature verification succeeds.
+*/
+restriction Eq:
+  "All x y #i. Eq(x, y) @ #i ==> x = y"
+
+/*Similarly, this is a restriction for inequality.*/
+restriction Neq:
+  "All x y #i. Neq(x, y) @ #i ==> not(x = y)"
+
+// Generate long-term keys (s_sk, s_pk) for server and client
+rule Generate_Ltk:
+  let pkS = pk(~sk) 
+  in
+  [ Fr(~sk) ]
+  --[HonestParty(~sk, pkS), Honest(pkS)]->
+  [ !Ltk($S, ~sk), 
+    !Pk($S, pkS), 
+    Out(pkS) ]
+
+#ifdef uks
+rule Generate_Ltk_Attacker:
+  let pkS = pk(~sk) 
+  in
+  [ Fr(~sk) ]
+  --[Attacker(~sk, pk(~sk))]->
+  [ !Ltk($S, ~sk), 
+    !Pk($S, pkS), 
+    Out(pkS),
+    Out(~sk) ] 
+  
+  #endif
+
+// Client generates KEM key pair (x_sk, x_pk), encapsulates a secret ss1,
+// signs the public KEM key, and sends (x_pk, sig, ct1)
+rule Client_Init:
+  let x_pk = pk(~x_sk)
+      ct1 = aenc(~ss1, pkS)
+      sig = sign(x_pk, ~c_sk)
+      c_pk = pk(~c_sk)
+  in
+  [ Fr(~x_sk),
+    Fr(~ss1),
+    !Ltk($C, ~c_sk),
+    !Pk($S, pkS)]
+  --[ ClientInitMessage(),
+      Neq($C, $S),
+      Neq(c_pk, pkS)]->
+  [ Out(<x_pk, sig, ct1>), StateC(~x_sk, ~c_sk, ~ss1, $C, $S, pkS) ]
+
+// Server verifies signature, decapsulates secret ss1, encapsulates their
+// secret ss2, and computes the session key K_S
+rule Server_Init:
+  let 
+   s_pk = pk(~s_sk)
+   in_m = <x_pk, sig, ct1>
+   ss1 = adec(ct1, ~s_sk)
+   ct2 = aenc(~ss2, x_pk)
+
+   K_S = <ss1, ~ss2>
+    
+  in
+  [ Fr(~ss2),
+    In(in_m),
+    !Ltk($S, ~s_sk),
+    !Pk($C, pkC) ]
+  --[ ServerInitMessage(),
+      Eq(verify(sig, x_pk, pkC), true),
+      Neq($C, $S),
+      ServerAccepts(K_S, x_pk, ss1, ~ss2, pkC, s_pk),
+      SecretServer(K_S, x_pk, pkC, s_pk)
+       ]->
+  [ Out(ct2) ]
+
+// Finally, the client decapsulates, and computes the session key.
+rule Client_Accepts:
+  let
+    x_pk = pk(~x_sk)
+    c_pk = pk(~c_sk)
+    ss2 = adec(ct2, ~x_sk)
+    K_C = <~ss1, ss2>
+  in
+  [ StateC(~x_sk, ~c_sk, ~ss1, $C, $S, pkS),
+    In(ct2) ]
+  --[ SessionKeyAccept(K_C, ~x_sk, ~ss1, ss2, c_pk, pkS),
+      SecretClient(K_C, x_pk, c_pk, pkS),
+      ClientRecvMessage() ]->
+  [ ]
+
+#ifdef compromise
+
+// Attacker learns the party $A long-term key
+rule Compromise_LTK:
+  [ !Ltk($A, ~sk)]
+  --[CompromiseLtk(pk(~sk))]->
+  [ Out(~sk) ]
+
+// Attacker compromises the ephemeral Kem keys
+rule Compromise_KEMKey:
+  [ StateC(~x_sk, ~c_sk, ~ss1, $C, $S, pkS)]
+  --[CompromiseKEMKey(~x_sk)]->
+  [ Out(~x_sk) ]
+
+#endif
+
+// Sanity Traces to check executability of the model
+lemma ExecutabilityClient:
+  exists-trace
+  "Ex #i. ClientInitMessage() @ #i"
+
+lemma ExecutabilityServer:
+  exists-trace
+  "Ex #i. ServerInitMessage() @ #i"
+
+lemma ExecutabilityClientEnd:
+  exists-trace
+  "Ex #i. ClientRecvMessage() @ #i"
+
+#ifdef uks
+// UKS
+lemma UKS_Attack_MutualAuthentication:
+  "All key x_pk pkC1 pkC2 pkS1 pkS2 #i #j . 
+    SecretServer(key, x_pk, pkC1, pkS1) @ #i &
+    SecretClient(key, x_pk, pkC2, pkS2) @ #j
+   ==>  (pkC1=pkC2) & (pkS1 = pkS2)
+     "
+
+#endif
+
+// If both server and client derive the same key, and agree on parameters, they are talking to one another
+lemma Implicit_MutualAuthentication:
+  "All key x_sk x_pk pkC1 pkC2 pkS1 pkS2 #i #j. 
+     SecretClient(key, x_sk, pkC1, pkS1) @ #i &
+     SecretServer(key, x_pk, pkC2, pkS2) @ #j 
+  ==> pkC1=pkC2 & pkS1=pkS2 " 
+
+#ifdef compromise
+// If both server and client derive the same key, and agree on parameters, they are talking to one another
+// or their long-term/ephemeral keys are compormised
+lemma Implicit_MutualAuthentication_withCompromise:
+  "All key x_sk x_pk pkC1 pkC2 pkS1 pkS2 #i #j. 
+     SecretClient(key, x_sk, pkC1, pkS1) @ #i &
+     SecretServer(key, x_pk, pkC2, pkS2) @ #j 
+  ==> 
+      (pkC1=pkC2 & pkS1=pkS2)
+    | (Ex #l. CompromiseLtk(pkS1)@ #l)
+    | (Ex #l. CompromiseLtk(pkC2)@ #l)
+    | ( Ex kem_sk #t. CompromiseKEMKey(kem_sk) @ t)
+     " 
+
+// The attacker cannot learn the session key, even if they compromise the parties in the future.
+lemma SessionKey_ForwardSecrecy:
+  "All sessKey x_sk x_pk pkC pkS #i #j #k. 
+      SecretClient(sessKey, x_sk, pkC, pkS) @ #i &
+      SecretServer(sessKey, x_pk, pkC, pkS) @ #j &
+      K(sessKey) @ k
+  ==>
+      ( Ex #t. CompromiseLtk(pkC) @ t & t < i)
+    | ( Ex #t. CompromiseLtk(pkS) @ t & t < i)
+    | ( Ex kem_sk #t. CompromiseKEMKey(kem_sk) @ t & t < i)
+  "
+
+lemma Reancanpsulation_against_SessionIndependence:
+  "All key x_sk x_pk ss1 ss2 pkC pkS #i #j #k. 
+     SessionKeyAccept(key, x_sk, ss1, ss2, pkC, pkS) @ #i &
+     SecretServer(key, x_pk, pkC, pkS) @ #j & 
+     K(ss2) @ #k &
+     not(Ex #l. CompromiseLtk(pkS)@ #l) 
+  ==> 
+      Ex #t1 #t2. CompromiseKEMKey(x_sk) @ #t1 &
+                  CompromiseLtk(pkC) @t2
+     "
+
+#endif
+
+end
