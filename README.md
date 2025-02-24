@@ -78,6 +78,15 @@ subfolder: [signedDH](signedDH/)
 | -------- | -------:| --- | -------- | ----------- | --------- |
 | Easy     |    Easy | ?   | Easy  | Easy        | HARD      |
 
+| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties | Difficulty ratings | Status |
+|:----------- | -------- | :--------: | :------: | ----------- | -------------- | ---------- | ---------- | -------------- | :------: |
+| Squirrel    | Active   | ∞        | ∞      | None        | Computational  | Hash, Sign     | Auth, FS   | Easy           |        |
+| CryptoVerif | Active   | ∞        | ∞      | None        | Computational  | Hash, Sign     | Auth, FS   | Easy           |        |
+| EasyCrypt   | Active   | ∞        | ∞      | None        | Computational  | Hash, Sign     | Auth, FS   | Hard           |        |
+| Tamarin     | Active   | ∞        | ∞      | LTK         | Symbolic       | Hash, Sign     | Auth, FS   | Easy (Auth,FS) | ✅     |
+| Proverif    | Active   | ∞        | ∞      | None        | Symbolic       | Hash, Sign     | Auth, FS   | Easy (Auth,FS) |        |
+
+
 Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
 
 * LTK compromise: does not really increase difficulty
