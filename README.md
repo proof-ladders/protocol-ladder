@@ -95,6 +95,21 @@ Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise
 
 TODO: ensure files follow standard conventions
 
+## Signed KEM
+
+WIP
+
+subfolder: [signedKEM](signedKEM/)
+
+| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties | Difficulty ratings | Status |
+|:----------- | -------- | :--------: | :------: | ----------- | -------------- | ---------- | ---------- | -------------- | :------: |
+| Squirrel    | Active   | ∞        | ∞      | None       		| Computational  | Hash, Sign     	   | Auth, FS   | Easy          	|        |
+| CryptoVerif | Active   | ∞        | ∞      | None        		| Computational  | Hash, Sign     	   | Auth, FS   | Easy           	|        |
+| EasyCrypt   | Active   | ∞        | ∞      | None        		| Computational  | Hash, Sign     	   | Auth, FS   | Hard           	|        |
+| Tamarin     | Active   | ∞        | ∞      | LTK, EK, MAL_LTK         | Symbolic       | Hash, Sign, AsymEnc     | Auth, FS, ⚡UKS, ⚡ReEncap   	| Easy   | ✅     |
+| Proverif    | Active   | ∞        | ∞      | None       		| Symbolic       | Hash, Sign     	   | Auth, FS   | Easy (Auth,FS) 	|        |
+
+
 ## NTOR protocol
 
 subfolder: [ntor](ntor/)
