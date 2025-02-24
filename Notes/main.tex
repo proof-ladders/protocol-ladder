@@ -186,7 +186,8 @@ The protocol is given in \cref{fig:basic-hash}.
             \qquad false
           \end{array}$}{receiver}
         \nextlevel[5.7]                
-        \mess{$res$}{receiver}{initiator}     
+        \mess{$res$}{receiver}{initiator}    
+        \nextlevel 
       \end{msc}
     \end{center}
       \caption{Basic Hash}\label{fig:basic-hash}    
@@ -253,7 +254,7 @@ This key is used to authenticate the server, while the client and the server exc
             k_C = \hash((y_\sfpk)^{x_\sfsk})
           \end{array}$}{initiator}
         
-         \nextlevel[3]
+         \nextlevel[4]
       \end{msc}
           \end{center}
       \caption{Signed Diffie-Hellman key exchange}\label{fig:dh}
@@ -332,7 +333,7 @@ $$\encaps(x_\sfpk) := \sfss \getR \{0,1\}^\lambda; \sfct \getR \aenckem(\sfss,x_
             {\sfss_2  \getR \decaps(\sfct_2,x_\sfsk) }\\
             k_C  = \sfss_1 \| \sfss_2
           \end{array}$}{initiator}
-        \nextlevel[2]
+        \nextlevel[3]
       \end{msc}
           \end{center}
       \caption{signed KEM key exchange}\label{fig:kem}
@@ -404,7 +405,7 @@ This key is used to authenticate the server, while the client and the server exc
             k_C = \hash((y_\sfpk)^{x_\sfsk}{,\sfss})
           \end{array}$}{initiator}
         
-         \nextlevel[3]
+         \nextlevel[4]
       \end{msc}
           \end{center}
       \caption{Hybridization of a signed Diffie-Hellman key exchange}\label{fig:hybrid}
@@ -474,7 +475,7 @@ This key is used to authenticate the server, while the client and the server exc
             k_C = \hash(mk_C, 1)
           \end{array}$}{initiator}
         
-        \nextlevel[3]
+        \nextlevel[4]
       \end{msc}
           \end{center}
       \caption{Simplified NTOR}\label{fig:ntor}
@@ -548,7 +549,8 @@ They want to claim ownership of their website and distribute the new certificate
             \texttt{Abort if not } \verify(sig, token, o_\sfpk)
           \end{array}$}{le}
         \nextlevel[3]
-        \mess{Approved}{le}{initiator}    
+        \mess{Approved}{le}{initiator}
+        \nextlevel
       \end{msc}
     \end{center}
       \caption{Simplified ACME Protocol. The dotted arrows indicate an authenticated channel.}\label{fig:acme}    
@@ -586,7 +588,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \declinst{attacker}{
             \begin{tabular}[c]{c}
               \\
-              \fcolorbox{black}{white}{{\;\; \textsc{Attacker} \;\;}}
+              \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
             \end{tabular}}{}%
           
         \declinst{receiver}{
@@ -606,11 +608,11 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \nextlevel[1]                      
         \mess{$true$}{receiver}{attacker}
         \mess{$true$}{attacker}{initiator}
-        \nextlevel[1]
-        \mess{$n, auth$}{attacker}{receiver}
+        \nextlevel[1.5]
+        \mess[red]{$n, auth$}{attacker}{receiver}
         \nextlevel[1]        
-                \mess{$true$}{receiver}{attacker}
-        
+        \mess{$true$}{receiver}{attacker}
+        \nextlevel
         
       \end{msc}
     \end{center}
@@ -626,7 +628,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -641,7 +643,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \declinst{attacker}{
             \begin{tabular}[c]{c}
               $a_\sfsk $\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Attacker} \;\;}}
+              \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
             \end{tabular}}{}%          
         \declinst{receiver}{
           \begin{tabular}[c]{c}
@@ -661,13 +663,14 @@ To give an idea of the specific capabilities of their tools, we finally invite f
           \end{array}$}{initiator}
         \nextlevel[5.5]
         \mess{$x_\sfpk, sig, \sfct_1$}{initiator}{attacker}
-        \action*{$
+        \nextlevel[1]
+        \action*[red]{$
           \begin{array}{@{}l@{}}
             { \sfss_1  \getR \decaps(\sfct_1, a_\sfsk) }\\
             \sfct_1'  \getR \aenckem(\sfss_1, s_\sfpk)
           \end{array}$}{attacker}
         \nextlevel[4.7]        
-        \mess{$x_\sfpk, sig, \sfct_1'$}{attacker}{receiver}        
+        \mess{$x_\sfpk, sig, \textcolor{red}{\sfct_1'}$}{attacker}{receiver}        
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}
@@ -689,7 +692,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
             k_C =  \sfss_1\| \sfss_2
           \end{array}$}{initiator}
         
-        
+        \nextlevel[3]
       \end{msc}
           \end{center}
           \caption{signed KEM key exchange - Unknown Key-share Attack through reencapsulation attack . \\
@@ -708,7 +711,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -719,7 +722,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \declinst{attacker}{
             \begin{tabular}[c]{c}
               $ $\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Attacker} \;\;}}
+              \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
             \end{tabular}}{}%          
         \declinst{receiver}{
           \begin{tabular}[c]{c}
@@ -735,7 +738,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
             \textit{Continue execution of this session as usual\dots}
           \end{array}$}{initiator}
         \nextlevel[6.5]           
-       \mess{Compromise $x_\sfsk^c, sig^c$}{initiator}{attacker}
+       \mess{\textcolor{red}{Compromise $x_\sfsk^c, sig^c$}}{initiator}{attacker}
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}\
@@ -746,7 +749,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
           \end{array}$}{initiator}
         \nextlevel[5.5]
         \mess{$x_\sfpk, sig, \sfct_1$}{initiator}{attacker}
-        \mess{$x_\sfpk^c, sig^c, \sfct_1$}{attacker}{receiver}        
+        \mess{\textcolor{red}{$x_\sfpk^c, sig^c$}$, \sfct_1$}{attacker}{receiver}        
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}
@@ -759,20 +762,20 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \mess{$\sfct_2$}{receiver}{attacker}
         \nextlevel[1]
         \nextlevel[1]        
-        \action*{$
+        \action*[red]{$
           \begin{array}{@{}l@{}}
-            { \sfss_2  \getR \decaps(\sfct_2, x_\sfsk^c) }\\
+            {\sfss_2  \getR \decaps(\sfct_2, x_\sfsk^c) }\\
             \sfct_2'  \getR \aenckem(\sfss_2, x_\sfpk)
           \end{array}$}{attacker}
         \nextlevel[4.7]
-        \mess{$\sfct_2'$}{attacker}{initiator}
+        \mess{\textcolor{red}{$\sfct_2'$}}{attacker}{initiator}
         \nextlevel[1]                
         \action*{$
           \begin{array}{@{}l@{}}
-            {\sfss_2  \getR \decaps(\sfct_2',x_\sfsk) }\\
-            k_C =  \sfss_1\| \sfss_2
+            {\sfss_2  \getR \decaps(\textcolor{red}{\sfct_2'},x_\sfsk) }\\
+            k_C =  \sfss_1\| \textcolor{red}{\sfss_2}
           \end{array}$}{initiator}
-        
+        \nextlevel[3]
         
       \end{msc}
           \end{center}
@@ -818,10 +821,9 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \nextlevel[2]
         \mess{$token_2$}{le}{initiator}   
         \nextlevel[0.5]   
-        \action*{$
+        \action*[red]{$
           \begin{array}{@{}l@{}}
-          \textcolor{red}{
-           sk_{deo}, pk_{deo} = DEO(token_2, sig)}
+           sk_{deo}, pk_{deo} = DEO(token_2, sig)
           \end{array}$}{initiator}
         \nextlevel[3]                  
         \mess{\textcolor{red}{Update $pk_{deo}$}}{initiator}{le}
@@ -834,7 +836,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
           \begin{array}{@{}l@{}}
            \verify(sig, \textcolor{red}{token_2}, \textcolor{red}{pk_{deo}})
           \end{array}$}{le}
-        \nextlevel[3]
+        \nextlevel[4]
         \mess{Approved}{le}{initiator}    
       \end{msc}
     \end{center}
