@@ -1,22 +1,22 @@
 /*
- * Protocol:	Signed Diffie-Hellman
- * Modeler: 	Aurora Naska
- * Date: 	February 2025
+ * Protocol:	  Signed Diffie-Hellman
+ * Modeler: 	  Aurora Naska
+ * Date: 	      February 2025
  *
- * Status: 	Finished
+ * Status: 	    Finished
  * 
- * attacker: active
- * sessions: unbounded ∞ 
- * agents: unbounded ∞ 
+ * attacker:    active
+ * sessions:    unbounded ∞ 
+ * agents:      unbounded ∞ 
  * compromises: long-term keys (LTK)
- * primitives: hash, signatures, diffie-hellman
- * properties: executability, client_key_secrecy, forward_secrecy, client_side_authentication
- * difficulty: easy
+ * primitives:  hash, signatures, diffie-hellman
+ * properties:  executability, client_key_secrecy, forward_secrecy, client_side_authentication
+ * difficulty:  easy
  *
  ==============================================================================
-summary of summaries:
+  summary of summaries:
 
-analyzed: signedDH.spthy
+  analyzed: signedDH.spthy
 
   processing time: 0.30s
   
