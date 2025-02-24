@@ -52,6 +52,7 @@ The proposed protocols are listed in roughly increasing order of proof difficult
 \item \textbf{Signed KEM} (\cref{prob:kem}): a bilateral authenticated variant relying on KEMs, illustrating subtle attacks against key-exchanges. 
 \item  \textbf{Signed DH+KEM} (\cref{prob:hybrid}): a hybrid variant with both KEM and DH following the pattern for the ongoing hybridization of SSH/TLS.
 \item \textbf{Simplified NTOR} protocol (\cref{prob:ntor}): a DH key-exchange using long term DH keys for authentication instead of signatures, which is the base pattern for Wireguard and PQXDH.
+\item \textbf{Simplified Let's Encrypt: ACME} (\cref{prob:acme}): a simplified signature-based challenge-response protocol to allow a website owner to prove ownership of domain. Following the ACME protocol as standardized by IETF\footnote{\url{https://datatracker.ietf.org/doc/html/rfc8555}}.
 \end{itemize}
 
 The rational behind this set:
@@ -154,7 +155,7 @@ The protocol is given in \cref{fig:basic-hash}.
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -185,9 +186,7 @@ The protocol is given in \cref{fig:basic-hash}.
             \qquad false
           \end{array}$}{receiver}
         \nextlevel[5.7]                
-        \mess{$res$}{receiver}{initiator}
-        
-        
+        \mess{$res$}{receiver}{initiator}     
       \end{msc}
     \end{center}
       \caption{Basic Hash}\label{fig:basic-hash}    
@@ -208,7 +207,7 @@ This key is used to authenticate the server, while the client and the server exc
 \item forward secrecy - nobody except the two matching sessions can derive the key of this session, and this even if the long term key of the server is compromised in the future.
 \end{itemize}
 
-\paragraph{Scenarios} Scenarios as strong are possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
+\paragraph{Scenarios} Scenarios as strong as possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
 
 \begin{figure}
 
@@ -218,7 +217,7 @@ This key is used to authenticate the server, while the client and the server exc
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -254,7 +253,7 @@ This key is used to authenticate the server, while the client and the server exc
             k_C = \hash((y_\sfpk)^{x_\sfsk})
           \end{array}$}{initiator}
         
-        
+         \nextlevel[3]
       \end{msc}
           \end{center}
       \caption{Signed Diffie-Hellman key exchange}\label{fig:dh}
@@ -295,7 +294,7 @@ $$\encaps(x_\sfpk) := \sfss \getR \{0,1\}^\lambda; \sfct \getR \aenckem(\sfss,x_
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -333,7 +332,7 @@ $$\encaps(x_\sfpk) := \sfss \getR \{0,1\}^\lambda; \sfct \getR \aenckem(\sfss,x_
             {\sfss_2  \getR \decaps(\sfct_2,x_\sfsk) }\\
             k_C  = \sfss_1 \| \sfss_2
           \end{array}$}{initiator}
-        \nextlevel
+        \nextlevel[2]
       \end{msc}
           \end{center}
       \caption{signed KEM key exchange}\label{fig:kem}
@@ -353,7 +352,7 @@ This key is used to authenticate the server, while the client and the server exc
 \item forward secrecy - nobody except the two matching sessions can derive the key of this session, and this even if the long term key of the server is compromised in the future.
 \end{itemize}
 
-\paragraph{Scenarios} Scenarios as strong are possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
+\paragraph{Scenarios} Scenarios as strong as possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
 
 \paragraph{Bonus} Provides proofs for the secrecy where the signature is secure, but only either the KEM or the DH part is assumed secure, and the other primitive is completely broken.
 
@@ -366,7 +365,7 @@ This key is used to authenticate the server, while the client and the server exc
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -405,7 +404,7 @@ This key is used to authenticate the server, while the client and the server exc
             k_C = \hash((y_\sfpk)^{x_\sfsk}{,\sfss})
           \end{array}$}{initiator}
         
-        
+         \nextlevel[3]
       \end{msc}
           \end{center}
       \caption{Hybridization of a signed Diffie-Hellman key exchange}\label{fig:hybrid}
@@ -417,7 +416,7 @@ This key is used to authenticate the server, while the client and the server exc
 
 The protocol is given in \cref{fig:ntor}.
 
- \paragraph{Description}The server has a long term DH keypar $s_\sfsk,s_\sfpk$.
+ \paragraph{Description}The server has a long term DH keypair $s_\sfsk,s_\sfpk$.
 This key is used to authenticate the server, while the client and the server exchange fresh DH values to derive a shared secret key. 
 
 \paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
@@ -426,7 +425,7 @@ This key is used to authenticate the server, while the client and the server exc
 \item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
 \end{itemize}
 
-\paragraph{Scenarios} Scenarios as strong are possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
+\paragraph{Scenarios} Scenarios as strong as possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
 
 
 \begin{figure}
@@ -437,7 +436,7 @@ This key is used to authenticate the server, while the client and the server exc
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -475,11 +474,86 @@ This key is used to authenticate the server, while the client and the server exc
             k_C = \hash(mk_C, 1)
           \end{array}$}{initiator}
         
-        
+        \nextlevel[3]
       \end{msc}
           \end{center}
       \caption{Simplified NTOR}\label{fig:ntor}
 \end{figure}
+
+\subsection{Simplified Let's Encrypt: ACME Protocol}\label{prob:acme}
+
+The protocol is given in \cref{fig:acme}.
+
+ \paragraph{Description} The website owner has a long term keypair $o_\sfsk,o_\sfpk$ of their website certificate.
+They want to claim ownership of their website and distribute the new certificate to the DNS Sever and Let's Encrypt (LE) server. To this end, the owner starts a challenge response protocol with the LE server, signs a token using the certificate key, and sends the certificate to the DNS Server. The LE server retrieves the certificate of the website from the DNS server and upon successful verification of signature it concludes that the owner controls the private key of the certificate and the DNS record for the website address.
+
+\paragraph{Properties} This protocol should provide the guarantee that if a certificate is accepted, then the owner owns the private key of the certificate and registered website.
+
+\paragraph{Scenarios} Scenarios as strong as possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. 
+
+
+\begin{figure}
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{5cm}
+        \setlength{\topheaddist}{0cm}
+
+        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+              $o_\sfsk$\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Owner} \;\;}}
+            \end{tabular}}{}%
+
+        \declinst{le}{
+            \begin{tabular}[c]{c}
+              \\
+              \fcolorbox{black}{white}{{\;\; \textsc{Let's Encrypt (LE)} \;\;}}
+            \end{tabular}}{}%
+          
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $Adr$ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{DNS Sever} \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]    
+        \mess{Register, $Adr$}{initiator}{le}
+        \nextlevel[0.5]   
+        \action*{$
+          \begin{array}{@{}l@{}}
+           Generate \ token
+          \end{array}$}{le}
+        \nextlevel[2]
+        \mess{$token$}{le}{initiator}   
+        \nextlevel[0.5]   
+        \action*{$
+          \begin{array}{@{}l@{}}
+           sig = \sign(token, o_\sfsk)
+          \end{array}$}{initiator}
+        \nextlevel[2.5]                  
+        \mess[dotted]{DNS-Upd(Adr, $sig$)}{initiator}{receiver}
+        \nextlevel[1.5]
+        \mess{Update $o_\sfpk$}{initiator}{le}
+        \nextlevel[0.5]
+        \mess{DNS-Req($Adr$)}{le}{receiver}
+        \nextlevel[1.5]        
+        \mess[dotted]{DNS-Rsp($sig$)}{receiver}{le}
+        \nextlevel
+         \action*{$
+          \begin{array}{@{}l@{}}
+            \texttt{Abort if not } \verify(sig, token, o_\sfpk)
+          \end{array}$}{le}
+        \nextlevel[3]
+        \mess{Approved}{le}{initiator}    
+      \end{msc}
+    \end{center}
+      \caption{Simplified ACME Protocol. The dotted arrows indicate an authenticated channel.}\label{fig:acme}    
+\end{figure}
+
 
 \subsection{Showcase}\label{prob:showcase}
 
@@ -704,6 +778,67 @@ To give an idea of the specific capabilities of their tools, we finally invite f
           \end{center}
           \caption{signed KEM key exchange - Reencapsulation attack against session independence. \\
             The attacker learns half of the key of a fresh session by compromising material from an independent session.}\label{fig:kem-si}
+\end{figure}
+
+\begin{figure}
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{5cm}
+        \setlength{\topheaddist}{0cm}
+
+        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+             \\
+              \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
+            \end{tabular}}{}%
+
+        \declinst{le}{
+            \begin{tabular}[c]{c}
+              $Adr, o_\sfpk$\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Let's Encrypt (LE)} \;\;}}
+            \end{tabular}}{}%
+          
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $Adr, sig$ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{DNS Sever} \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]    
+        \mess{Register, $Adr$}{initiator}{le}
+        \nextlevel[0.5]   
+        \action*{$
+          \begin{array}{@{}l@{}}
+           Generate \ token_2
+          \end{array}$}{le}
+        \nextlevel[2]
+        \mess{$token_2$}{le}{initiator}   
+        \nextlevel[0.5]   
+        \action*{$
+          \begin{array}{@{}l@{}}
+          \textcolor{red}{
+           sk_{deo}, pk_{deo} = DEO(token_2, sig)}
+          \end{array}$}{initiator}
+        \nextlevel[3]                  
+        \mess{\textcolor{red}{Update $pk_{deo}$}}{initiator}{le}
+        \nextlevel[0.5]
+        \mess{DNS-Req($Adr$)}{le}{receiver}
+        \nextlevel[1.5]        
+        \mess[dotted]{DNS-Rsp($sig$)}{receiver}{le}
+        \nextlevel
+         \action*{$
+          \begin{array}{@{}l@{}}
+           \verify(sig, \textcolor{red}{token_2}, \textcolor{red}{pk_{deo}})
+          \end{array}$}{le}
+        \nextlevel[3]
+        \mess{Approved}{le}{initiator}    
+      \end{msc}
+    \end{center}
+      \caption{Attack on ACME Protocol. The owner of $Adr$ has completed an execution of ACME and placed the public key $pk_{AC}$ on the LE server, and signature $sig$ for address $Adr$ on the DNS server. The attacker starts a new instance of the protocol to claim ownership of the victim's website, and substitutes the public key using a DEO (\emph{Destructive Exclusive Ownership}) attack on the signature. I.e, The attacker can generate a public key $pk_{deo}$ for signature $sig$, such that the signature verifies under another plaintext.}\label{fig:acme_attack}    
 \end{figure}
 
 % \bibliographystyle{plain}
