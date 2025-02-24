@@ -51,7 +51,8 @@ The proposed protocols are listed in roughly increasing order of proof difficult
 \item \textbf{Signed DH} (\cref{prob:dh}): a simple key-exchange providing secrecy and authentication, which is the historic pattern for SSH/TLS.
 \item \textbf{Signed KEM} (\cref{prob:kem}): a bilateral authenticated variant relying on KEMs, illustrating subtle attacks against key-exchanges. 
 \item  \textbf{Signed DH+KEM} (\cref{prob:hybrid}): a hybrid variant with both KEM and DH following the pattern for the ongoing hybridization of SSH/TLS.
-\item \textbf{Simplified NTOR} protocol (\cref{prob:ntor}): a DH key-exchange using long term DH keys for authentication instead of signatures, which is the base pattern for Wireguard and PQXDH.
+\item \textbf{Simplified NTOR} protocol (\cref{prob:ntor}): a DH key-exchange using long-term DH keys for authentication instead of signatures, which is the base pattern for Wireguard and PQXDH.
+\item \textbf{Simplified ACME} protocol (\cref{prob:acme}): a simplified signature-based challenge-response protocol to allow a website owner to prove ownership of their domain\footnote{\url{https://datatracker.ietf.org/doc/html/rfc8555}}.
 \end{itemize}
 
 The rational behind this set:
@@ -69,7 +70,7 @@ Multi-party protocols and e-voting protocols are not included in this set, as ve
 
 \subsection{Modeling protocols}
 
-Protocols are asynchronous programs executed between several parties over an often untrusted network. Given the wide range of potential modeling choices for both execution models and security properties, we do not commit to any single option in this presentation. Each problem will be specified at a high-level by giving a message sequence chart of an expected run between two (or more) honest agents. An agent can be characterized by a role and some long term material. Typically, for a key-exchange setting we can denote by $S(s_\sfsk,s_\sfpk)$ a server owning the signing key $s_\sfsk$ and $C(s_\sfpk)$ a client that already knows the corresponding public key, and thus intends to communicate to this specific server.
+Protocols are asynchronous programs executed between several parties over an often untrusted network. Given the wide range of potential modeling choices for both execution models and security properties, we do not commit to any single option in this presentation. Each problem will be specified at a high-level by giving a message sequence chart of an expected run between two (or more) honest agents. An agent can be characterized by a role and some long-term material. Typically, for a key-exchange setting we can denote by $S(s_\sfsk,s_\sfpk)$ a server owning the signing key $s_\sfsk$ and $C(s_\sfpk)$ a client that already knows the corresponding public key, and thus intends to communicate to this specific server.
 
 
 Each problem may be ``solved'' in a variety of ways based on many different modeling choices. We detail those choices below.
@@ -88,7 +89,7 @@ We consider that the attacker is at the level of network communications, with th
 
 \begin{itemize}
 \item \textbf{Attacker: \emph{passive vs active}} - A passive attacker can intercept and read all messages sent over the network, but it cannot tamper with them. An active attacker can modify and drop any message sent over the network and additionally inject their own.
-  \item \textbf{Compromise: \emph{none vs ephemeral and/or long term material}} - The attacker can perform a targeted attack on some users, and partially or fully compromise their cryptographic material. In the basic scenario, the attacker capabilities are very limited and unable to execute any such compromise. 
+  \item \textbf{Compromise: \emph{none vs ephemeral and/or long-term material}} - The attacker can perform a targeted attack on some users, and partially or fully compromise their cryptographic material. In the basic scenario, the attacker capabilities are very limited and unable to execute any such compromise. 
   The attacker may then be able to corrupt an agent's long-term materials, typically the $s_\sfsk$ of a server (note that in some key exchange scenarios, $C$ may not possess any long-term secret material, because they do not wish to authenticate themselves to the server). Additionally, the attacker can compromise the ephemeral material of a specific session, effectively exposing the ephemeral secret keys for that session. In the more complex scenario, the attacker is able to compromise both.
  \end{itemize}
 
@@ -111,10 +112,10 @@ Some very generic properties are:
 
 In the problem set, we will have a particular focus on key-exchanges, which have a variety of properties/attacks:
 \begin{itemize}
-\item \textbf{Authentication} - Whenever a party expects to be talking to a given agent, it is indeed the case. Authentication might be \emph{unilateral} (at the end of the key-exchange the client knows it is talking to  the server owning $s_\sfpk$ but the server has no guarantee about the client), or \emph{bilateral} (the client also owns some long term key, and the server is sure about the identity of the client). In addition, authentication might be \emph{injective or non-injective}, where it is injective if for each session of a client believing to be talking with some server, there is a single and distinct corresponding session on the server. If the authentication is non-injective, a single server session may validate authentication for several sessions of the client, which can typically happen in case of replay attacks.
-\item \textbf{Secrecy} - The key derived at the end of a session between two uncompromised participants should be secret. A stronger variant is \textbf{Forward Secrecy (FS)}, where even if at some point the long term material of an agent is compromised, this does not affect the secrecy of all the previously completed exchanges.
+\item \textbf{Authentication} - Whenever a party expects to be talking to a given agent, it is indeed the case. Authentication might be \emph{unilateral} (at the end of the key-exchange the client knows it is talking to  the server owning $s_\sfpk$ but the server has no guarantee about the client), or \emph{bilateral} (the client also owns some long-term key, and the server is sure about the identity of the client). In addition, authentication might be \emph{injective or non-injective}, where it is injective if for each session of a client believing to be talking with some server, there is a single and distinct corresponding session on the server. If the authentication is non-injective, a single server session may validate authentication for several sessions of the client, which can typically happen in case of replay attacks.
+\item \textbf{Secrecy} - The key derived at the end of a session between two uncompromised participants should be secret. A stronger variant is \textbf{Forward Secrecy (FS)}, where even if at some point the long-term material of an agent is compromised, this does not affect the secrecy of all the previously completed exchanges.
 \item \textbf{Session independence} - For a given agent, compromising the ephemeral material of all sessions but one should not affect the security of the uncompromised session.
-\item \textbf{Unknown Key-Share (UKC) attacks} -  This class of attacks occurs when two honest agent might derive the same key, but in effect did not expect to be talking together, this typically may occur with a client C willing to talk to a compromised server A, and the attacker makes it so that another server S derives the same key as C.
+\item \textbf{Unknown Key-Share (UKS) attacks} -  This class of attacks occurs when two honest agent might derive the same key, but in effect did not expect to be talking together, this typically may occur with a client C willing to talk to a compromised server A, and the attacker makes it so that another server S derives the same key as C.
 \item \textbf{Key-Compromised Impersonation (KCI)} - in a scenario with a bilateral authenticated key exchange, when we compromise the long-term material of a given agent C, the attacker can of course impersonate C to some honest server S. However, it should not be the case that for later honest sessions of C that may run with unconpromised ephemeral material, an attacker can impersonate S.  A classical scenario where this occurs is when two parties share a symmetric pre-shared (PSK) key used for authentication, leaking this PSK on the side of C allows to both impersonate C to S and S to C.
 \end{itemize}
 
@@ -131,30 +132,18 @@ In addition, we hope to aggregate in the companion repository\footnote{\url{http
 
 \subsection{Basic-Hash}\label{prob:basic-hash}
 
-The protocol is given in \cref{fig:basic-hash}. 
+The protocol is illustrated in \cref{fig:basic-hash}. 
 
-\paragraph{Description} For a set $\tagset$ of valid identities, a RFID reader has a database of valid secret keys $\{t_\sfsk\}_{T \in \tagset}$. A RFID tag with identity $T$ and key $t_\sfsk$ authenticates to the reader by sampling a fresh challenge $n$, and sending the pair $(n,\hash(n,t_\sfsk))$ to the reader, which looks into its database to see if the hash can be mapped to a valid identity and then answers true or false.
-
-
-\paragraph{Properties} This protocol should provide two guarantees against an active attacker:
-\begin{itemize}
-\item non-injective unilateral authentication - if the reader accepts some message as coming from some tag, the corresponding tag did send this message at some point in the past.
-\item unlinkability - it should be impossible to decide whether two sessions of the protocol correspond to the same tag or not. That is, it should be impossible to distinguish a scenario where there is a single tag executing $n$ times the protocol in sequence with a scenario where $n$ distinct tags all execute the protocol each a single time. 
-\end{itemize}
-
-\paragraph{Scenarios} The core scenario we wish to target is one reader and many tags with many sessions for each tag. Multiple readers do not really increase the relevance of the model, as readers never process anything from them. Compromises of material is not of particular interest here.
-
-\paragraph{Bonus} Show that injective authentication does not hold due to a replay attack. The corresponding attack trace is given in \cref{app:attacks}, \cref{fig:basic-hash-att}.
-
-\begin{figure}
+\begin{figure}[h]
 
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
     \begin{center}
+    \resizebox{0.8\columnwidth}{!}{
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -185,40 +174,41 @@ The protocol is given in \cref{fig:basic-hash}.
             \qquad false
           \end{array}$}{receiver}
         \nextlevel[5.7]                
-        \mess{$res$}{receiver}{initiator}
-        
-        
+        \mess{$res$}{receiver}{initiator}    
+        \nextlevel 
       \end{msc}
+      }
     \end{center}
       \caption{Basic Hash}\label{fig:basic-hash}    
 \end{figure}
 
+\paragraph{Description} For a set $\tagset$ of valid identities, a RFID reader has a database of valid secret keys $\{t_\sfsk\}_{T \in \tagset}$. A RFID tag with identity $T$ and key $t_\sfsk$ authenticates to the reader by sampling a fresh challenge $n$, and sending the pair $(n,\hash(n,t_\sfsk))$ to the reader, which looks into its database to see if the hash can be mapped to a valid identity and then answers true or false.
 
-
-\subsection{Signed DH key exchanges}\label{prob:dh}
-
-The protocol is given in \cref{fig:dh}.
-
- \paragraph{Description} The server has a long term signature keypair $s_\sfsk,s_\sfpk$.
-This key is used to authenticate the server, while the client and the server exchange fresh DH values to derive a shared secret key.
 
 \paragraph{Properties} This protocol should provide two guarantees against an active attacker:
 \begin{itemize}
-\item injective unilateral client-side authentication - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
-\item forward secrecy - nobody except the two matching sessions can derive the key of this session, and this even if the long term key of the server is compromised in the future.
+\item \emph{non-injective unilateral authentication} - if the reader accepts some message as coming from some tag, the corresponding tag did send this message at some point in the past.
+\item \emph{unlinkability} - it should be impossible to decide whether two sessions of the protocol correspond to the same tag or not. That is, it should be impossible to distinguish a scenario where there is a single tag executing $n$ times the protocol in sequence with a scenario where $n$ distinct tags all execute the protocol each a single time. 
 \end{itemize}
 
-\paragraph{Scenarios} Scenarios as strong are possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
+\paragraph{Scenarios} The core scenario we wish to target is one reader and many tags with many sessions for each tag. Multiple readers do not really increase the relevance of the model, as readers never process anything from them. Compromises of material is not of particular interest here.
 
-\begin{figure}
+\paragraph{Bonus} Show that \emph{injective authentication} does not hold due to a replay attack. The corresponding attack trace is illustrated in \cref{app:attacks}, \cref{fig:basic-hash-att}.
+
+\subsection{Signed DH key exchange}\label{prob:dh}
+
+The protocol is illustrated in \cref{fig:dh}.
+
+\begin{figure}[h]
 
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
     \begin{center}
+    \resizebox{0.8\columnwidth}{!}{
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -254,48 +244,39 @@ This key is used to authenticate the server, while the client and the server exc
             k_C = \hash((y_\sfpk)^{x_\sfsk})
           \end{array}$}{initiator}
         
-        
+         \nextlevel[4]
       \end{msc}
-          \end{center}
+      }
+      \end{center}
       \caption{Signed Diffie-Hellman key exchange}\label{fig:dh}
 \end{figure}
 
+ \paragraph{Description} The server has a long-term signature keypair $s_\sfsk,s_\sfpk$.
+This key is used to authenticate the server, while the client and the server exchange fresh DH values to derive a shared secret key.
 
-\subsection{Signed KEM key exchanges}\label{prob:kem}
-
-The protocol is given in \cref{fig:kem}.
-
- \paragraph{Description} The client has a long term signature keypair $c_\sfsk,c_\sfpk$.
-This key is used to authenticate the client, while the client and the server exchange fresh KEM values to derive a shared secret key.
-
-\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
+\paragraph{Properties} This protocol should provide two guarantees against an active attacker:
 \begin{itemize}
-\item bilateral injective authentication -  if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters, and conversely.
-\item forward secrecy - nobody except the two matching sessions can derive the key of this session, and this even if the long term key of the client is compromised in the future. Note that compromising the server keys breaks the forward secrecy of half of the key.
+\item \emph{injective unilateral client-side authentication} - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
+\item \emph{forward secrecy} - nobody except the two matching sessions can derive the key of this session, even if the long-term key of the server is compromised in the future.
 \end{itemize}
 
-\paragraph{Scenario} The target is scenario is unbounded parties and unbounded session, with compromise of long term keys.
- 
-We want to consider in this problem a KEM that is just IND-CCA, the KEM may thus be implemented using an asymmetric encryption function $\aenckem$, and with
-$$\encaps(x_\sfpk) := \sfss \getR \{0,1\}^\lambda; \sfct \getR \aenckem(\sfss,x_\sfpk); \return~(\sfct,\sfss)  $$
+\paragraph{Scenarios} Scenarios as strong as possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
 
 
-\paragraph{Bonus}
-\begin{enumerate}
-\item under compromise of long term keys and thus attacker controlled servers, this protocol suffers from an Unknown Key Share attack. The corresponding attack trace is given in \cref{app:attacks}, \cref{fig:kem-uks}.
-\item  even when allowing attackers to compromise ephemeral keys $x_\sfsk$, we should on a good protocol still be able to prove that whenever a client session and a server session derive the same secret key, then if the corresponding client session $x_\sfsk$ was not compromised, the key is fully secret. This corresponds to session independence, where allowing to compromise the material of other sessions does not impact the security of uncomprommised sessions.  The corresponding attack trace is given in \cref{app:attacks}, \cref{fig:kem-si}.  
-\end{enumerate}
+\subsection{Signed KEM key exchange}\label{prob:kem}
 
+The protocol is illustrated in \cref{fig:kem}.
 
-\begin{figure}[ht]
+\begin{figure}[h]
 
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
     \begin{center}
+    \resizebox{0.8\columnwidth}{!}{
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -333,40 +314,49 @@ $$\encaps(x_\sfpk) := \sfss \getR \{0,1\}^\lambda; \sfct \getR \aenckem(\sfss,x_
             {\sfss_2  \getR \decaps(\sfct_2,x_\sfsk) }\\
             k_C  = \sfss_1 \| \sfss_2
           \end{array}$}{initiator}
-        \nextlevel
+        \nextlevel[3]
       \end{msc}
-          \end{center}
-      \caption{signed KEM key exchange}\label{fig:kem}
+      }
+      \end{center}
+      \caption{Signed KEM key exchange}\label{fig:kem}
 \end{figure}
 
 
-\subsection{Signed DH+KEM key exchanges}\label{prob:hybrid}
+ \paragraph{Description} The client has a long-term signature keypair $c_\sfsk,c_\sfpk$.
+This key is used to authenticate the client, while the client and the server exchange fresh KEM values to derive a shared secret key.
 
-The protocol is given in \cref{fig:hybrid}.
-
- \paragraph{Description} The server has a long term signature keypair $s_\sfsk,s_\sfpk$. 
-This key is used to authenticate the server, while the client and the server exchange fresh DH and KEM values to derive a shared secret key.
-
-\paragraph{Properties} This protocol should provide two guarantees against an active attacker:
+\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
 \begin{itemize}
-\item injective unilateral client-side authentication - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
-\item forward secrecy - nobody except the two matching sessions can derive the key of this session, and this even if the long term key of the server is compromised in the future.
+\item \emph{bilateral injective authentication} -  if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters, and conversely.
+\item \emph{forward secrecy} - nobody except the two matching sessions can derive the key of this session, even if the long-term key of the client is compromised in the future. Note that compromising the server keys breaks the forward secrecy of half of the key.
 \end{itemize}
 
-\paragraph{Scenarios} Scenarios as strong are possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
+\paragraph{Scenario} The target scenario is unbounded parties and unbounded session, with compromise of long-term keys.
+We want to consider in this problem: a KEM that is just IND-CCA, i.e., the KEM may be implemented using an asymmetric encryption function $\aenckem$, and with:
+$$\encaps(x_\sfpk) := \sfss \getR \{0,1\}^\lambda; \sfct \getR \aenckem(\sfss,x_\sfpk); \return~(\sfct,\sfss)  $$
 
-\paragraph{Bonus} Provides proofs for the secrecy where the signature is secure, but only either the KEM or the DH part is assumed secure, and the other primitive is completely broken.
+
+\paragraph{Bonus}
+\begin{enumerate}
+\item Under compromise of long-term keys, i.e., attacker controlled servers, this protocol suffers from an Unknown Key-Share (UKS) attack. The corresponding attack trace is illustrated in \cref{app:attacks}, \cref{fig:kem-uks}.
+\item  Under compromise of ephemeral keys $x_\sfsk$, we should on a good protocol still be able to prove that whenever a client session and a server session derive the same secret key, then if the corresponding client session $x_\sfsk$ was not compromised, the key is fully secret. This corresponds to \emph{session independence}, where allowing to compromise the material of other sessions does not impact the security of uncompromised sessions.  The corresponding attack trace is illustrated in \cref{app:attacks}, \cref{fig:kem-si}.  
+\end{enumerate}
 
 
-\begin{figure}
+\subsection{Signed DH+KEM key exchange}\label{prob:hybrid}
+
+The protocol is illustrated in \cref{fig:hybrid}.
+
+\begin{figure}[h]
 
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
     \begin{center}
+    \resizebox{0.8\columnwidth}{!}{
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -405,39 +395,40 @@ This key is used to authenticate the server, while the client and the server exc
             k_C = \hash((y_\sfpk)^{x_\sfsk}{,\sfss})
           \end{array}$}{initiator}
         
-        
+         \nextlevel[4]
       \end{msc}
-          \end{center}
+      }
+      \end{center}
       \caption{Hybridization of a signed Diffie-Hellman key exchange}\label{fig:hybrid}
 \end{figure}
 
+ \paragraph{Description} The server has a long-term signature keypair $s_\sfsk,s_\sfpk$. 
+This key is used to authenticate the server, while the client and the server exchange fresh DH and KEM values to derive a shared secret key.
 
-
-\subsection{DH key exchanges}\label{prob:ntor}
-
-The protocol is given in \cref{fig:ntor}.
-
- \paragraph{Description}The server has a long term DH keypar $s_\sfsk,s_\sfpk$.
-This key is used to authenticate the server, while the client and the server exchange fresh DH values to derive a shared secret key. 
-
-\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
+\paragraph{Properties} This protocol should provide two guarantees against an active attacker:
 \begin{itemize}
-\item injective authentication - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
-\item secrecy - nobody except the two matching sessions can derive the key.  The key might be proven to be indistinguishable from a random value.
+\item \emph{injective unilateral client-side authentication} - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
+\item \emph{forward secrecy} - nobody except the two matching sessions can derive the key of this session, even if the long-term key of the server is compromised in the future.
 \end{itemize}
 
-\paragraph{Scenarios} Scenarios as strong are possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
+\paragraph{Scenarios} Scenarios as strong as possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
 
+\paragraph{Bonus} Provide proofs for the secrecy where the signature is secure, but only either the KEM or the DH part is assumed secure, while the other primitive is completely broken.
 
-\begin{figure}
+\subsection{Simplified NTOR}\label{prob:ntor}
+
+The protocol is illustrated in \cref{fig:ntor}.
+
+\begin{figure}[h]
 
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
     \begin{center}
+    \resizebox{0.8\columnwidth}{!}{
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -475,15 +466,103 @@ This key is used to authenticate the server, while the client and the server exc
             k_C = \hash(mk_C, 1)
           \end{array}$}{initiator}
         
-        
+        \nextlevel[4]
       \end{msc}
-          \end{center}
+      }
+      \end{center}
       \caption{Simplified NTOR}\label{fig:ntor}
 \end{figure}
 
+ \paragraph{Description}The server has a long-term DH keypair $s_\sfsk,s_\sfpk$.
+This key is used to authenticate the server, while the client and the server exchange fresh DH values to derive a shared secret key. 
+
+\paragraph{Properties} This protocol should provide two guarantees against an active machine-in-the-middle attacker:
+\begin{itemize}
+\item \emph{injective authentication} - if a client derives a key with some parameters (the set of public keys), a corresponding server session derived the same key with the same parameters.
+\item \emph{secrecy} - nobody except the two matching sessions can derive the key. The key might be proven to be indistinguishable from a random value.
+\end{itemize}
+
+\paragraph{Scenarios} Scenarios as strong as possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. Compromise of long-term keys is needed to enable verification of Forward Secrecy.  
+
+\subsection{Simplified ACME Protocol}\label{prob:acme}
+
+The protocol is illustrated in \cref{fig:acme}.
+
+\begin{figure}[h]
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \resizebox{0.8\columnwidth}{!}{
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{5cm}
+        \setlength{\topheaddist}{0cm}
+
+        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+              $o_\sfsk$\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Owner} \;\;}}
+            \end{tabular}}{}%
+
+        \declinst{le}{
+            \begin{tabular}[c]{c}
+              \\
+              \fcolorbox{black}{white}{{\;\; \textsc{Let's Encrypt (LE)} \;\;}}
+            \end{tabular}}{}%
+          
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $Adr$ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{DNS Sever} \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]    
+        \mess{Register, $Adr$}{initiator}{le}
+        \nextlevel[0.5]   
+        \action*{$
+          \begin{array}{@{}l@{}}
+           Generate \ token
+          \end{array}$}{le}
+        \nextlevel[2]
+        \mess{$token$}{le}{initiator}   
+        \nextlevel[0.5]   
+        \action*{$
+          \begin{array}{@{}l@{}}
+           sig = \sign(token, o_\sfsk)
+          \end{array}$}{initiator}
+        \nextlevel[2.5]                  
+        \mess[dotted]{DNS-Upd(Adr, $sig$)}{initiator}{receiver}
+        \nextlevel[1.5]
+        \mess{Update $o_\sfpk$}{initiator}{le}
+        \nextlevel[0.5]
+        \mess{DNS-Req($Adr$)}{le}{receiver}
+        \nextlevel[1.5]        
+        \mess[dotted]{DNS-Rsp($sig$)}{receiver}{le}
+        \nextlevel
+         \action*{$
+          \begin{array}{@{}l@{}}
+            \texttt{Abort if not } \verify(sig, token, o_\sfpk)
+          \end{array}$}{le}
+        \nextlevel[3]
+        \mess{Approved}{le}{initiator}
+        \nextlevel
+      \end{msc}
+      }
+    \end{center}
+      \caption{Simplified ACME Protocol. The dotted arrows indicate an authenticated channel.}\label{fig:acme}    
+\end{figure}
+
+ \paragraph{Description} The website owner has a long-term keypair $o_\sfsk,o_\sfpk$ of their website certificate.
+They want to claim ownership of their website and distribute the new certificate to the DNS Sever and Let's Encrypt (LE) server. To this end, the owner starts a challenge response protocol with the LE server, signs a token using the certificate key, and sends the certificate to the DNS Server. The LE server retrieves the certificate of the website from the DNS server and upon successful verification of signature it concludes that the owner controls the private key of the certificate and the DNS record for the website address.
+
+\paragraph{Properties} This protocol should provide the guarantee that if a certificate is accepted, then the owner owns the private key of the certificate and registered website.
+
+\paragraph{Scenarios} Scenarios as strong as possible are relevant for this problem. We hope to see an unbounded number of distinct servers and clients, with an unbounded number of sessions. 
+
 \subsection{Showcase}\label{prob:showcase}
 
-To give an idea of the specific capabilities of their tools, we finally invite for this problem just submissions of interesting case-studies made in the tool. Those solutions do not need to come with the model files nor follow the full template, as comparison will be less relevant. This can typically be based on recently published verification work. The format should simply be the name of the case-study, a short description with the salient point, and eventually a link to a paper or models.
+To give an idea of the specific capabilities of their tools, we finally invite for this problem set submissions of interesting case-studies verified by the individual tools. Those solutions do not need to come with the model files nor follow the full template, as comparison will be less relevant. This can typically be based on recently published verification work. The format should simply be the name of the case-study, a short description with the salient point, and eventually a link to a paper or models.
 
 \appendix
 
@@ -492,11 +571,12 @@ To give an idea of the specific capabilities of their tools, we finally invite f
 
 
 
-\begin{figure}
+\begin{figure}[h]
 
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
     \begin{center}
+    \resizebox{1\columnwidth}{!}{
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
@@ -512,7 +592,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \declinst{attacker}{
             \begin{tabular}[c]{c}
               \\
-              \fcolorbox{black}{white}{{\;\; \textsc{Attacker} \;\;}}
+              \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
             \end{tabular}}{}%
           
         \declinst{receiver}{
@@ -532,27 +612,29 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \nextlevel[1]                      
         \mess{$true$}{receiver}{attacker}
         \mess{$true$}{attacker}{initiator}
-        \nextlevel[1]
-        \mess{$n, auth$}{attacker}{receiver}
+        \nextlevel[1.5]
+        \mess[red]{$n, auth$}{attacker}{receiver}
         \nextlevel[1]        
-                \mess{$true$}{receiver}{attacker}
-        
+        \mess{$true$}{receiver}{attacker}
+        \nextlevel
         
       \end{msc}
+      }
     \end{center}
-      \caption{Basic Hash - basic replay attack breaking injective authentication}\label{fig:basic-hash-att}    
+      \caption{Basic Hash - Basic replay attack breaking \emph{injective authentication}.}\label{fig:basic-hash-att}    
 \end{figure}
 
 
-\begin{figure}
+\begin{figure}[h]
 
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
     \begin{center}
+    \resizebox{1\columnwidth}{!}{
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -567,7 +649,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \declinst{attacker}{
             \begin{tabular}[c]{c}
               $a_\sfsk $\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Attacker} \;\;}}
+              \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
             \end{tabular}}{}%          
         \declinst{receiver}{
           \begin{tabular}[c]{c}
@@ -587,13 +669,14 @@ To give an idea of the specific capabilities of their tools, we finally invite f
           \end{array}$}{initiator}
         \nextlevel[5.5]
         \mess{$x_\sfpk, sig, \sfct_1$}{initiator}{attacker}
-        \action*{$
+        \nextlevel[1]
+        \action*[red]{$
           \begin{array}{@{}l@{}}
             { \sfss_1  \getR \decaps(\sfct_1, a_\sfsk) }\\
             \sfct_1'  \getR \aenckem(\sfss_1, s_\sfpk)
           \end{array}$}{attacker}
         \nextlevel[4.7]        
-        \mess{$x_\sfpk, sig, \sfct_1'$}{attacker}{receiver}        
+        \mess{$x_\sfpk, sig, \textcolor{red}{\sfct_1'}$}{attacker}{receiver}        
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}
@@ -615,26 +698,28 @@ To give an idea of the specific capabilities of their tools, we finally invite f
             k_C =  \sfss_1\| \sfss_2
           \end{array}$}{initiator}
         
-        
+        \nextlevel[3]
       \end{msc}
-          \end{center}
-          \caption{signed KEM key exchange - Unknown Key-share Attack through reencapsulation attack . \\
-            Both honest client and honest server derive the same key, but do not believe to be talking together.
+      }
+      \end{center}
+       \caption{Signed KEM key exchange - \emph{Unknown Key-Share (UKS)} attack through re-encapsulation attack.
+       Both honest client and honest server derive the same key, but do not believe to be talking together.
 }\label{fig:kem-uks}
 \end{figure}
 
 
 
 
-\begin{figure}
+\begin{figure}[h]
 
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
     \begin{center}
+    \resizebox{1\columnwidth}{!}{
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
-        \setlength{\instdist}{4cm}
+        \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
         \declinst{initiator}{
@@ -645,7 +730,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \declinst{attacker}{
             \begin{tabular}[c]{c}
               $ $\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Attacker} \;\;}}
+              \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
             \end{tabular}}{}%          
         \declinst{receiver}{
           \begin{tabular}[c]{c}
@@ -661,7 +746,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
             \textit{Continue execution of this session as usual\dots}
           \end{array}$}{initiator}
         \nextlevel[6.5]           
-       \mess{Compromise $x_\sfsk^c, sig^c$}{initiator}{attacker}
+       \mess{\textcolor{red}{Compromise $x_\sfsk^c, sig^c$}}{initiator}{attacker}
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}\
@@ -672,7 +757,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
           \end{array}$}{initiator}
         \nextlevel[5.5]
         \mess{$x_\sfpk, sig, \sfct_1$}{initiator}{attacker}
-        \mess{$x_\sfpk^c, sig^c, \sfct_1$}{attacker}{receiver}        
+        \mess{\textcolor{red}{$x_\sfpk^c, sig^c$}$, \sfct_1$}{attacker}{receiver}        
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}
@@ -685,25 +770,89 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \mess{$\sfct_2$}{receiver}{attacker}
         \nextlevel[1]
         \nextlevel[1]        
-        \action*{$
+        \action*[red]{$
           \begin{array}{@{}l@{}}
-            { \sfss_2  \getR \decaps(\sfct_2, x_\sfsk^c) }\\
+            {\sfss_2  \getR \decaps(\sfct_2, x_\sfsk^c) }\\
             \sfct_2'  \getR \aenckem(\sfss_2, x_\sfpk)
           \end{array}$}{attacker}
         \nextlevel[4.7]
-        \mess{$\sfct_2'$}{attacker}{initiator}
+        \mess{\textcolor{red}{$\sfct_2'$}}{attacker}{initiator}
         \nextlevel[1]                
         \action*{$
           \begin{array}{@{}l@{}}
-            {\sfss_2  \getR \decaps(\sfct_2',x_\sfsk) }\\
-            k_C =  \sfss_1\| \sfss_2
+            {\sfss_2  \getR \decaps(\textcolor{red}{\sfct_2'},x_\sfsk) }\\
+            k_C =  \sfss_1\| \textcolor{red}{\sfss_2}
           \end{array}$}{initiator}
-        
+        \nextlevel[3]
         
       \end{msc}
-          \end{center}
-          \caption{signed KEM key exchange - Reencapsulation attack against session independence. \\
+      }
+      \end{center}
+      \caption{Signed KEM key exchange - Reencapsulation attack against session independence.
             The attacker learns half of the key of a fresh session by compromising material from an independent session.}\label{fig:kem-si}
+\end{figure}
+
+\begin{figure}[h]
+
+ % \setlength{\belowcaptionskip}{-15pt}
+    \setmsckeyword{} \drawframe{no}
+    \begin{center}
+    \resizebox{1\columnwidth}{!}{
+    \begin{msc}{}
+
+        \setlength{\instwidth}{0\mscunit}
+        \setlength{\instdist}{5cm}
+        \setlength{\topheaddist}{0cm}
+
+        \declinst{initiator}{
+            \begin{tabular}[c]{c}
+             \\
+              \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
+            \end{tabular}}{}%
+
+        \declinst{le}{
+            \begin{tabular}[c]{c}
+              $o_\sfpk$\\
+              \fcolorbox{black}{white}{{\;\; \textsc{Let's Encrypt (LE)} \;\;}}
+            \end{tabular}}{}%
+          
+        \declinst{receiver}{
+          \begin{tabular}[c]{c}
+            $Adr, sig$ \\
+            \fcolorbox{black}{white}{{\;\;  \textsc{DNS Sever} \;\;}}
+          \end{tabular}}{}%
+        \nextlevel[0]    
+        \mess{Register, $Adr$}{initiator}{le}
+        \nextlevel[0.5]   
+        \action*{$
+          \begin{array}{@{}l@{}}
+           Generate \ token_2
+          \end{array}$}{le}
+        \nextlevel[2]
+        \mess{$token_2$}{le}{initiator}   
+        \nextlevel[0.5]   
+        \action*[red]{$
+          \begin{array}{@{}l@{}}
+           sk_{deo}, pk_{deo} = DEO(token_2, sig)
+          \end{array}$}{initiator}
+        \nextlevel[3]                  
+        \mess{\textcolor{red}{Update $pk_{deo}$}}{initiator}{le}
+        \nextlevel[0.5]
+        \mess{DNS-Req($Adr$)}{le}{receiver}
+        \nextlevel[1.5]        
+        \mess[dotted]{DNS-Rsp($sig$)}{receiver}{le}
+        \nextlevel
+         \action*{$
+          \begin{array}{@{}l@{}}
+           \verify(sig, \textcolor{red}{token_2}, \textcolor{red}{pk_{deo}})
+          \end{array}$}{le}
+        \nextlevel[4]
+        \mess{Approved}{le}{initiator} 
+        \nextlevel   
+      \end{msc}
+      }
+    \end{center}
+      \caption{Attack on ACME Protocol. The owner of $Adr$ has completed an execution of ACME and placed the public key $o_\sfpk$ on the LE server, and signature $sig$ for address $Adr$ on the DNS server. The attacker starts a new instance of the protocol to claim ownership of the victim's website, and substitutes the public key using a DEO (\emph{Destructive Exclusive Ownership}) attack on the signature. I.e, The attacker can generate a public key $pk_{deo}$ for signature $sig$, such that the signature verifies under another plaintext.}\label{fig:acme_attack}    
 \end{figure}
 
 % \bibliographystyle{plain}
