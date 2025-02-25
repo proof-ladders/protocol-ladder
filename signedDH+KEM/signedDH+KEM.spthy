@@ -34,7 +34,7 @@ analyzed: signedDH+KEM.spthy
  *
  */
 
-theory KemDH
+theory signedDHKEM
 begin
 
 builtins: diffie-hellman, signing, asymmetric-encryption
@@ -142,8 +142,10 @@ lemma BothPartiesCanReachEnd:
 // Secrecy of established session key
 // Does not hold. (The client could have been an attacker, therefore it knows the established key.)
 lemma ServerKeySecrecy:
-  "All S key #i. SecretServer(S, key) @ #i 
-  ==> (not Ex #j. K(key) @ #j)
+  "All S key #i. 
+      SecretServer(S, key) @ #i 
+    ==> 
+      not(Ex #j. K(key) @ #j)
     | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
 
 // If a client establishes successfully a session with key: sesskey, the attacker does not know 
@@ -152,8 +154,8 @@ lemma SessionKey_Secrecy:
   "All S sessKey #i. 
       SecretClient(S, sessKey) @ #i 
     ==> 
-      ( not Ex #j. K(sessKey) @ #j)
-    | ( Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
+      not(Ex #j. K(sessKey) @ #j)
+    | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
 
 // The attacker cannot learn the session key, even if they compromise the server in the future.
 // Or compromise the kem key at any time.
@@ -162,14 +164,14 @@ lemma ForwardSecrecy:
       SecretClient(S, sessKey) @ #i &
       K(sessKey) @ k
     ==>
-        ( Ex s_sk #j. CompromiseLtk(S, s_sk) @ j & j < i)"  
+      (Ex s_sk #j. CompromiseLtk(S, s_sk) @ j & j < i)"  
 
 // At the end of the protocol, if the client establishes a session with key: sessKey,
 // then there is a corresponding server S session with the same parameters.
 lemma ClientSide_Authentication:
   "All S x_pk z_pk y_pk ct sig s_pk key #i. 
-   ClientAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, key) @ #i 
-   ==>  
+      ClientAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, key) @ #i 
+    ==>  
       (Ex #j. j<i & ServerAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, key) @ #j)
     | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
 

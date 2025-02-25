@@ -9,37 +9,35 @@
  * sessions:    unbounded ∞ 
  * agents:      unbounded ∞ 
  * compromises: long-term keys (LTK)
- * primitives:  hash, signatures, diffie-hellman
+ * primitives:  hash, diffie-hellman
  * properties:  executability, session_key_secrecy, forward_secrecy, client_side_authentication
  * difficulty:  easy
  *
- ==============================================================================
+==============================================================================
   summary of summaries:
 
-  analyzed: signedDH.spthy
+  analyzed: ntor.spthy
 
-  processing time: 0.30s
+  processing time: 0.66s
   
   ExecutabilityClient (exists-trace): verified (2 steps)
   ExecutabilityServer (exists-trace): verified (4 steps)
   ExecutabilityClientEnd (exists-trace): verified (7 steps)
   BothPartiesCanReachEnd (exists-trace): verified (8 steps)
-  ServerKeySecrecy (all-traces): falsified - found trace (6 steps)
-  SessionKey_Secrecy (all-traces): verified (11 steps)
-  ForwardSecrecy (all-traces): verified (11 steps)
-  ClientSide_Authentication (all-traces): verified (7 steps)
+  ServerKeySecrecy (all-traces): falsified - found trace (8 steps)
+  SessionKey_Secrecy (all-traces): verified (17 steps)
+  ForwardSecrecy (all-traces): verified (17 steps)
+  ClientSide_Authentication (all-traces): verified (12 steps)
 
 ==============================================================================
-
-real	0m0,357s
-user	0m0,878s
-sys	0m0,056s
+ *
  */
  
-theory SignedDH
+theory ntor
 begin
 
-builtins: hashing, diffie-hellman, signing
+builtins: diffie-hellman
+functions: hash5/5, hash2/2
 
 /* This is a restriction that ensures in any rule with the Eq(x,y) action, the terms
 matched by the variables x and y are the same. The modeler can then add an Eq action to 
@@ -49,8 +47,8 @@ restriction Eq:
   "All x y #i. Eq(x, y) @ #i ==> x = y"
 
 // Generate Server's long-term (s_sk, s_pk)
-rule Generate_serverLtk:
-  let pkS = pk(~sk) 
+rule generate_serverLtk:
+  let pkS = 'g'^~sk 
   in
   [ Fr(~sk) ]
   -->
@@ -66,45 +64,49 @@ rule Client_Init:
   --[ ClientInitMessage()]->
   [ Out(<x_pk>), StateC($C, ~x_sk) ]
 
-/*Server generates their own DH pair (y_sk, y_pk),
-  sign the public keys of client and server,
-  calculates the session key, and
-  send the public key and signature to client.
-*/
+// Server generates own DH pair, computes master key mk_S as a hash of the public DH keys of both 
+// parties, the public signing key of server, and DH outputs: x_pk^y_sk, x_pk^s_sk .
+// Computes from mk_S an authentication hash and session key K_S.
 rule Server_Init:
   let 
-    y_pk = 'g'^~y_sk 
-    serverSign = sign(<x_pk, y_pk>, ~s_sk)
-    dh_output = x_pk^~y_sk
-    K_S = h(dh_output)
-    m = <y_pk, serverSign>
+    y_pk = 'g'^~y_sk
+    s_pk = 'g'^~s_sk
+    dh_output1 = x_pk^~y_sk
+    dh_output2 = x_pk^~s_sk
+    mk_S = hash5(x_pk, y_pk, s_pk, dh_output1, dh_output2)
+    auth = hash2(mk_S, '0')
+    K_S = hash2(mk_S, '1')
+    m = <y_pk, auth>
   in
   [ !Ltk($S, ~s_sk), 
     Fr(~y_sk)
   , In(x_pk) ]
   --[ ServerInitMessage(),
-      ServerAccepts($S, x_pk, y_pk, pk(~s_sk), serverSign, K_S),
+      ServerAccepts($S, x_pk, y_pk, s_pk, auth, K_S),
       SecretServer($S, K_S) ]->
   [ Out(m) ]
 
-// Client verifies the server's signature and derives the session key K_C
+// Client computes master key mk_C, verifies the authentication tag auth, and computes session key K_C.
 rule Client_Accepts:
   let
-    m = <y_pk, serverSign>
+    m = <y_pk, auth>
     x_pk = 'g'^~x_sk
-    dh_output = y_pk^~x_sk
-    K_C = h(dh_output)
+    dh_output1 = y_pk^~x_sk
+    dh_output2 = s_pk^~x_sk
+    mk_C = hash5(x_pk, y_pk, s_pk, dh_output1, dh_output2)
+    auth_c = hash2(mk_C, '0')
+    K_C = hash2(mk_C, '1')
   in
   [ StateC($C, ~x_sk),
     !Pk($S, s_pk),
     In(m) ]
-  --[  Eq(verify(serverSign, <x_pk, y_pk>, s_pk), true),
-      ClientAccepts($S, x_pk, y_pk, s_pk, serverSign, K_C),
+  --[  Eq(auth, auth_c),
+      ClientAccepts($S, x_pk, y_pk, s_pk, auth, K_C),
       SecretClient($S, K_C),
       ClientRecvMessage()]->
   [ ]
 
-// The attacker learns the server's long-term key
+//Attacker learns the server's long-term key
 rule Compromise_LTK:
   [ !Ltk($S, ~sk)]
   --[CompromiseLtk($S, ~sk)]->
@@ -125,24 +127,25 @@ lemma ExecutabilityClientEnd:
 
 lemma BothPartiesCanReachEnd:
   exists-trace
-  "Ex S x_pk y_pk s_pk serverSign sessKey #i #j. i < j &
-    ServerAccepts(S, x_pk, y_pk, s_pk, serverSign, sessKey) @ #i &
-    ClientAccepts(S, x_pk, y_pk, s_pk, serverSign, sessKey) @ #j "
+  "Ex S x_pk y_pk s_pk auth key #i #j. i < j &
+     ServerAccepts(S, x_pk, y_pk, s_pk, auth, key) @ #i &
+   ClientAccepts(S, x_pk, y_pk, s_pk, auth, key) @ #j "
 
 
-// Secrecy of established session key for the server.
-// Does not hold, Tamarin finds an attack trace. 
-// (The client could have been an attacker, therefore it knows the established key.)
+// Secrecy of established session key
+// Does not hold. (The client could have been an attacker, therefore it knows the established key.)
 lemma ServerKeySecrecy:
-  "All S sessKey #i. SecretServer(S, sessKey) @ #i 
+  "All S key #i. SecretServer(S, key) @ #i 
     ==> 
-      not(Ex #j. K(sessKey) @ #j)
+      not(Ex #j. K(key) @ #j)
     | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
+
 
 // If a client establishes successfully a session with key: sesskey, the attacker does not know 
 // this secret, unless they compromise the server's long-term key.
 lemma SessionKey_Secrecy:
-  "All S sessKey #i. SecretClient(S, sessKey) @ #i 
+  "All S sessKey #i. 
+      SecretClient(S, sessKey) @ #i 
     ==> 
       not(Ex #j. K(sessKey) @ #j)
     | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
@@ -153,16 +156,15 @@ lemma ForwardSecrecy:
       SecretClient(S, sessKey) @ #i &
       K(sessKey) @ k
     ==>
-      (Ex s_sk #j. CompromiseLtk(S, s_sk) @ j & j < i )"
+      (Ex s_sk #j. CompromiseLtk(S, s_sk) @ j & j < i)"
 
 // At the end of the protocol, if the client establishes a session with key: sessKey,
 // then there is a corresponding server S session with the same parameters.
 lemma ClientSide_Authentication:
-  "All S x_pk y_pk s_pk serverSign sessKey #i. 
-      ClientAccepts(S, x_pk, y_pk, s_pk, serverSign, sessKey) @ #i 
+  "All S x_pk y_pk s_pk auth key #i. 
+      ClientAccepts(S, x_pk, y_pk, s_pk, auth, key) @ #i 
    ==>  
-      (Ex #j. j<i & ServerAccepts(S, x_pk, y_pk, s_pk, serverSign, sessKey) @ #j)
+      (Ex #j. j<i & ServerAccepts(S, x_pk, y_pk, s_pk, auth, key) @ #j)
     | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
-
 
 end

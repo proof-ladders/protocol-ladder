@@ -173,9 +173,9 @@ lemma ExecutabilityClientEnd:
 // UKS
 lemma UKS_Attack_MutualAuthentication:
   "All key x_pk pkC1 pkC2 pkS1 pkS2 #i #j . 
-    SecretServer(key, x_pk, pkC1, pkS1) @ #i &
-    SecretClient(key, x_pk, pkC2, pkS2) @ #j
-   ==>  (pkC1=pkC2) & (pkS1 = pkS2)
+      SecretServer(key, x_pk, pkC1, pkS1) @ #i &
+      SecretClient(key, x_pk, pkC2, pkS2) @ #j
+    ==>  (pkC1=pkC2) & (pkS1 = pkS2)
      "
 
 #endif
@@ -183,9 +183,9 @@ lemma UKS_Attack_MutualAuthentication:
 // If both server and client derive the same key, and agree on parameters, they are talking to one another
 lemma Implicit_MutualAuthentication:
   "All key x_sk x_pk pkC1 pkC2 pkS1 pkS2 #i #j. 
-     SecretClient(key, x_sk, pkC1, pkS1) @ #i &
-     SecretServer(key, x_pk, pkC2, pkS2) @ #j 
-  ==> pkC1=pkC2 & pkS1=pkS2 " 
+      SecretClient(key, x_sk, pkC1, pkS1) @ #i &
+      SecretServer(key, x_pk, pkC2, pkS2) @ #j 
+    ==>   (pkC1=pkC2) & (pkS1=pkS2)" 
 
 #ifdef compromise
 // If both server and client derive the same key, and agree on parameters, they are talking to one another
@@ -198,8 +198,7 @@ lemma Implicit_MutualAuthentication_withCompromise:
       (pkC1=pkC2 & pkS1=pkS2)
     | (Ex #l. CompromiseLtk(pkS1)@ #l)
     | (Ex #l. CompromiseLtk(pkC2)@ #l)
-    | ( Ex kem_sk #t. CompromiseKEMKey(kem_sk) @ t)
-     " 
+    | ( Ex kem_sk #t. CompromiseKEMKey(kem_sk) @ t)" 
 
 // The attacker cannot learn the session key, even if they compromise the parties in the future.
 lemma SessionKey_ForwardSecrecy:
@@ -210,19 +209,17 @@ lemma SessionKey_ForwardSecrecy:
   ==>
       ( Ex #t. CompromiseLtk(pkC) @ t & t < i)
     | ( Ex #t. CompromiseLtk(pkS) @ t & t < i)
-    | ( Ex kem_sk #t. CompromiseKEMKey(kem_sk) @ t & t < i)
-  "
+    | ( Ex kem_sk #t. CompromiseKEMKey(kem_sk) @ t & t < i)"
 
 lemma Reancanpsulation_against_SessionIndependence:
   "All key x_sk x_pk ss1 ss2 pkC pkS #i #j #k. 
-     SessionKeyAccept(key, x_sk, ss1, ss2, pkC, pkS) @ #i &
-     SecretServer(key, x_pk, pkC, pkS) @ #j & 
-     K(ss2) @ #k &
-     not(Ex #l. CompromiseLtk(pkS)@ #l) 
-  ==> 
-      Ex #t1 #t2. CompromiseKEMKey(x_sk) @ #t1 &
-                  CompromiseLtk(pkC) @t2
-     "
+      SessionKeyAccept(key, x_sk, ss1, ss2, pkC, pkS) @ #i &
+      SecretServer(key, x_pk, pkC, pkS) @ #j & 
+      K(ss2) @ #k &
+      not(Ex #l. CompromiseLtk(pkS)@ #l) 
+    ==> 
+      (Ex #t1 #t2. CompromiseKEMKey(x_sk) @ #t1 &
+                  CompromiseLtk(pkC) @t2)"
 
 #endif
 
