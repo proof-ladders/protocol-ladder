@@ -68,7 +68,7 @@ subfolder: [basic-hash](basic-hash/)
 | Proverif    | Active   | ∞        | ∞      | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unlo) | WIP    |
 
 
-## Signed Diffie-Hellman
+## Problem 2: Signed Diffie-Hellman
 
 WIP
 
@@ -78,13 +78,14 @@ subfolder: [signedDH](signedDH/)
 | -------- | -------:| --- | -------- | ----------- | --------- |
 | Easy     |    Easy | ?   | Easy  | Easy        | HARD      |
 
-| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties | Difficulty ratings | Status |
-|:----------- | -------- | :--------: | :------: | ----------- | -------------- | ---------- | ---------- | -------------- | :------: |
-| Squirrel    | Active   | ∞        | ∞      | None        | Computational  | Hash, Sign     | Auth, FS   | Easy           |        |
-| CryptoVerif | Active   | ∞        | ∞      | None        | Computational  | Hash, Sign     | Auth, FS   | Easy           |        |
-| EasyCrypt   | Active   | ∞        | ∞      | None        | Computational  | Hash, Sign     | Auth, FS   | Hard           |        |
-| Tamarin     | Active   | ∞        | ∞      | LTK         | Symbolic       | Hash, Sign     | Auth, FS   | Easy (Auth,FS) | ✅     |
-| Proverif    | Active   | ∞        | ∞      | None        | Symbolic       | Hash, Sign     | Auth, FS   | Easy (Auth,FS) |        |
+| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives     | Properties | Difficulty ratings | Status |
+| :---------- | -------- | :------: | :----: | ----------- | -------------- | -------------- | ---------- | ------------------ | :----: |
+| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign     | Auth, FS   | Easy               |        |
+| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign     | Auth, FS   | Easy               |        |
+| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign     | Auth, FS   | Hard               |        |
+| Tamarin     | Active   |    ∞     |   ∞    | LTK         | Symbolic       | Hash, DH, Sign | Auth, FS   | Easy (Auth,FS)     |   ✅   |
+| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, Sign     | Auth, FS   | Easy (Auth,FS)     |        |
+
 
 
 Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
@@ -95,19 +96,34 @@ Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise
 
 TODO: ensure files follow standard conventions
 
-## Signed KEM
+## Problem 3: Signed KEM
 
 WIP
 
 subfolder: [signedKEM](signedKEM/)
 
-| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties | Difficulty ratings | Status |
-|:----------- | -------- | :--------: | :------: | ----------- | -------------- | ---------- | ---------- | -------------- | :------: |
-| Squirrel    | Active   | ∞        | ∞      | None       		| Computational  | Hash, Sign     	   | Auth, FS   | Easy          	|        |
-| CryptoVerif | Active   | ∞        | ∞      | None        		| Computational  | Hash, Sign     	   | Auth, FS   | Easy           	|        |
-| EasyCrypt   | Active   | ∞        | ∞      | None        		| Computational  | Hash, Sign     	   | Auth, FS   | Hard           	|        |
-| Tamarin     | Active   | ∞        | ∞      | LTK, EK, MAL_LTK         | Symbolic       | Hash, Sign, AsymEnc     | Auth, FS, ⚡UKS, ⚡ReEncap   	| Easy   | ✅     |
-| Proverif    | Active   | ∞        | ∞      | None       		| Symbolic       | Hash, Sign     	   | Auth, FS   | Easy (Auth,FS) 	|        |
+| Tool        | Attacker | Sessions | Agents | Compromises      | Attacker Class | Primitives              | Properties                 | Difficulty ratings | Status |
+| :---------- | -------- | :------: | :----: | ---------------- | -------------- | ----------------------- | -------------------------- | ------------------ | :----: |
+| Squirrel    | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Easy               |        |
+| CryptoVerif | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Easy               |        |
+| EasyCrypt   | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Hard               |        |
+| Tamarin     | Active   |    ∞     |   ∞    | LTK, EK, MAL_LTK | Symbolic       | Hash, DH, Sign, AsymEnc | Auth, FS, ⚡UKS, ⚡ReEncap | Easy                 |   ✅   |
+| Proverif    | Active   |    ∞     |   ∞    | None             | Symbolic       | Hash, Sign              | Auth, FS                   | Easy (Auth,FS)     |        |
+
+
+## Problem 4: Signed DH+KEM
+
+WIP
+
+subfolder: [signedDH+KEM](signedDH+KEM/)
+
+| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives        | Properties        | Difficulty ratings | Status |
+| :---------- | -------- | :------: | :----: | ----------- | -------------- | ----------------- | ----------------- | ------------------ | :----: |
+| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Easy               |        |
+| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Easy               |        |
+| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Hard               |        |
+| Tamarin     | Active   |    ∞     |   ∞    | LTK, EK     | Symbolic       | DH, Sign, AsymEnc | Auth, FS, Secrecy | Easy               |   ✅   |
+| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, Sign        | Auth, FS          | Easy (Auth,FS)     |        |
 
 
 ## NTOR protocol
