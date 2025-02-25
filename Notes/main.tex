@@ -166,16 +166,8 @@ The protocol is illustrated in \cref{fig:basic-hash}.
         \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
-        \declinst{initiator}{
-            \begin{tabular}[c]{c}
-              $t_\sfsk$\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Tag} \;\;}}
-            \end{tabular}}{}%
-        \declinst{receiver}{
-          \begin{tabular}[c]{c}
-            $\{t_\sfsk\}_{T \in \tagset}$ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{Reader} \;\;}}
-          \end{tabular}}{}%
+        \declinst{initiator}{$t_\sfsk$}{\textsc{Tag}}
+        \declinst{receiver}{$\{t_\sfsk\}_{T \in \tagset}$}{\textsc{Reader}}
         \nextlevel[0]        
         \action*{$
           \begin{array}{@{}l@{}}
@@ -187,13 +179,12 @@ The protocol is illustrated in \cref{fig:basic-hash}.
         \nextlevel[1]        
         \action*{$
           \begin{array}{@{}l@{}}
-            res =\\
-            \quad            \texttt{if }\exists T \in \tagset, \hash(n,t_\sfsk) = auth\texttt{ then } \\
-            \qquad true \\
-            \quad \texttt{else} \\
-            \qquad false
+             \texttt{if }\exists T \in \tagset, \hash(n,t_\sfsk) = auth\texttt{ then } \\
+            \quad res = true \\
+             \texttt{else} \\
+            \quad res = false
           \end{array}$}{receiver}
-        \nextlevel[5.7]                
+        \nextlevel[7.0]                
         \mess{$res$}{receiver}{initiator}    
         \nextlevel 
       \end{msc}
@@ -231,16 +222,8 @@ The protocol is illustrated in \cref{fig:dh}.
         \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
-        \declinst{initiator}{
-            \begin{tabular}[c]{c}
-              $s_\sfpk $\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
-            \end{tabular}}{}%
-        \declinst{receiver}{
-          \begin{tabular}[c]{c}
-            $s_\sfsk $ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
-          \end{tabular}}{}%
+        \declinst{initiator}{$s_\sfpk $}{\textsc{Client}}%
+        \declinst{receiver}{$s_\sfsk $}{\textsc{Server}}%
         \nextlevel[0]        
         \action*{$
           \begin{array}{@{}l@{}}
@@ -299,16 +282,8 @@ The protocol is illustrated in \cref{fig:kem}.
         \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
-        \declinst{initiator}{
-            \begin{tabular}[c]{c}
-              $c_\sfsk, s_\sfpk $\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
-            \end{tabular}}{}%
-        \declinst{receiver}{
-          \begin{tabular}[c]{c}
-            $c_\sfpk, s_\sfsk $ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
-          \end{tabular}}{}%
+        \declinst{initiator}{$c_\sfsk, s_\sfpk $}{\textsc{Client}}%
+        \declinst{receiver}{$c_\sfpk, s_\sfsk $}{\textsc{Server}}%
         \nextlevel[0]        
         \action*{$
           \begin{array}{@{}l@{}}
@@ -326,7 +301,7 @@ The protocol is illustrated in \cref{fig:kem}.
             { \sfct_2,\sfss_2  \getR \encaps(x_\sfpk) }\\
             k_S = \sfss_1 \| \sfss_2
           \end{array}$}{receiver}
-        \nextlevel[5.7]                
+        \nextlevel[6.3]                
         \mess{$\sfct_2$}{receiver}{initiator}
         \nextlevel[1]                        
         \action*{$
@@ -360,7 +335,7 @@ $$\encaps(x_\sfpk) := \sfss \getR \{0,1\}^\lambda; \sfct \getR \aenckem(\sfss,x_
 
 \paragraph{Bonus}
 \begin{enumerate}
-\item If the attacker can claim their own long-term keypair, this protocol suffers from an Unknown Key-Share (UKS) attack. The corresponding attack trace is illustrated in \cref{app:attacks}, \cref{fig:kem-uks}.
+\item If the attacker can register their own long-term keypair, this protocol suffers from an Unknown Key-Share (UKS) attack. The corresponding attack trace is illustrated in \cref{app:attacks}, \cref{fig:kem-uks}.
 \item  Under compromise of ephemeral keys $x_\sfsk$, we should on a good protocol still be able to prove that whenever a client session and a server session derive the same secret key, then if the corresponding client session $x_\sfsk$ was not compromised, the key is fully secret. This corresponds to \emph{session independence}, where allowing to compromise the material of other sessions does not impact the security of uncompromised sessions.  The corresponding attack trace is illustrated in \cref{app:attacks}, \cref{fig:kem-si}.  
 \end{enumerate}
 
@@ -381,16 +356,8 @@ The protocol is illustrated in \cref{fig:hybrid}.
         \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
-        \declinst{initiator}{
-            \begin{tabular}[c]{c}
-              $s_\sfpk $\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
-            \end{tabular}}{}%
-        \declinst{receiver}{
-          \begin{tabular}[c]{c}
-            $s_\sfsk $ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
-          \end{tabular}}{}%
+        \declinst{initiator}{$s_\sfpk $}{\textsc{Client}}%
+        \declinst{receiver}{$s_\sfsk $}{\textsc{Server}}%
         \nextlevel[0]        
         \action*{$
           \begin{array}{@{}l@{}}
@@ -407,7 +374,7 @@ The protocol is illustrated in \cref{fig:hybrid}.
             sig= \sign( (x_\sfpk, y_\sfpk, z_\sfpk, \sfct), s_\sfsk)\\
                         k_S = \hash((x_\sfpk)^{y_\sfsk}{,\sfss})
           \end{array}$}{receiver}
-        \nextlevel[5.7]                
+        \nextlevel[6.3]                
         \mess{$y_\sfpk,sig, {\sfct}$}{receiver}{initiator}
         \nextlevel[1]                        
         \action*{$
@@ -453,16 +420,8 @@ The protocol is illustrated in \cref{fig:ntor}.
         \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
-        \declinst{initiator}{
-            \begin{tabular}[c]{c}
-              $s_\sfpk$\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
-            \end{tabular}}{}%
-        \declinst{receiver}{
-          \begin{tabular}[c]{c}
-            $s_\sfsk $ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
-          \end{tabular}}{}%
+        \declinst{initiator}{$s_\sfpk $}{\textsc{Client}}%
+        \declinst{receiver}{$s_\sfsk $}{\textsc{Server}}%
         \nextlevel[0]        
         \action*{$
           \begin{array}{@{}l@{}}
@@ -478,7 +437,7 @@ The protocol is illustrated in \cref{fig:ntor}.
             auth = \hash(mk_S, 0 ) \\
              k_S = \hash(mk_S, 1)
           \end{array}$}{receiver}
-        \nextlevel[5.7]                
+        \nextlevel[6.3]                
         \mess{$y_\sfpk,auth$}{receiver}{initiator}
         \nextlevel[1]                        
         \action*{$
@@ -522,23 +481,9 @@ The protocol is illustrated in \cref{fig:acme}.
         \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
-        \declinst{initiator}{
-            \begin{tabular}[c]{c}
-              $o_\sfsk$\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Owner} \;\;}}
-            \end{tabular}}{}%
-
-        \declinst{le}{
-            \begin{tabular}[c]{c}
-              \\
-              \fcolorbox{black}{white}{{\;\; \textsc{Let's Encrypt (LE)} \;\;}}
-            \end{tabular}}{}%
-          
-        \declinst{receiver}{
-          \begin{tabular}[c]{c}
-            $Adr$ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{DNS Sever} \;\;}}
-          \end{tabular}}{}%
+        \declinst{initiator}{$o_\sfsk$}{\textsc{Owner}}%
+        \declinst{le}{}{\textsc{Let's Encrypt (LE)}}%
+        \declinst{receiver}{$Adr$}{\textsc{DNS Server}}%
         \nextlevel[0]    
         \mess{Register, $Adr$}{initiator}{le}
         \nextlevel[0.5]   
@@ -605,23 +550,9 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \setlength{\instdist}{4cm}
         \setlength{\topheaddist}{0cm}
 
-        \declinst{initiator}{
-            \begin{tabular}[c]{c}
-              $t_\sfsk$\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Tag} \;\;}}
-            \end{tabular}}{}%
-
-        \declinst{attacker}{
-            \begin{tabular}[c]{c}
-              \\
-              \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
-            \end{tabular}}{}%
-          
-        \declinst{receiver}{
-          \begin{tabular}[c]{c}
-            $\{t_\sfsk\}_{T \in \tagset}$ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{Reader} \;\;}}
-          \end{tabular}}{}%
+        \declinst{initiator}{$t_\sfsk$}{\textsc{Tag}}%
+        \declinst{attacker}{}{\textsc{\textcolor{red}{Attacker}}}%
+        \declinst{receiver}{$\{t_\sfsk\}_{T \in \tagset}$}{\textsc{Reader}}%
         \nextlevel[0]        
         \action*{$
           \begin{array}{@{}l@{}}
@@ -667,12 +598,12 @@ To give an idea of the specific capabilities of their tools, we finally invite f
               \textsc{Client} \\ \textit{\footnotesize wants to talk to dishonest party}                
               \end{tabular}
  \;\;}}
-            \end{tabular}}{}%
+            \end{tabular}}{$\hspace{20mm}$}%
         \declinst{attacker}{
             \begin{tabular}[c]{c}
              \textcolor{red}{ $a_\sfsk $}\\
               \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
-            \end{tabular}}{}%          
+            \end{tabular}}{$\hspace{20mm}$}%          
         \declinst{receiver}{
           \begin{tabular}[c]{c}
             $c_\sfpk, s_\sfpk $ \\
@@ -681,7 +612,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
             \textsc{Server} \\ \textit{\footnotesize wants to talk to honest client}              
             \end{tabular}
  \;\;}}
-          \end{tabular}}{}%
+          \end{tabular}}{$\hspace{20mm}$}%
         \nextlevel[0]                
         \action*{$
           \begin{array}{@{}l@{}}\
