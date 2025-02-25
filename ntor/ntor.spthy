@@ -18,16 +18,16 @@
 
   analyzed: ntor.spthy
 
-  processing time: 0.66s
+  processing time: 0.70s
   
   ExecutabilityClient (exists-trace): verified (2 steps)
   ExecutabilityServer (exists-trace): verified (4 steps)
   ExecutabilityClientEnd (exists-trace): verified (7 steps)
   BothPartiesCanReachEnd (exists-trace): verified (8 steps)
   ServerKeySecrecy (all-traces): falsified - found trace (8 steps)
-  SessionKey_Secrecy (all-traces): verified (17 steps)
-  ForwardSecrecy (all-traces): verified (17 steps)
-  ClientSide_Authentication (all-traces): verified (12 steps)
+  SessionKey_Secrecy (all-traces): verified (20 steps)
+  ForwardSecrecy (all-traces): verified (20 steps)
+  ClientSide_Authentication (all-traces): verified (13 steps)
 
 ==============================================================================
  *
@@ -62,7 +62,7 @@ rule Client_Init:
   in
   [ Fr(~x_sk)]
   --[ ClientInitMessage()]->
-  [ Out(<x_pk>), StateC($C, ~x_sk) ]
+  [ Out(<x_pk>), StateC($C, ~x_sk), !EK($C, ~x_sk) ]
 
 // Server generates own DH pair, computes master key mk_S as a hash of the public DH keys of both 
 // parties, the public signing key of server, and DH outputs: x_pk^y_sk, x_pk^s_sk .
@@ -112,6 +112,12 @@ rule Compromise_LTK:
   --[CompromiseLtk($S, ~sk)]->
   [ Out(~sk) ]
 
+//Attacker learns the emphemeral kem key
+rule Compromise_DHKey:
+  [  !EK($C, ~z_sk)]
+  --[CompromiseDHKey($C, ~z_sk)]->
+  [ Out(~z_sk) ]
+
 // Sanity Traces to check executability of the model
 lemma ExecutabilityClient:
   exists-trace
@@ -142,21 +148,24 @@ lemma ServerKeySecrecy:
 
 
 // If a client establishes successfully a session with key: sesskey, the attacker does not know 
-// this secret, unless they compromise the server's long-term key.
+// this secret, unless they compromise the server's long-term key or the DH ephemeral keys.
 lemma SessionKey_Secrecy:
   "All S sessKey #i. 
       SecretClient(S, sessKey) @ #i 
     ==> 
       not(Ex #j. K(sessKey) @ #j)
-    | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
+    | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)
+    | (Ex A dh_sk #j. CompromiseDHKey(A, dh_sk) @ #j)"
 
-// The attacker cannot learn the session key, even if they compromise the server in the future.
+// The attacker cannot learn the session key, even if they compromise the server in the future
+// unless they have compromised the DH ephemeral keys.
 lemma ForwardSecrecy:
   "All S sessKey #i #k. 
       SecretClient(S, sessKey) @ #i &
       K(sessKey) @ k
     ==>
-      (Ex s_sk #j. CompromiseLtk(S, s_sk) @ j & j < i)"
+      (Ex s_sk #j. CompromiseLtk(S, s_sk) @ j & j < i)
+    | (Ex A dh_sk #j. CompromiseDHKey(A, dh_sk) @ #j)"
 
 // At the end of the protocol, if the client establishes a session with key: sessKey,
 // then there is a corresponding server S session with the same parameters.
@@ -165,6 +174,7 @@ lemma ClientSide_Authentication:
       ClientAccepts(S, x_pk, y_pk, s_pk, auth, key) @ #i 
    ==>  
       (Ex #j. j<i & ServerAccepts(S, x_pk, y_pk, s_pk, auth, key) @ #j)
-    | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
+    | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)
+    | (Ex A dh_sk #j. CompromiseDHKey(A, dh_sk) @ #j)"
 
 end
