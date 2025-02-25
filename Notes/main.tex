@@ -1,11 +1,14 @@
-\documentclass{article}
+\documentclass[11pt]{article}
 
 
 \usepackage{msc}
 \usepackage{url}
+\usepackage{microtype}
 
 \usepackage{hyperref}
 \usepackage[capitalize,nameinlink]{cleveref}
+
+\usepackage[paper=a4paper,margin=20mm]{geometry}
 
 %% prot syntax
 \newcommand{\store}{\leftarrow}
@@ -33,18 +36,21 @@
 \newcommand{\tagset}{\kwf{TAGS}}
 \newcommand{\return}{\kwf{return}}
 
-\title{A ladder of cryptographic protocol problems for illustrating formal verification}
+\title{A ladder of cryptographic problems\\
+to illustrate formal verification}
+
+\author{Cas Cremers and Charlie Jacomme and Aurora Naska}
 
 \begin{document}
 
 \maketitle
 
-This document and its companion repository\footnote{\url{https://github.com/charlie-j/fm-crypto-lib}} provide a set of cryptographic problems dedicated to protocols. It aims to help understand how the multiple approaches fit and compare together in the formal verification landscape. This document specifies the problems and expected format of solutions, while the repository aims to collect the solutions and provide nice summary table.
+This document and its companion repository\cite{ladder-repo} provide a set of cryptographic problems dedicated to protocols. It aims to help understand how the multiple approaches fit and compare within the formal verification landscape. This document specifies the problems and expected format of solutions, while the repository aims to collect the solutions and provide nice summary table.
 
-This initiative was pushed forward for the HACS workshop. See here\footnote{\url{https://github.com/charlie-j/fm-crypto-lib/blob/main/README.md\#acknowledgments}} for acknowledgments and how to cite this work.
+This initiative was pushed forward for the HACS workshop. See here~\cite{ladder-repo-authors} for acknowledgments and how to cite this work.
 
-\section{Protocols problem set}
-This document outlines several protocols that we recommend for the crypto ladder.
+\section{Protocol problem set}
+This document outlines several cryptographic problems that we recommend for the crypto ladder.
 The proposed protocols are listed in roughly increasing order of proof difficulty within the crypto world:
 \begin{itemize}
 \item \textbf{Basic-Hash} (\cref{prob:basic-hash}): a RFID tag/reader access protocol, meant to provide unlinkability (a strong notion of anonymity) between the tags. This is the base pattern for electronic passport authentication.
@@ -55,7 +61,7 @@ The proposed protocols are listed in roughly increasing order of proof difficult
 \item \textbf{Simplified ACME} protocol (\cref{prob:acme}): a simplified signature-based challenge-response protocol to allow a website owner to prove ownership of their domain\footnote{\url{https://datatracker.ietf.org/doc/html/rfc8555}}.
 \end{itemize}
 
-The rational behind this set:
+The rationale behind this set is the following:
 \begin{itemize}
 \item provide very simple examples, that increase in difficulty;
 \item show a variety of security properties (secrecy, authentication, privacy) and threat models;
@@ -63,29 +69,32 @@ The rational behind this set:
 \item showcase the scope and cutting edge between different methodologies.
 \end{itemize}
 
-Multi-party protocols and e-voting protocols are not included in this set, as verification for those problem is for the moment scarce.
+Multi-party protocols and e-voting protocols are not included in this set, as verification for those problems is for the moment scarce.
 
-\paragraph{Notations} In this document, secret keys and key pairs are denoted by using the subscripts $\sfsk$/$\sfpk$ to distinguish between secret/public parts. We rely on usual algorithms for KEM, signatures and DH. We use a generic hash function $\hash$ without a fixed arity, modelers may use the most canonical way to represent those computations in their tools.
+We note that advanced users can use the tools mentioned for much more intricate problems -- sometimes orders of magnitude more complex -- than the ones shown here. For the purpose of presenting problems meaningfully within this document, we have chosen relatively simple problems that can serve to highlight the core elements.
+
+\subsection{Notation} 
+
+In this document, secret keys and key pairs are denoted by using the subscripts $\sfsk$/$\sfpk$ to distinguish between secret/public parts. We rely on usual algorithms for KEMs, signatures and DH. We use a generic hash function $\hash$ without a fixed arity: modelers may use the most canonical way to represent such computations in their tools.
 
 
 \subsection{Modeling protocols}
 
-Protocols are asynchronous programs executed between several parties over an often untrusted network. Given the wide range of potential modeling choices for both execution models and security properties, we do not commit to any single option in this presentation. Each problem will be specified at a high-level by giving a message sequence chart of an expected run between two (or more) honest agents. An agent can be characterized by a role and some long-term material. Typically, for a key-exchange setting we can denote by $S(s_\sfsk,s_\sfpk)$ a server owning the signing key $s_\sfsk$ and $C(s_\sfpk)$ a client that already knows the corresponding public key, and thus intends to communicate to this specific server.
+Protocols are asynchronous programs executed between several parties over an often untrusted network. Given the wide range of potential modeling choices for both execution models and security properties, we do not commit to any single option in this presentation. Each problem will be specified at a high level by giving a message sequence chart of an expected run between two (or more) honest agents. An agent can be characterized by a role and some long-term material. Typically, for a key-exchange setting we can denote by $S(s_\sfsk,s_\sfpk)$ a server owning the signing key $s_\sfsk$ and $C(s_\sfpk)$ a client that already knows the corresponding public key, and thus intends to communicate to this specific server.
 
+Each problem may be ``solved'' in a variety of ways based on many different modeling choices. We detail some of the main those choices below.
 
-Each problem may be ``solved'' in a variety of ways based on many different modeling choices. We detail those choices below.
-
-\paragraph{Execution scenario} The simplest execution scenario for each protocol involves a single party for each role, with each party participating in only one session. However, we want to consider scenarios closer to real world executions, involving an unbounded number of sessions and potentially parties.
-We categorize this as follows:
+\paragraph{Execution scenario} The simplest execution scenario for each protocol involves a single party for each role, with each party participating in only one session. However, we typically want to consider scenarios closer to real world executions, involving an unbounded number of sessions and potentially parties.
+We categorize some of these modeling choices as follows:
 \begin{itemize}
 \item \textbf{Number of sessions: \emph{bounded vs unbounded}} - Scenarios with a bounded number of sessions corresponds to some $C(s_\sfpk)$ interacting with at most $n$ instances --a bounded fixed number of times-- of the corresponding partner $S(s_\sfsk,s_\sfpk)$. However, we may want to allow the two agents, $C$ and $S$, to execute between themselves the protocol an unbounded number of time, $\infty$, corresponding to the real-world setting where we might not know how many instances are running.
-\item \textbf{Number of agents: \emph{bounded vs unbounded}} - In basic scenarios, we may only consider a bounded number of possible agents, and typically consider that there is a single server. However, we may also need to consider the scenario where there is an unbounded number of possible agents/identities for each role. This means that there typically would be a set of possible public keys $\{s_\sfpk^i\}$ for all the possible identities.
+\item \textbf{Number of agents: \emph{bounded vs unbounded}} - In basic scenarios, we may only consider a bounded number of possible agents, and typically consider that there is a single server. However, realistically, we may also need to consider the scenario where there is an unbounded (i.e., arbitrarily large) number of possible agents/identities for each role. This means that there typically would be a set of possible public keys $\{s_\sfpk^i\}$ for all the possible identities.
 \end{itemize}
 
 
 \paragraph{Threat model}
 
-We consider that the attacker is at the level of network communications, with their capabilities varying as follows:
+We consider that the attacker can to some extent control network communications, with their capabilities varying as follows:
 
 \begin{itemize}
 \item \textbf{Attacker: \emph{passive vs active}} - A passive attacker can intercept and read all messages sent over the network, but it cannot tamper with them. An active attacker can modify and drop any message sent over the network and additionally inject their own.
@@ -93,39 +102,50 @@ We consider that the attacker is at the level of network communications, with th
   The attacker may then be able to corrupt an agent's long-term materials, typically the $s_\sfsk$ of a server (note that in some key exchange scenarios, $C$ may not possess any long-term secret material, because they do not wish to authenticate themselves to the server). Additionally, the attacker can compromise the ephemeral material of a specific session, effectively exposing the ephemeral secret keys for that session. In the more complex scenario, the attacker is able to compromise both.
  \end{itemize}
 
- \paragraph{Modeling of  primitives} For protocol analysis, primitives are most of the time abstracted away as abstract function calls. 
+ \paragraph{Modeling of  primitives} For protocol analysis, primitives are most of the time abstracted away as abstract function calls or primitive assumptions.
 
  \begin{itemize}
  \item \textbf{Approach: \emph{computational vs symbolic}} - In the computational approach, hardness assumptions are made over the primitives, e.g., IND-CCA for encryption, and the attacker is restricted by what it cannot do w.r.t. to the primitives. In the symbolic approach, primitives are idealized, and typically, an encryption perfectly hides its content and the attacker cannot learn its plaintext unless it know the corresponding decryption keys \footnote{In more details, equations define their only possible behaviors}.
-\item \textbf{Primitive characterization} - Each primitive might be modeled in a variety of way, with weaker or stronger assumptions over it. In the computational approach, we may model the encryption as IND-CPA or IND-CCA1 or IND-CCA2. The symbolic approach may consider a signature under different security assumptions: perfect, leaking the signed message, suffering from DEO attacks, etc.    
+\item \textbf{Primitive characterization} - Each primitive might be modeled in a variety of way, with weaker or stronger assumptions over it. In the computational approach, we may model the encryption as IND-CPA or IND-CCA1 or IND-CCA2. The symbolic approach may consider a signature under different security assumptions: perfect, leaking the signed message, suffering from non-exclusive ownership attacks, etc.    
 \end{itemize}
 
 \paragraph{Security properties}
-
 Finally, security properties can themselves be expressed in a variety of way, without always a clear consensus in the community. Rather than commit to a specific notion, we detail below some classes of attacks that are relevant in our setting.
 
 Some very generic properties are:
 \begin{itemize}
 \item \textbf{Protection from Replay Attacks} - A message sent by a party \emph{cannot} be replayed successfully several times to another party to establish a connection. (Note that this is only meaningful in a multiple session scenario.)
-\item \textbf{Data agreement} - Several parties are expected to agree on a set of data, such as keys, transcripts, identities, at the end of an execution.
+\item \textbf{Data agreement} - When an agent A completes a session, apparently with honest peer B, both parties are expected to agree on a set of data, such as keys, transcripts, and identities.
 \end{itemize}
-
 In the problem set, we will have a particular focus on key-exchanges, which have a variety of properties/attacks:
 \begin{itemize}
-\item \textbf{Authentication} - Whenever a party expects to be talking to a given agent, it is indeed the case. Authentication might be \emph{unilateral} (at the end of the key-exchange the client knows it is talking to  the server owning $s_\sfpk$ but the server has no guarantee about the client), or \emph{bilateral} (the client also owns some long-term key, and the server is sure about the identity of the client). In addition, authentication might be \emph{injective or non-injective}, where it is injective if for each session of a client believing to be talking with some server, there is a single and distinct corresponding session on the server. If the authentication is non-injective, a single server session may validate authentication for several sessions of the client, which can typically happen in case of replay attacks.
-\item \textbf{Secrecy} - The key derived at the end of a session between two uncompromised participants should be secret. A stronger variant is \textbf{Forward Secrecy (FS)}, where even if at some point the long-term material of an agent is compromised, this does not affect the secrecy of all the previously completed exchanges.
-\item \textbf{Session independence} - For a given agent, compromising the ephemeral material of all sessions but one should not affect the security of the uncompromised session.
-\item \textbf{Unknown Key-Share (UKS) attacks} -  This class of attacks occurs when two honest agent might derive the same key, but in effect did not expect to be talking together, this typically may occur with a client C willing to talk to a compromised server A, and the attacker makes it so that another server S derives the same key as C.
-\item \textbf{Key-Compromised Impersonation (KCI)} - in a scenario with a bilateral authenticated key exchange, when we compromise the long-term material of a given agent C, the attacker can of course impersonate C to some honest server S. However, it should not be the case that for later honest sessions of C that may run with unconpromised ephemeral material, an attacker can impersonate S.  A classical scenario where this occurs is when two parties share a symmetric pre-shared (PSK) key used for authentication, leaking this PSK on the side of C allows to both impersonate C to S and S to C.
+\item \textbf{Authentication} - Whenever a party expects to be talking to a given honest agent, it is indeed the case. Authentication might be \emph{unilateral} (at the end of the key-exchange the client knows it is talking to  the server owning $s_\sfpk$ but the server has no guarantee about the client), or \emph{bilateral} (the client also owns some long-term key, and the server obtains guarantees about the identity of the client). 
+
+In addition, authentication might be \emph{injective or non-injective}, where it is injective if for each session of a client believing to be talking with some server, there is a single and distinct corresponding session on the server. If the authentication is non-injective, a single server session may validate authentication for several sessions of the client, which can typically happen in case of replay attacks. 
+
+Moreover, authentication can also require agreement on data, or on complete transcripts (e.g., variants of ``matching conversations'' or ``synchronization'').
+  \item \textbf{Unknown Key-Share (UKS) attacks} -  This class of attacks occurs when two honest agents derive the same key, but did not expect to be sharing a session key, typically because they do not have the same expectations on who the respective peer is.
+  
+  UKS attacks come in several flavors. Traditionally, a UKS attack targets an honest party trying to communicate with an honest peer. 
+  Concrete attack scenarios typically involve honest agents A and B and a dishonest agent C, where A aims to talk to B, and the attacker manages to get B to compute the same key as A while B thinks they are talking to C.  Such UKS attacks can be viewed as a violation of (implicit) agreement on the identities involved in the communication. In the context of a larger protocol, UKS may cause mis-attribution of received messages or sending messages to the wrong agent.
+
+  A second type of UKS attack is one in which two honest agents compute the same session key, but where each of them is trying to communicate with a dishonest peer.
+  This is not a violation of classical agreement or authentication properties, since they only provide guarantees when trying to communicate with honest peers. 
+  This variant of a UKS attack can be avoided.\footnote{However, there is always a similar attack possible for an active network attacker, who can establish and learn two different keys with each of the parties, allowing it to actively relay traffic if required.}
+
+\item \textbf{Secrecy} - The key derived at the end of a session of a honest agent trying to communicate with an honest agent should be secret. A stronger variant is \textbf{Forward Secrecy (FS)}, where even if at some point the long-term material of an agent is compromised, this does not affect the secrecy of all previously completed exchanges.
+\item \textbf{Session independence} - For a given agent, compromising the ephemeral material of all sessions except for one should not affect the security of the uncompromised session.
+\item \textbf{Key-Compromise Impersonation (KCI)} - in a scenario with a bilateral authenticated key exchange, when we compromise the long-term material of a given agent C, the attacker can typically impersonate C to some honest server S. However, we additionally want to guarantee that this does not later allow the adversary to impersonate as an honest part (e.g., S) towards C.
+  A typical scenario where KCI can occur is when two parties share a symmetric pre-shared (PSK) key used for authentication: leaking this long-term material on the side of C can allow the adversary to impersonate as S to C in the future. In contrast, for protocols based on long-term signatures, this is typically not possible.
 \end{itemize}
 
 
 \subsection{Problem solutions}
 
-We invite tool developers and users to contribute to this project. For each tool we thus encourage developpers to have a dedicated public repository containing in whatever format they wish, some full or partial solutions, along with tutorials or any other desired material.
+We invite tool developers and users to contribute to this project. For each tool we thus encourage developers to have a dedicated public repository containing in whatever format they wish, some full or partial solutions, along with tutorials or any other desired material.
 
 
-In addition, we hope to aggregate in the companion repository\footnote{\url{https://github.com/charlie-j/fm-crypto-lib}} the full solutions file for each problem and tool, to enable for a quick browsing of the files, as well as provide for each problem a table summarizing all the existing contributions and giving some comparison points. To be able to build such a table, we ask that each solution for a particular problem comes with a standardized description summarizing the features of the model and analysis. See the README of the repository for the template description, as well as the tables.
+In addition, we hope to aggregate in the companion repository~\cite{ladder-repo} the full solutions file for each problem and tool, to enable for a quick browsing of the files, and to provide for each problem a table summarizing all the existing contributions and giving some comparison points. To be able to build such a table, we ask that each solution for a particular problem comes with a standardized description summarizing the features of the model and analysis. See the README of the repository for the template description, as well as the tables.
 
 \section{Protocol problems}
 
@@ -857,8 +877,8 @@ To give an idea of the specific capabilities of their tools, we finally invite f
       \caption{Attack on ACME Protocol. The owner of $Adr$ has completed an execution of ACME and placed the public key $o_\sfpk$ on the LE server, and signature $sig$ for address $Adr$ on the DNS server. The attacker starts a new instance of the protocol to claim ownership of the victim's website, and substitutes the public key using a DEO (\emph{Destructive Exclusive Ownership}) attack on the signature. I.e, The attacker can generate a public key $pk_{deo}$ for signature $sig$, such that the signature verifies under another plaintext.}\label{fig:acme_attack}    
 \end{figure}
 
-% \bibliographystyle{plain}
-% \bibliography{biblio}
+\bibliographystyle{plain}
+\bibliography{biblio}
 
 
 
