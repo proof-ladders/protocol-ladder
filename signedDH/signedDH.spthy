@@ -1,7 +1,7 @@
 /*
  * Protocol:	  Signed Diffie-Hellman
  * Modeler: 	  Aurora Naska
- * Date: 	      February 2025
+ * Date:        February 2025
  *
  * Status: 	    Finished
  * 
@@ -10,7 +10,7 @@
  * agents:      unbounded ∞ 
  * compromises: long-term keys (LTK)
  * primitives:  hash, signatures, diffie-hellman
- * properties:  executability, client_key_secrecy, forward_secrecy, client_side_authentication
+ * properties:  executability, session_key_secrecy, forward_secrecy, client_side_authentication
  * difficulty:  easy
  *
  ==============================================================================
@@ -25,7 +25,7 @@
   ExecutabilityClientEnd (exists-trace): verified (7 steps)
   BothPartiesCanReachEnd (exists-trace): verified (8 steps)
   ServerKeySecrecy (all-traces): falsified - found trace (6 steps)
-  ClientKey_Secrecy (all-traces): verified (11 steps)
+  SessionKey_Secrecy (all-traces): verified (11 steps)
   ForwardSecrecy (all-traces): verified (11 steps)
   ClientSide_Authentication (all-traces): verified (7 steps)
 
@@ -139,9 +139,9 @@ lemma ServerKeySecrecy:
         (not Ex #j. K(sessKey) @ #j)
       | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
 
-// If a client establises successfully a session with key: sesskey, the attacker does not know 
+// If a client establishes successfully a session with key: sesskey, the attacker does not know 
 // this secret, unless they compromise the server's long-term key.
-lemma ClientKey_Secrecy:
+lemma SessionKey_Secrecy:
   "All S sessKey #i. SecretClient(S, sessKey) @ #i 
   ==> 
       (not Ex #j. K(sessKey) @ #j)

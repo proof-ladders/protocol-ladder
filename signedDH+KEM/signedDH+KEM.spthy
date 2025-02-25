@@ -1,0 +1,176 @@
+/*
+ * Protocol:	  Signed KEM
+ * Modeler: 	  Aurora Naska
+ * Date:        February 2025
+ *
+ * Status:  	  Finished
+ * 
+ * attacker:    active
+ * sessions:    unbounded ∞ 
+ * agents:      unbounded ∞ 
+ * compromises: long-term keys (LTK) + emphemeral keys (EK)
+ * primitives:  signatures, diffie-hellman, asymetric encryption
+ * properties:  executability, forward_secrecy, clientSide_authentication,
+ *              sessionKey_secrecy
+ * difficulty:  easy
+ *
+==============================================================================
+summary of summaries:
+
+analyzed: signedDH+KEM.spthy
+
+  processing time: 0.99s
+  
+  ExecutabilityClient (exists-trace): verified (2 steps)
+  ExecutabilityServer (exists-trace): verified (4 steps)
+  ExecutabilityClientEnd (exists-trace): verified (9 steps)
+  BothPartiesCanReachEnd (exists-trace): verified (10 steps)
+  ServerKeySecrecy (all-traces): falsified - found trace (8 steps)
+  SessionKey_Secrecy (all-traces): verified (13 steps)
+  ForwardSecrecy (all-traces): verified (13 steps)
+  ClientSide_Authentication (all-traces): verified (7 steps)
+
+==============================================================================
+ *
+ */
+
+theory KemDH
+begin
+
+builtins: diffie-hellman, signing, asymmetric-encryption
+functions: h/2
+
+/* This is a restriction that ensures in any rule with the Eq(x,y) action, the terms
+matched by the variables x and y are the same. The modeler can then add an Eq action to 
+any rule where such an equality is desired, e.g., check that signature verification succeeds.
+*/
+restriction Eq:
+  "All x y #i. Eq(x, y) @ #i ==> x = y"
+
+// Generate Server's long-term (s_sk, s_pk)
+rule generate_serverLtk:
+  let pkS = pk(~sk) 
+  in
+  [ Fr(~sk) ]
+  -->
+  [ !Ltk($S, ~sk), 
+    !Pk($S, pkS), 
+    Out(pkS) ]
+
+// Client generates DH pair, Kem, and sends public keys
+rule Client_Init:
+  let x_pk = 'g'^~x_sk
+      z_pk = pk(~z_sk)
+  in
+  [ Fr(~x_sk),
+    Fr(~z_sk)]
+  --[ ClientInitMessage()]->
+  [ Out(<x_pk, z_pk>), StateC($C, ~x_sk, ~z_sk), !EK($C, ~z_sk) ]
+
+// Server generates DH pair, encapsulates secret ss, signs the public keys received, their DH pubKeys,
+// and ct with their singing key s_sk. Computes the session key K_S =hash(x_pk^y_sk, ss).
+rule Server_Init:
+  let 
+    y_pk = 'g'^~y_sk 
+    ct = aenc(~ss, z_pk)
+    serverSign = sign(<x_pk, y_pk, z_pk, ct>, ~s_sk)
+    dh_output = x_pk^~y_sk
+    k_s = h(dh_output, ~ss)
+    m = <y_pk, serverSign, ct>
+  in
+  [ !Ltk($S, ~s_sk), 
+    Fr(~y_sk),
+    Fr(~ss),
+    In(<x_pk, z_pk>) ]
+  --[ ServerInitMessage(),
+      ServerAccepts($S, x_pk, z_pk, y_pk, ct, serverSign, pk(~s_sk), k_s),
+      SecretServer($S, k_s) ]->
+  [ Out(m) ]
+
+// Client receives and verifies signature. 
+// Decapsulates ct, and computes session key K_C = hash(y_pk^x_sk, ss) 
+rule Client_Accepts:
+  let
+    m = <y_pk, serverSign, ct>
+    x_pk = 'g'^~x_sk
+    z_pk = pk(~z_sk)
+    
+    ss = adec(ct, ~z_sk)
+    dh_output = y_pk^~x_sk
+    k_c = h(dh_output, ss)
+  in
+  [ StateC($C, ~x_sk, ~z_sk),
+    !Pk($S, s_pk),
+    In(m) ]
+  --[  Eq(verify(serverSign, <x_pk, y_pk, z_pk, ct>, s_pk), true),
+      ClientAccepts($S, x_pk, z_pk, y_pk, ct, serverSign, s_pk, k_c),
+      SecretClient($S, k_c),
+      ClientRecvMessage() ]->
+  [  ]
+
+//Attacker learns the server's long-term key
+rule Compromise_LTK:
+  [ !Ltk($S, ~sk)]
+  --[CompromiseLtk($S, ~sk)]->
+  [ Out(~sk) ]
+
+//Attacker learns the emphemeral kem key
+rule Compromise_KEMKey:
+  [  !EK($C, ~z_sk)]
+  --[CompromiseKEMKey($C, ~z_sk)]->
+  [ Out(~z_sk) ]
+
+// Sanity Traces to check executability of the model
+lemma ExecutabilityClient:
+  exists-trace
+  "Ex #i. ClientInitMessage() @ #i"
+
+lemma ExecutabilityServer:
+  exists-trace
+  "Ex #i. ServerInitMessage() @ #i"
+
+lemma ExecutabilityClientEnd:
+  exists-trace
+  "Ex #i. ClientRecvMessage() @ #i"
+
+lemma BothPartiesCanReachEnd:
+  exists-trace
+  "Ex S x_pk z_pk y_pk ct sig s_pk key #i #j. i < j &
+      ServerAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, key) @ #i &
+      ClientAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, key) @ #j "
+
+// Secrecy of established session key
+// Does not hold. (The client could have been an attacker, therefore it knows the established key.)
+lemma ServerKeySecrecy:
+  "All S key #i. SecretServer(S, key) @ #i 
+  ==> (not Ex #j. K(key) @ #j)
+    | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
+
+// If a client establishes successfully a session with key: sesskey, the attacker does not know 
+// this secret even if they compromise the kem key, unless they compromise the server's long-term key.
+lemma SessionKey_Secrecy:
+  "All S sessKey #i. 
+      SecretClient(S, sessKey) @ #i 
+    ==> 
+      ( not Ex #j. K(sessKey) @ #j)
+    | ( Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
+
+// The attacker cannot learn the session key, even if they compromise the server in the future.
+// Or compromise the kem key at any time.
+lemma ForwardSecrecy:
+  "All S sessKey #i #k. 
+      SecretClient(S, sessKey) @ #i &
+      K(sessKey) @ k
+    ==>
+        ( Ex s_sk #j. CompromiseLtk(S, s_sk) @ j & j < i)"  
+
+// At the end of the protocol, if the client establishes a session with key: sessKey,
+// then there is a corresponding server S session with the same parameters.
+lemma ClientSide_Authentication:
+  "All S x_pk z_pk y_pk ct sig s_pk key #i. 
+   ClientAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, key) @ #i 
+   ==>  
+      (Ex #j. j<i & ServerAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, key) @ #j)
+    | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
+
+end
