@@ -599,11 +599,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
               \end{tabular}
  \;\;}}
             \end{tabular}}{$\hspace{20mm}$}%
-        \declinst{attacker}{
-            \begin{tabular}[c]{c}
-             \textcolor{red}{ $a_\sfsk $}\\
-              \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
-            \end{tabular}}{$\hspace{20mm}$}%          
+        \declinst{attacker}{$a_\sfsk $}{\textsc{\textcolor{red}{Attacker}}}%          
         \declinst{receiver}{
           \begin{tabular}[c]{c}
             $c_\sfpk, s_\sfpk $ \\
@@ -638,9 +634,8 @@ To give an idea of the specific capabilities of their tools, we finally invite f
             { \sfct_2,\sfss_2  \getR \encaps(x_\sfpk^c) }\\
             k_S =  \sfss_1 \| \sfss_2
           \end{array}$}{receiver}
-        \nextlevel[5.7]                
+        \nextlevel[6.3]                
         \mess{$\sfct_2$}{receiver}{attacker}
-        \nextlevel[1]
         \nextlevel[1]        
 
         \mess{$\sfct_2$}{attacker}{initiator}
@@ -656,7 +651,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
       }
       \end{center}
        \caption{Signed KEM key exchange - \emph{Unknown Key-Share (UKS)} attack through re-encapsulation attack.
-       Both honest client and honest server derive the same key, but do not believe to be talking together.
+       The honest server, trying to talk to the honest client, derives the same key as the client, who does not believe they are talking to each other.  
 }\label{fig:kem-uks}
 \end{figure}
 
@@ -675,21 +670,9 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
-        \declinst{initiator}{
-            \begin{tabular}[c]{c}
-              $c_\sfsk, s_\sfpk $\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Client} \;\;}}
-            \end{tabular}}{}%
-        \declinst{attacker}{
-            \begin{tabular}[c]{c}
-              $ $\\
-              \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
-            \end{tabular}}{}%          
-        \declinst{receiver}{
-          \begin{tabular}[c]{c}
-            $c_\sfpk, s_\sfpk $ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{Server} \;\;}}
-          \end{tabular}}{}%
+        \declinst{initiator}{$c_\sfsk, s_\sfpk $}{\textsc{Client}}%
+        \declinst{attacker}{}{\textsc{\textcolor{red}{Attacker}}}%          
+        \declinst{receiver}{$c_\sfpk, s_\sfpk $}{\textsc{Server}}%
         \nextlevel[0]                
         \action*{$
           \begin{array}{@{}l@{}}
@@ -708,7 +691,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
             { \sfct_1,\sfss_1  \getR \encaps(s_\sfpk) }\\                        
             sig= \sign( x_\sfpk, c_\sfsk)
           \end{array}$}{initiator}
-        \nextlevel[5.5]
+        \nextlevel[6.5]
         \mess{$x_\sfpk, sig, \sfct_1$}{initiator}{attacker}
         \mess{\textcolor{red}{$x_\sfpk^c, sig^c$}$, \sfct_1$}{attacker}{receiver}        
         \nextlevel[1]        
@@ -719,7 +702,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
             { \sfct_2,\sfss_2  \getR \encaps(x_\sfpk^c) }\\
             k_S =  \sfss_1 \| \sfss_2
           \end{array}$}{receiver}
-        \nextlevel[5.7]                
+        \nextlevel[6.3]                
         \mess{$\sfct_2$}{receiver}{attacker}
         \nextlevel[1]
         \nextlevel[1]        
@@ -757,23 +740,9 @@ To give an idea of the specific capabilities of their tools, we finally invite f
         \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
-        \declinst{initiator}{
-            \begin{tabular}[c]{c}
-             \\
-              \fcolorbox{black}{white}{{\;\; \textsc{\textcolor{red}{Attacker}} \;\;}}
-            \end{tabular}}{}%
-
-        \declinst{le}{
-            \begin{tabular}[c]{c}
-              $o_\sfpk$\\
-              \fcolorbox{black}{white}{{\;\; \textsc{Let's Encrypt (LE)} \;\;}}
-            \end{tabular}}{}%
-          
-        \declinst{receiver}{
-          \begin{tabular}[c]{c}
-            $Adr, sig$ \\
-            \fcolorbox{black}{white}{{\;\;  \textsc{DNS Sever} \;\;}}
-          \end{tabular}}{}%
+        \declinst{initiator}{}{\textsc{\textcolor{red}{Attacker}}}%
+        \declinst{le}{$o_\sfpk$}{\textsc{Let's Encrypt (LE)}}%          
+        \declinst{receiver}{$Adr, sig$}{\textsc{DNS Sever}}%
         \nextlevel[0]    
         \mess{Register, $Adr$}{initiator}{le}
         \nextlevel[0.5]   
