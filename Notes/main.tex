@@ -475,34 +475,36 @@ The protocol is illustrated in \cref{fig:acme}.
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
     \begin{center}
-    \resizebox{0.8\columnwidth}{!}{
+    \resizebox{0.9\columnwidth}{!}{
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
         \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
-        \declinst{initiator}{$o_\sfsk$}{\textsc{Owner}}%
-        \declinst{le}{}{\textsc{Let's Encrypt (LE)}}%
+        \declinst{initiator}{$o_\sfsk, le_\sfpk$}{\textsc{Owner}}%
+        \declinst{le}{$le_\sfsk$}{\textsc{Let's Encrypt (LE)}}%
         \declinst{receiver}{$Adr$}{\textsc{DNS Server}}%
-        \nextlevel[0]    
+         \nextlevel[1]
         \mess{Register, $Adr$}{initiator}{le}
         \nextlevel[0.5]   
         \action*{$
           \begin{array}{@{}l@{}}
-           Generate \ token
+          Generate \ token \\
+          sig_{le} = \sign(token, le_\sfsk)   
           \end{array}$}{le}
-        \nextlevel[2]
-        \mess{$token$}{le}{initiator}   
+        \nextlevel[5]
+        \mess{$token, sig_{le}$}{le}{initiator}   
         \nextlevel[0.5]   
         \action*{$
           \begin{array}{@{}l@{}}
+          \texttt{Abort if not }\verify(sig_{le}, token, le_\sfpk) \\
            sig = \sign(token, o_\sfsk)
           \end{array}$}{initiator}
-        \nextlevel[2.5]                  
+        \nextlevel[3.5]                  
         \mess[dotted]{DNS-Upd(Adr, $sig$)}{initiator}{receiver}
         \nextlevel[1.5]
-        \mess{Update $o_\sfpk$}{initiator}{le}
+        \mess{ Update $Adr, o_\sfpk$}{initiator}{le}
         \nextlevel[0.5]
         \mess{DNS-Req($Adr$)}{le}{receiver}
         \nextlevel[1.5]        
@@ -544,7 +546,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
     \begin{center}
-    \resizebox{1\columnwidth}{!}{
+    \resizebox{0.8\columnwidth}{!}{
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
@@ -584,7 +586,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
     \begin{center}
-    \resizebox{1\columnwidth}{!}{
+    \resizebox{0.8\columnwidth}{!}{
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
@@ -664,7 +666,7 @@ To give an idea of the specific capabilities of their tools, we finally invite f
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
     \begin{center}
-    \resizebox{1\columnwidth}{!}{
+    \resizebox{0.8\columnwidth}{!}{
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
@@ -734,32 +736,33 @@ To give an idea of the specific capabilities of their tools, we finally invite f
  % \setlength{\belowcaptionskip}{-15pt}
     \setmsckeyword{} \drawframe{no}
     \begin{center}
-    \resizebox{1\columnwidth}{!}{
+    \resizebox{0.9\columnwidth}{!}{
     \begin{msc}{}
 
         \setlength{\instwidth}{0\mscunit}
         \setlength{\instdist}{5cm}
         \setlength{\topheaddist}{0cm}
 
-        \declinst{initiator}{}{\textsc{\textcolor{red}{Attacker}}}%
-        \declinst{le}{$o_\sfpk$}{\textsc{Let's Encrypt (LE)}}%          
-        \declinst{receiver}{$Adr, sig$}{\textsc{DNS Sever}}%
-        \nextlevel[0]    
+        \declinst{initiator}{$le_\sfpk$}{\textsc{\textcolor{red}{Attacker}}}%
+        \declinst{le}{$le_\sfsk$}{\textsc{Let's Encrypt (LE)}}%
+        \declinst{receiver}{$Adr$}{\textsc{DNS Server}}%
+         \nextlevel[1]
         \mess{Register, $Adr$}{initiator}{le}
         \nextlevel[0.5]   
         \action*{$
           \begin{array}{@{}l@{}}
-           Generate \ token_2
+          Generate \ token_2 \\
+          sig_{le} = \sign(token_2, le_\sfsk)   
           \end{array}$}{le}
-        \nextlevel[2]
-        \mess{$token_2$}{le}{initiator}   
+        \nextlevel[5]
+        \mess{$token, sig_{le}$}{le}{initiator}     
         \nextlevel[0.5]   
         \action*[red]{$
           \begin{array}{@{}l@{}}
            sk_{deo}, pk_{deo} = DEO(token_2, sig)
           \end{array}$}{initiator}
         \nextlevel[3]                  
-        \mess{\textcolor{red}{Update $pk_{deo}$}}{initiator}{le}
+        \mess{\textcolor{red}{Update $Adr, pk_{deo}$}}{initiator}{le}
         \nextlevel[0.5]
         \mess{DNS-Req($Adr$)}{le}{receiver}
         \nextlevel[1.5]        

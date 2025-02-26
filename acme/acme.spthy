@@ -1,0 +1,173 @@
+/*
+ * Protocol:	  ACME
+ * Modeler: 	  Aurora Naska
+ * Date:        February 2025
+ *
+ * Status:  	  Finished
+ * 
+ * attacker:    active
+ * sessions:    unbounded ∞ 
+ * agents:      unbounded ∞ 
+ * compromises: none
+ * primitives:  signatures, asymetric encryption
+ * properties:  executability, owner_authentication, deo_attack
+ * difficulty:  easy
+ *
+==============================================================================
+  summary of summaries:
+
+  analyzed: acme.spthy
+
+  processing time: 0.31s
+  
+  ExecutabilityOwnerInit (exists-trace): verified (3 steps)
+  ExecutabilityLE (exists-trace): verified (3 steps)
+  ExecutabilityOwnerChallenge (exists-trace): verified (6 steps)
+  ExecutabilityLEEnd (exists-trace): verified (8 steps)
+  ExecutabilityFullTrace (exists-trace): verified (14 steps)
+  OwnerAuthentication (all-traces): verified (3 steps)
+
+==============================================================================  
+  processing time: 0.36s  (-D=deo)
+  
+  ExecutabilityOwnerInit (exists-trace): verified (3 steps)
+  ExecutabilityLE (exists-trace): verified (3 steps)
+  ExecutabilityOwnerChallenge (exists-trace): verified (6 steps)
+  ExecutabilityLEEnd (exists-trace): verified (11 steps)
+  ExecutabilityFullTrace (exists-trace): verified (15 steps)
+  OwnerAuthentication (all-traces): falsified - found trace (12 steps)
+
+==============================================================================
+ *
+ * Note: The file contains 2 different threat models, which can be executed in Tamarin by adding the flag -D:
+ *       - No DEO attack on signatures (no flag): The mutual authentication property holds.
+ *       - DEO attack (-D=deo): The property falsifies.
+ */
+ 
+theory ACME
+begin
+
+builtins: signing, asymmetric-encryption
+
+#ifdef deo
+functions: deo_pk/2
+equations: verify(sig, m, deo_pk(m, sig)) = true
+#endif
+
+/* This is a restriction that ensures in any rule with the Eq(x,y) action, the terms
+matched by the variables x and y are the same. The modeler can then add an Eq action to 
+any rule where such an equality is desired, e.g., check that signature verification succeeds.
+*/
+restriction Eq:
+  "All x y #i. Eq(x, y) @ #i ==> x = y"
+
+// Owner
+rule Create_Owner:
+  [ Fr(~o_sk) ]
+  --[ OwnerClaimedAddress($Adr, pk(~o_sk))]->
+  [ Out(<$Adr, pk(~o_sk)>), !StateOwner(~o_sk, $Adr) ]
+
+// Lets Encrypt (LE)
+rule Create_LE:
+  [ Fr(~le_sk) ]
+  --[ CreateLE(~le_sk, pk(~le_sk))]->
+  [ Out(<pk(~le_sk)>), !LE_Ltk(~le_sk), !LE_Pk(pk(~le_sk)) ]
+
+// Owner sends register request with the address, public key, and a signnature 
+rule OwnerWebsite_InitRegister:
+  let m = <'Register', $Adr>
+  in
+  [ !StateOwner(~o_sk, $Adr)
+   ]
+  --[OwnerInitRegister(~o_sk, $Adr),
+     OwnerInitMessage()]->
+  [ Out(m)]
+
+// LE receives request to register website, and sends challenge (token)
+rule LE_InitChallenge:
+  let
+    in_m = <'Register', $Adr>
+    out_sig = sign(~token,~le_sk)
+  in
+  [ Fr(~token),
+    In(in_m),
+    !LE_Ltk(~le_sk)
+   ]
+  --[ StartChallenge(~token, $Adr),
+      LEChallengeMessage()]->
+  [ Out(<~token, out_sig>), !RegisterAdrLE(~token, $Adr) ]
+
+// Client receives challenge, and verifies the LE signature.
+// Then sends to the to DNS server over an authenticated channel the signed token,
+// and to LE a website ready response
+rule Client_SignChallenge:
+  let
+    out_sig_DNS = sign(~token, ~o_sk)
+  in
+  [ !StateOwner(~o_sk, $Adr),
+    !LE_Pk(LE_pk),
+    In(<~token, sig>) ]
+  --[ 
+    Eq(verify(sig, ~token, LE_pk), true),
+    ClientSignMessage(~o_sk, ~token, $Adr)]->
+  [ !DNSEntry($Adr, out_sig_DNS),
+    Out(<$Adr, 'Ready', pk(~o_sk)>) ]
+
+// LE verifies callenge
+rule LE_VerifyChallenge_Update:
+  let
+    in_m = <$Adr, 'Ready'>
+  in
+  [ In(<in_m, in_sig, o_pk>),
+    !DNSEntry($Adr, DNSsig),
+    !RegisterAdrLE(~token, $Adr),
+    !LE_Ltk(~le_sk)
+   ]
+  --[ AcceptedAddress($Adr, o_pk, ~token),
+      Eq(verify(DNSsig, ~token, o_pk), true)
+      ]->
+  [ Out('Approved') ]
+
+// DNS can be queried by the attacker 
+rule DNS_Query:
+  [ !DNSEntry($Adr, sig)
+   ]
+  -->
+  [ Out(sig) ]
+
+
+// Sanity Traces to check executability of the model
+lemma ExecutabilityOwnerInit:
+  exists-trace
+  "Ex #i. OwnerInitMessage() @ #i"
+
+lemma ExecutabilityLE:
+  exists-trace
+  "Ex #i. LEChallengeMessage() @ #i"
+
+lemma ExecutabilityOwnerChallenge:
+  exists-trace
+  "Ex o_sk t Adr #i. ClientSignMessage(o_sk, t, Adr) @ #i"
+
+lemma ExecutabilityLEEnd:
+  exists-trace
+  "Ex Adr s t #i. AcceptedAddress(Adr, s, t) @ #i"
+
+lemma ExecutabilityFullTrace:
+  exists-trace
+  "Ex Adr sig t o_sk o_pk #i #j #t #k. o_pk=pk(o_sk) & 
+    AcceptedAddress(Adr, sig, t) @ #i &
+    ClientSignMessage(o_sk, t, Adr) @ #j &
+    StartChallenge(t, Adr) @ #t &
+    OwnerInitRegister(o_sk, Adr) @ #k
+    "
+
+// Authentication of Owner
+lemma OwnerAuthentication:
+  "All Adr o_pk t #i. 
+   AcceptedAddress(Adr, o_pk, t) @ #i 
+   ==>  
+      (Ex #j. j<i & OwnerClaimedAddress(Adr, o_pk) @ #j)
+    "
+
+end
