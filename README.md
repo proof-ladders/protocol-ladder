@@ -156,6 +156,21 @@ Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise
 Notes:
 * shows that ntor is "harder" than signedDH, due to authentication through static DH keys, which implies authentication based on gDH+ROM.
 
+## Problem 6: Simplified ACME
+
+WIP
+
+subfolder: [acme](acme/)
+
+| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties  | Difficulty ratings | Status |
+| :---------- | -------- | :------: | :----: | ----------- | -------------- | ---------- | ----------- | ------------------ | :----: |
+| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Easy               |        |
+| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Easy               |        |
+| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Hard               |        |
+| Tamarin     | Active   |    ∞     |   ∞    | None        | Symbolic       | Sign       | Auth, ⚡DEO  | Easy               |   ✅   |
+| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Sign       | Auth        | Easy               |        |
+
+
 
 ## Showcase
 
