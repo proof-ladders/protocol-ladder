@@ -145,7 +145,7 @@ spec: https://spec.torproject.org/proposals/216-ntor-handshake.html
 | Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH   | Auth, FS          | Easy               |        |
 | CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH   | Auth, FS          | Easy               |        |
 | EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH   | Auth, FS          | Hard               |        |
-| Tamarin     | Active   |    ∞     |   ∞    | LTK         | Symbolic       | Hash, DH   | Auth, FS, Secrecy | Easy               |   ✅   |
+| Tamarin     | Active   |    ∞     |   ∞    | LTK, EK     | Symbolic       | Hash, DH   | Auth, FS, Secrecy | Easy               |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, DH   | Auth, FS          | Easy               |        |
 
 Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
