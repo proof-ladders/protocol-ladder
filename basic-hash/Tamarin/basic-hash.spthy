@@ -1,0 +1,109 @@
+/*
+ * Protocol:	  Basic-Hash
+ * Modeler: 	  Aurora Naska
+ * Date:        February 2025
+ *
+ * Status: 	    Finished
+ * 
+ * attacker:    active
+ * sessions:    unbounded ∞ 
+ * agents:      unbounded ∞ 
+ * compromises: none
+ * primitives:  hash
+ * properties:  executability, authentication, replay_attack
+ * difficulty:  easy
+ *
+==============================================================================
+  summary of summaries:
+
+  analyzed: basic-hash.spthy
+
+  processing time: 0.14s
+  
+  ExecutabilityTag (exists-trace): verified (3 steps)
+  ExecutabilityReader (exists-trace): verified (5 steps)
+  Authentication (all-traces): verified (5 steps)
+  Replay_Attack (all-traces): falsified - found trace (7 steps)
+
+==============================================================================
+ *
+ */
+ 
+theory BasicHash
+begin
+
+builtins: hashing
+
+/* This is a restriction that ensures in any rule with the Eq(x,y) action, the terms
+matched by the variables x and y are the same. The modeler can then add an Eq action to 
+any rule where such an equality is desired, e.g., check that signature verification succeeds.
+*/
+restriction Eq:
+  "All x y #i. Eq(x, y) @ #i ==> x = y"
+
+restriction FalseBranch:
+  "All n t #i. NotReaderAccepts(n, t) @ #i
+    ==> not(Ex #j. CreateTag(t) @ #j)"
+
+// Generate Tags
+rule Generate_Tags:
+  [ Fr(~t_sk) ]
+  --[CreateTag(~t_sk)]->
+  [ !Tag(~t_sk) ]
+
+// Initiate request to authenticate to Reader
+rule Tag_Init:
+  let auth = h(~n, ~t_sk)
+  in
+  [ !Tag(~t_sk),
+    Fr(~n) ]
+  --[TagRunning(~n, ~t_sk)]->
+  [ Out(<~n, auth>) ]
+
+// Reader accepts
+rule Reader_True:
+  [ !Tag(~t_sk),
+    In(<n, auth>)]
+  --[ReaderAccepts(n, ~t_sk),
+     Eq(auth, h(n, ~t_sk))]->
+  [ Out('True') ]
+
+// Reader does not accept
+rule Reader_False:
+  [ In(<n, some_tsk, h(n, some_tsk)>)]
+  --[NotReaderAccepts(n, some_tsk)]->
+  [Out('False')]
+
+// Tag gets response
+rule Tag_Gets_Response:
+  [ !Tag(~t_sk),
+    In(res) ]
+  -->
+  [ ]
+
+// Sanity Traces to check executability of the model
+lemma ExecutabilityTag:
+  exists-trace
+  "Ex n t #i. TagRunning(n, t) @ #i"
+
+lemma ExecutabilityReader:
+  exists-trace
+  "Ex n t #i. ReaderAccepts(n, t) @ #i"
+
+// At the end of the protocol, if the reader accepts some message,
+// then the corresponding tag did send this message at some point
+lemma Authentication:
+  "All n t #i. 
+      ReaderAccepts(n, t) @ #i 
+   ==>  
+      (Ex #j. TagRunning(n, t) @ #j)"
+
+// The reader can accept the same request many times.
+lemma Replay_Attack:
+  "All n t #i #j. 
+      ReaderAccepts(n, t) @ #i &
+      ReaderAccepts(n, t) @ #j
+   ==>  
+      (#i = #j)"
+
+end
