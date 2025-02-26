@@ -1,6 +1,6 @@
 /*
- * Protocol:	  ACME
- * Modeler: 	  Aurora Naska
+ * Protocol:    ACME
+ * Modeler:     Aurora Naska
  * Date:        February 2025
  *
  * Status:  	  Finished
@@ -40,7 +40,7 @@
 ==============================================================================
  *
  * Note: The file contains 2 different threat models, which can be executed in Tamarin by adding the flag -D:
- *       - No DEO attack on signatures (no flag): The mutual authentication property holds.
+ *       - No DEO attack on signatures (no flag): The owner authentication property holds.
  *       - DEO attack (-D=deo): The property falsifies.
  */
  
