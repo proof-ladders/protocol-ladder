@@ -18,7 +18,7 @@
 
   analyzed: ntor.spthy
 
-  processing time: 0.70s
+  processing time: 0.72s
   
   ExecutabilityClient (exists-trace): verified (2 steps)
   ExecutabilityServer (exists-trace): verified (4 steps)
@@ -28,6 +28,7 @@
   SessionKey_Secrecy (all-traces): verified (20 steps)
   ForwardSecrecy (all-traces): verified (20 steps)
   ClientSide_Authentication (all-traces): verified (13 steps)
+  Unique_Commits (all-traces): verified (10 steps)
 
 ==============================================================================
  *
@@ -168,7 +169,9 @@ lemma ForwardSecrecy:
     | (Ex A dh_sk #j. CompromiseDHKey(A, dh_sk) @ #j)"
 
 // At the end of the protocol, if the client establishes a session with key: sessKey,
-// then there is a corresponding server S session with the same parameters.
+// then there is a corresponding server S session with the same parameters, and
+// there are no two commits with the same parameters.
+// Otherwise the server was compromised
 lemma ClientSide_Authentication:
   "All S x_pk y_pk s_pk auth key #i. 
       ClientAccepts(S, x_pk, y_pk, s_pk, auth, key) @ #i 
@@ -176,5 +179,11 @@ lemma ClientSide_Authentication:
       (Ex #j. j<i & ServerAccepts(S, x_pk, y_pk, s_pk, auth, key) @ #j)
     | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)
     | (Ex A dh_sk #j. CompromiseDHKey(A, dh_sk) @ #j)"
+
+lemma Unique_Commits:
+  "All S x_pk y_pk s_pk auth key #i #j. 
+      ClientAccepts(S, x_pk, y_pk, s_pk, auth, key) @ #i   &
+      ClientAccepts(S, x_pk, y_pk, s_pk, auth, key) @ #j
+    ==> #i=#j"
 
 end

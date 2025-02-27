@@ -17,13 +17,15 @@
   summary of summaries:
 
   analyzed: basic-hash.spthy
-
-  processing time: 0.14s
+  
+  processing time: 0.15s
   
   ExecutabilityTag (exists-trace): verified (3 steps)
   ExecutabilityReader (exists-trace): verified (5 steps)
-  Authentication (all-traces): verified (5 steps)
+  Non_Injective_Authentication (all-traces): verified (5 steps)
+  Injective_Authentication (all-traces): falsified - found trace (7 steps)
   Replay_Attack (all-traces): falsified - found trace (7 steps)
+
 
 ==============================================================================
  *
@@ -42,7 +44,7 @@ restriction Eq:
   "All x y #i. Eq(x, y) @ #i ==> x = y"
 
 restriction FalseBranch:
-  "All n t #i. NotReaderAccepts(n, t) @ #i
+  "All n t #i. NotReaderCommits(n, t) @ #i
     ==> not(Ex #j. CreateTag(t) @ #j)"
 
 // Generate Tags
@@ -64,14 +66,14 @@ rule Tag_Init:
 rule Reader_True:
   [ !Tag(~t_sk),
     In(<n, auth>)]
-  --[ReaderAccepts(n, ~t_sk),
+  --[ReaderCommits(n, ~t_sk),
      Eq(auth, h(n, ~t_sk))]->
   [ Out('True') ]
 
 // Reader does not accept
 rule Reader_False:
   [ In(<n, some_tsk, h(n, some_tsk)>)]
-  --[NotReaderAccepts(n, some_tsk)]->
+  --[NotReaderCommits(n, some_tsk)]->
   [Out('False')]
 
 // Tag gets response
@@ -88,21 +90,34 @@ lemma ExecutabilityTag:
 
 lemma ExecutabilityReader:
   exists-trace
-  "Ex n t #i. ReaderAccepts(n, t) @ #i"
+  "Ex n t #i. ReaderCommits(n, t) @ #i"
 
 // At the end of the protocol, if the reader accepts some message,
 // then the corresponding tag did send this message at some point
-lemma Authentication:
+lemma Non_Injective_Authentication:
   "All n t #i. 
-      ReaderAccepts(n, t) @ #i 
+      ReaderCommits(n, t) @ #i 
    ==>  
       (Ex #j. TagRunning(n, t) @ #j)"
+
+// At the end of the protocol, if the reader accepts some message,
+// then therese is a  corresponding tag send this message at some point,
+// and there are not two Commits on the same parameters
+lemma Injective_Authentication:
+  "All n t #i. 
+      ReaderCommits(n, t) @ #i 
+   ==>  
+      (Ex #j. TagRunning(n, t) @ #j
+        & not(Ex #t.  ReaderCommits(n, t) @ #t 
+              & not(#t = #i)
+             )
+      )"
 
 // The reader can accept the same request many times.
 lemma Replay_Attack:
   "All n t #i #j. 
-      ReaderAccepts(n, t) @ #i &
-      ReaderAccepts(n, t) @ #j
+      ReaderCommits(n, t) @ #i &
+      ReaderCommits(n, t) @ #j
    ==>  
       (#i = #j)"
 

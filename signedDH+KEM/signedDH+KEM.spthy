@@ -28,7 +28,8 @@ analyzed: signedDH+KEM.spthy
   ServerKeySecrecy (all-traces): falsified - found trace (8 steps)
   SessionKey_Secrecy (all-traces): verified (13 steps)
   ForwardSecrecy (all-traces): verified (13 steps)
-  ClientSide_Authentication (all-traces): verified (7 steps)
+  ClientSide_Injective_Authentication (all-traces): verified (11 steps)
+  Unique_Commits (all-traces): verified (10 steps)
 
 ==============================================================================
  *
@@ -167,12 +168,22 @@ lemma ForwardSecrecy:
       (Ex s_sk #j. CompromiseLtk(S, s_sk) @ j & j < i)"  
 
 // At the end of the protocol, if the client establishes a session with key: sessKey,
-// then there is a corresponding server S session with the same parameters.
-lemma ClientSide_Authentication:
-  "All S x_pk z_pk y_pk ct sig s_pk key #i. 
-      ClientAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, key) @ #i 
+// then there is a corresponding server S session with the same parameters, and
+// there are no two commits with the same parameters.
+// Otherwise the server was compromised
+lemma ClientSide_Injective_Authentication:
+  "All S x_pk z_pk y_pk ct sig s_pk sessKey #i. 
+      ClientAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, sessKey) @ #i 
     ==>  
-      (Ex #j. j<i & ServerAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, key) @ #j)
+      (Ex #j. j<i & ServerAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, sessKey) @ #j
+                  & not(Ex #t. ClientAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, sessKey) @ #t
+                               & not(#t = #i)))
     | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
+
+lemma Unique_Commits:
+  "All S x_pk z_pk y_pk ct sig s_pk sessKey #i #j. 
+      ClientAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, sessKey) @ #i  &
+      ClientAccepts(S, x_pk, z_pk, y_pk, ct, sig, s_pk, sessKey) @ #j
+    ==> #i=#j"
 
 end
