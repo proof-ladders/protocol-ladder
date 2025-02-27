@@ -60,12 +60,12 @@ WIP
 subfolder: [basic-hash](basic-hash/)
 
 | Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties | Difficulty ratings          | Status |
-|:----------- | -------- | :--------: | :------: | ----------- | -------------- | ---------- | ---------- | --------------------------- | :------: |
-| Squirrel    | Active   | ∞        | ∞      | None        | Computational  | PRF        | Auth, Unli | Easy                        | ✅     |
-| CryptoVerif | Active   | ∞        | ∞      | None        | Computational  | PRF        | Auth, Unli | Easy                        | ✅     |
-| EasyCrypt   | Active   | ∞        | ∞      | None        | Computational  | PRF        | Auth, Unli | Hard                        | ✅     |
-| Tamarin     | Active   | ∞        | ∞      | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unli) | WIP    |
-| Proverif    | Active   | ∞        | ∞      | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unlo) | WIP    |
+| :---------- | -------- | :------: | :----: | ----------- | -------------- | ---------- | ---------- | --------------------------- | :----: |
+| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Easy                        |   ✅   |
+| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Easy                        |   ✅   |
+| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Hard                        |   ✅   |
+| Tamarin     | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unli)  |   ✅   |
+| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unlo)  |  WIP   |
 
 
 ## Problem 2: Signed Diffie-Hellman
