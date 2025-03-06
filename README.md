@@ -71,10 +71,10 @@ subfolder: [basic-hash](basic-hash/)
 ## Problem 2: Signed Diffie-Hellman
 
 subfolder: [signedDH](signedDH/)
-
+<!-- 
 | Proverif | Tamarin | DY* | Squirrel | CryptoVerif | EasyCrypt |
 | -------- | -------:| --- | -------- | ----------- | --------- |
-| Easy     |    Easy | ?   | Easy  | Easy        | HARD      |
+| Easy     |    Easy | ?   | Easy  | Easy        | HARD      | -->
 
 | Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives     | Properties | Difficulty ratings | Status |
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | -------------- | ---------- | ------------------ | :----: |
@@ -106,8 +106,6 @@ subfolder: [signedKEM](signedKEM/)
 
 ## Problem 4: Signed DH+KEM
 
-WIP
-
 subfolder: [signedDH+KEM](signedDH+KEM/)
 
 | Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives        | Properties        | Difficulty ratings | Status |
@@ -125,10 +123,10 @@ subfolder: [ntor](ntor/)
 
 spec: https://spec.torproject.org/proposals/216-ntor-handshake.html
 
-
+<!-- 
 | Proverif | Tamarin | DY* | Squirrel | CryptoVerif | EasyCrypt |
 | -------- | -------:| --- | -------- | ----------- | --------- |
-| Easy     |    Easy | ?   | Medium?  | Easy        | HARD      |
+| Easy     |    Easy | ?   | Medium?  | Easy        | HARD      | -->
 
 | Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties        | Difficulty ratings | Status |
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | ---------- | ----------------- | ------------------ | :----: |
