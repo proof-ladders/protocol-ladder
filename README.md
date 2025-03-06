@@ -12,40 +12,41 @@ We encourage tool developers to -- in addition to the solution files -- to provi
 The corresponding repositories are listed as:
 * Tamarin: https://github.com/tamarin-prover/teaching
 
+---
+> [!IMPORTANT]
+> We also expect that each solution comes with a quick standardized description, following the template provided here (see the pdf notes to better understand the terminology):
+>```
+> Model features:
+>  * attacker: active/passive    // whether the attacker is active or passive
+>  * sessions: n/∞ // whether there is a bounded (precise number n) or unbounded number (∞) of possible session
+>  * agents: n/∞ //  there is a bounded or unbounded number of agents
+>  * compromises: none/LTK/EK/EK+LTK
+>   // LTK means that there is only long term key compromise
+>   // EK means that there is only only ephemeral key compromise
+>   // EK+LTK enables both
+>  * Attacker class: computational/symbolic
+>  * Primitives: IND-CCA/UF-CMA/.../signature/signature with DEO/...
+>    // if approach is computational, this contains the list of assumptions
+>    // if it is symbolic, it contains the list of primitives with eventual advanced capabilities
+>  * Properties: Prop1, ..., ⚡Propi, ..., Propn
+>   // provide here the properties or class of attacks covered by the tool.
+>   // by default, giving a property means it is proved.
+>   // for tools that enable attack finding, a found attack on a property is given by prefixing the property with the  ⚡ emoji.
+>   
+> 
+> Analysis features:
+>   * difficulty ratings:	easy/medium/hard/possible/impossible (X), easy/medium/hard/possible/impossible (Y), ...
+>     // relative difficulty of the analysis (in case of WIP, this is of course an expected difficulty rating)
+> 	// possible means that it is theoretically possible, but would require for the moment unreasonable effort
+> 	// if relevant, several distinct ratings may be given, for example X might be a set of easy properties to prove
+> 	// and Y a set of hard properties
+>   * status: ✅/WIP/❎
+>     // status of the solution, if the model and proofs are fully complete (✅), do not exist at all (❎), or is partially completed (WIP)	
+> ``` 
+>
+>This standardized description can be extended at will be the authors, for instance in a dedicated README in the solution subfolder or in their own repository. We provide tables aggregating those standardized description for each problem below.
+>
 
-We also expect that each solution comes with a quick standardized description, following the template provided here (see the pdf notes to better understand the terminology):
-```
-Model features:
- * attacker: active/passive    // whether the attacker is active or passive
- * sessions: n/∞ // whether there is a bounded (precise number n) or unbounded number (∞) of possible session
- * agents: n/∞ //  there is a bounded or unbounded number of agents
- * compromises: none/LTK/EK/EK+LTK
-  // LTK means that there is only long term key compromise
-  // EK means that there is only only ephemeral key compromise
-  // EK+LTK enables both
- * Attacker class: computational/symbolic
- * Primitives: IND-CCA/UF-CMA/.../signature/signature with DEO/...
-   // if approach is computational, this contains the list of assumptions
-   // if it is symbolic, it contains the list of primitives with eventual advanced capabilities
- * Properties: Prop1, ..., ⚡Propi, ..., Propn
-  // provide here the properties or class of attacks covered by the tool.
-  // by default, giving a property means it is proved.
-  // for tools that enable attack finding, a found attack on a property is given by prefixing the property with the  ⚡ emoji.
-  
-
-Analysis features:
-  * difficulty ratings:	easy/medium/hard/possible/impossible (X), easy/medium/hard/possible/impossible (Y), ...
-    // relative difficulty of the analysis (in case of WIP, this is of course an expected difficulty rating)
-	// possible means that it is theoretically possible, but would require for the moment unreasonable effort
-	// if relevant, several distinct ratings may be given, for example X might be a set of easy properties to prove
-	// and Y a set of hard properties
-  * status: ✅/WIP/❎
-    // status of the solution, if the model and proofs are fully complete (✅), do not exist at all (❎), or is partially completed (WIP)	
-``` 
-
-This standardized description can be extended at will be the authors, for instance in a dedicated README in the solution subfolder or in their own repository. We provide tables aggregating those standardized description for each problem below.
-
-As of now, only the Basic Hash problem provides the beginning of what we hope to provide for all problems.
 
 ## Primitives
 
@@ -66,6 +67,7 @@ subfolder: [basic-hash](basic-hash/)
 | EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Hard                        |   ✅   |
 | Tamarin     | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unli)  |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unlo)  |  WIP   |
+
 
 
 ## Problem 2: Signed Diffie-Hellman
@@ -90,6 +92,8 @@ subfolder: [signedDH](signedDH/)
 > * LTK compromise: does not really increase difficulty
 > * Ephemeral compromise: OOS for CryptoVerif.
 
+
+
 ## Problem 3: Signed KEM
 
 subfolder: [signedKEM](signedKEM/)
@@ -103,6 +107,7 @@ subfolder: [signedKEM](signedKEM/)
 | Proverif    | Active   |    ∞     |   ∞    | None             | Symbolic       | Hash, Sign              | Auth, FS                   | Easy (Auth,FS)     |        |
 
 
+
 ## Problem 4: Signed DH+KEM
 
 subfolder: [signedDH+KEM](signedDH+KEM/)
@@ -114,6 +119,7 @@ subfolder: [signedDH+KEM](signedDH+KEM/)
 | EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Hard               |        |
 | Tamarin     | Active   |    ∞     |   ∞    | LTK, EK     | Symbolic       | DH, Sign, AsymEnc | Auth, FS, Secrecy | Easy               |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, Sign        | Auth, FS          | Easy (Auth,FS)     |        |
+
 
 
 ## Problem 5: NTOR protocol
@@ -142,6 +148,8 @@ spec: https://spec.torproject.org/proposals/216-ntor-handshake.html
 
 > [!NOTE]
 > * Shows that ntor is "harder" than signedDH, due to authentication through static DH keys, which implies authentication based on gDH+ROM.
+
+
 
 ## Problem 6: Simplified ACME
 
