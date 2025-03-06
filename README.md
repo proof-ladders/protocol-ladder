@@ -85,8 +85,7 @@ subfolder: [signedDH](signedDH/)
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, Sign     | Auth, FS   | Easy (Auth,FS)     |        |
 
 
-
-> [!NOTE]
+> [!TIP]
 > Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
 > * LTK compromise: does not really increase difficulty
 > * Ephemeral compromise: OOS for CryptoVerif.
@@ -136,13 +135,13 @@ spec: https://spec.torproject.org/proposals/216-ntor-handshake.html
 | Tamarin     | Active   |    ∞     |   ∞    | LTK, EK     | Symbolic       | Hash, DH   | Auth, FS, Secrecy | Easy               |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, DH   | Auth, FS          | Easy               |        |
 
-Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
+> [!TIP]
+> Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
+> * LTK compromise: does not really increase difficulty
+> * Ephemeral compromise: OOS for CryptoVerif.
 
-* LTK compromise: does not really increase difficulty
-* Ephemeral compromise: OOS for CryptoVerif.
-
-Notes:
-* shows that ntor is "harder" than signedDH, due to authentication through static DH keys, which implies authentication based on gDH+ROM.
+> [!NOTE]
+> * Shows that ntor is "harder" than signedDH, due to authentication through static DH keys, which implies authentication based on gDH+ROM.
 
 ## Problem 6: Simplified ACME
 
