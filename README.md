@@ -44,7 +44,7 @@ The corresponding repositories are listed as:
 >     // status of the solution, if the model and proofs are fully complete (✅), do not exist at all (❎), or is partially completed (WIP)	
 > ``` 
 >
->This standardized description can be extended at will be the authors, for instance in a dedicated README in the solution subfolder or in their own repository. We provide tables aggregating those standardized description for each problem below.
+>This standardized description can be extended at will by the authors, for instance in a dedicated README in the solution subfolder or in their own repository. We provide tables aggregating those standardized description for each problem below.
 >
 
 
@@ -167,10 +167,13 @@ subfolder: [acme](acme/)
 
 ## Showcase
 
-| Tool      | Case-study | Description | Link |     |
-| --------- | ---------- | ----------- | ---- | --- |
-| EasyCrypt | Kyber      | WIP         | WIP  |     |
-| Tamarin   | WIP        | WIP         | WIP  |     | 
+| Tool      | Case-study | Description       | Link                | Model                    |
+| --------- | ---------- | ----------------- | ------------------- | ------------------------ |
+| EasyCrypt | Kyber      | WIP               | WIP                 | WIP                      |                                                                  |
+| Tamarin   | SPDM       | SPDM is a protocol that aims to provide platform security, for example for communicating hardware components or cloud computing scenarios. The standard is under development by the DMTF consortium, and supported by major industry players including Broadcom, Cisco, Dell, Google, HP, IBM, Intel, and NVIDIA. | [paper](https://eprint.iacr.org/2024/2047) | [model](https://github.com/ComprehensiveSPDM/TamarinSPDMAnalysis) |
+
+
+
 
 # Primitives
 
