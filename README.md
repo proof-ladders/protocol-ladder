@@ -8,9 +8,9 @@ The problem sets and possible modeling options are detailed in the [pdf notes](h
 
 The directory structure for problems is as follows: there are top-level directories for each problem. Within these problem directories, there are tool-named subdirectories that contain solutions for that problem with the named tool.
 
-We encourage tool developers to -- in addition to the solution files -- to provide in a dedicated repository more detailed versions of the solutions, potentially with a full incremental tutorial, or partial solutions with corrections.
+We encourage tool developers to -- in addition to the solution files -- to provide additional repositories with more detailed versions of the solutions, partial solutions with corrections, or additional incremental tutorials and materials.
 The corresponding repositories are listed as:
-* Tamarin: https://github.com/auroranaska/hacs-tamarin-2025
+* Tamarin: https://github.com/tamarin-prover/teaching
 
 
 We also expect that each solution comes with a quick standardized description, following the template provided here (see the pdf notes to better understand the terminology):
