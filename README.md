@@ -70,8 +70,6 @@ subfolder: [basic-hash](basic-hash/)
 
 ## Problem 2: Signed Diffie-Hellman
 
-WIP
-
 subfolder: [signedDH](signedDH/)
 
 | Proverif | Tamarin | DY* | Squirrel | CryptoVerif | EasyCrypt |
@@ -88,17 +86,12 @@ subfolder: [signedDH](signedDH/)
 
 
 
-Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
-
-* LTK compromise: does not really increase difficulty
-* Ephemeral compromise: OOS for CryptoVerif.
-
-
-TODO: ensure files follow standard conventions
+> [!NOTE]
+> Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
+> * LTK compromise: does not really increase difficulty
+> * Ephemeral compromise: OOS for CryptoVerif.
 
 ## Problem 3: Signed KEM
-
-WIP
 
 subfolder: [signedKEM](signedKEM/)
 
@@ -130,9 +123,6 @@ subfolder: [signedDH+KEM](signedDH+KEM/)
 
 subfolder: [ntor](ntor/)
 
-
-WIP 
-
 spec: https://spec.torproject.org/proposals/216-ntor-handshake.html
 
 
@@ -157,8 +147,6 @@ Notes:
 * shows that ntor is "harder" than signedDH, due to authentication through static DH keys, which implies authentication based on gDH+ROM.
 
 ## Problem 6: Simplified ACME
-
-WIP
 
 subfolder: [acme](acme/)
 
