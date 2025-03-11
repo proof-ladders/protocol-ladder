@@ -1,0 +1,183 @@
+require import AllCore FSet FMap Distr.
+
+type pkey, skey, client_state, msg1, msg2, sskey.
+
+op [lossless full uniform] dssk: sskey distr.
+
+module type Prot = {
+  proc gen(): pkey * skey
+
+  proc init(s_id: pkey): client_state * msg1
+  proc resp(s_sk: skey, c: msg1): sskey * msg2
+  proc recv(st: client_state, c: msg2): sskey option
+}.
+
+(* We must do this to allow parameterisation by an RO *)
+type ro_in, ro_out.
+op d_ro: ro_out distr.
+
+module type RO = {
+  proc init(): unit
+  proc get(_: ro_in): ro_out
+}.
+
+module type Prot_RO (O : RO) = { include Prot }.
+
+module type Adv_RO_Oracles = {
+  (* Party management *)
+  proc gen(): pkey
+  proc corrupt(j: int): skey option
+  proc expose(i: int): client_state option
+
+  (* Protocol ops *)
+  proc init(pk: pkey): msg1
+  proc respond(j: int, c: msg1, b_test: bool): (sskey * msg2) option
+  proc receive(i: int, c: msg2, b_test: bool): sskey option
+
+  (* Random oracle *)
+  proc h(_: ro_in): ro_out
+}.
+
+module type Adv_RO (P : Adv_RO_Oracles) = {
+  proc distinguish(): bool
+}.
+
+module Exp_b (P : Prot_RO) (O : RO) (A : Adv_RO) = {
+  (* The challenge bit *)
+  var b_ror : bool
+
+  (* Server maps: *)
+  var m: int
+  (* - server handle to keypair *)
+  var s_map: (int, pkey * skey) fmap
+  (* - server-client handle to partial trace *)
+  var r_map: (int option * int, msg2 fset) fmap
+
+  (* Client maps: *)
+  var n: int
+  (* - client handle to state *)
+  var c_map: (int, client_state) fmap
+  (* - client handle to intended partner *)
+  var p_map: (int, int) fmap
+  (* - client handle to partial trace (early partnering) *)
+  var i_map: (int, msg1) fmap
+
+  var q   : int fset
+  var ich : int fset
+  var rch : int fset
+  var xp  : int fset
+  var cr  : int fset
+
+  module Oracles = {
+    proc gen(): pkey = {
+      var pk, sk;
+
+      m <- m + 1;
+      (pk, sk) <@ P(O).gen();
+      s_map.[m] <- (pk, sk);
+      return pk;
+    }
+
+    proc corrupt(j: int): skey option = {
+      var pk, sk;
+      var r <- None;
+
+      if (s_map.[j] is Some kp) {
+        (pk, sk) <- kp;
+        cr <- cr `|` fset1 j;
+        r <- Some sk;
+      }
+      return r;
+    }
+
+    proc expose(i) = {
+      var r <- None;
+
+      if (0 < i <= n /\ i \notin ich) {
+        xp <- xp `|` fset1 i;
+        r <- c_map.[i];
+      }
+      return r;
+    }
+
+    proc init(pk: pkey): msg1 = {
+      var st, c, jo;
+
+      n <- n + 1;
+      (st, c) <@ P(O).init(pk);
+      jo <- find (fun _ kp=> let (pk_j, _) = kp in pk_j = pk) s_map;
+      if (jo is Some j) {
+        p_map.[n] <- j;
+        i_map.[n] <- c;
+      }
+      return c;
+    }
+
+    proc respond(j: int, c: msg1, ch: bool): (sskey * msg2) option = {
+      var k, c', io, pk_j, sk_j;
+      var r <- None;
+
+      if (s_map.[j] is Some kp) { (* Equivalently: 0 < j <= m *)
+        (pk_j, sk_j) <- kp;
+        (k, c') <@ P(O).resp(sk_j, c);
+        io <- find (fun i _=> p_map.[i] = Some j /\ i_map.[i] = Some c) c_map;
+        if (io is Some i) {
+          r_map.[Some j, i] <- (oget r_map.[Some j, i]) `|` fset1 c';
+          if (ch /\ i \notin xp) {
+            if (b_ror) { k <$ dssk; }
+            ich <- ich `|` fset1 i;
+          }
+        }
+        r <- Some (k, c');
+      }
+      return r;
+    }
+
+    proc receive(i: int, c: msg2, ch: bool): sskey option = {
+      var st_i, k;
+      var ko <- None;
+
+      if (0 < i <= n /\ i \notin q) {
+        st_i <- oget c_map.[i];
+        ko <@ P(O).recv(st_i, c);
+        q <- q `|` fset1 i;
+        if (c \notin odflt fset0 r_map.[p_map.[i], i]) {
+          if (   ch
+              /\ i \notin xp
+              /\ p_map.[i] <> None /\ 0 < oget p_map.[i] <= m /\ oget p_map.[i] \notin cr
+              /\ ko <> None) {
+            if (b_ror) { k <$ dssk; ko <- Some k; }
+            ich <- ich `|` fset1 i;
+          }
+        }
+      }
+      return ko;
+    }
+
+    proc h = O.get
+  }
+
+  proc run(b) = {
+    var b';
+
+    O.init();
+
+    b_ror <- b;
+
+    m <- 0;
+    n <- 0;
+
+    q <- fset0;
+    ich <- fset0;
+    rch <- fset0;
+    xp <- fset0;
+    cr <- fset0;
+
+    p_map <- empty;
+    i_map <- empty;
+    r_map <- empty;
+
+    b' <@ A(Oracles).distinguish();
+    return b';
+  }
+}.

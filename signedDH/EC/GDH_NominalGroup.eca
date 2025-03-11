@@ -1,0 +1,122 @@
+require import AllCore FMap FSet Distr.
+require import PROM.
+
+type pkey, skey, sskey.
+
+op [lossless] dkp: (pkey * skey) distr.
+op shared_key: pkey -> skey -> pkey.
+
+axiom shared_keyC X x Y y:
+     (X, x) \in dkp
+  => (Y, y) \in dkp
+  => shared_key X y = shared_key Y x.
+
+(* The ideal distribution on session keys *)
+op [lossless full uniform] dssk: sskey distr.
+
+(* Here, we express a Gap-DH-style property on the abstract view of DH
+   above. *)
+module type GapDH_Oracles = {
+  proc gen_1(): pkey
+  proc corrupt_1(_: int): skey option
+
+  proc gen_2(): pkey
+  proc corrupt_2(_: int): skey option
+
+  proc ddh(_: pkey, _: pkey, _: pkey): bool option
+}.
+
+module type GapDH_Adv (O : GapDH_Oracles) = {
+  proc solve(): int * int * pkey
+}.
+
+module Gap_DH (A : GapDH_Adv) = {
+  var n: int
+  var m: int
+
+  var x_map: (int, pkey * skey) fmap
+  var y_map: (int, pkey * skey) fmap
+
+  var cr_1: int fset
+  var cr_2: int fset
+
+  module Oracles = {
+    proc gen_1() = {
+      var pk, sk;
+
+      n <- n + 1;
+      (pk, sk) <$ dkp;
+      x_map.[n] <- (pk, sk);
+      return pk;
+    }
+
+    proc corrupt_1(i) = {
+      var pk, sk;
+      var r <- None;
+
+      if (x_map.[i] is Some kp) {
+        (pk, sk) <- kp;
+        cr_1 <- cr_1 `|` fset1 i;
+        r <- Some sk;
+      }
+      return r;
+    }
+
+    proc gen_2() = {
+      var pk, sk;
+
+      m <- m + 1;
+      (pk, sk) <$ dkp;
+      y_map.[m] <- (pk, sk);
+      return pk;
+    }
+
+    proc corrupt_2(j) = {
+      var pk, sk;
+      var r <- None;
+
+      if (y_map.[j] is Some kp) {
+        (pk, sk) <- kp;
+        cr_2 <- cr_2 `|` fset1 j;
+        r <- Some sk;
+      }
+      return r;
+    }
+
+    proc ddh(x, y, z) = {
+      var jo, io;
+      var r <- None;
+
+      jo <- find (fun _ kp=> let (pk, _) = kp in x = pk) x_map;
+      if (jo is Some j) {
+        r <- Some (z = shared_key y (oget x_map.[j]).`2);
+      } else {
+        io <- find (fun _ kp=> let (pk, _) = kp in y = pk) y_map;
+        if (io is Some i) {
+          r <- Some (z = shared_key x (oget y_map.[i]).`2);
+        }
+      }
+      return r;
+    }
+  }
+
+  proc run() = {
+    var i, j, z;
+    var r <- false;
+
+    m <- 0;
+    n <- 0;
+
+    x_map <- empty;
+    y_map <- empty;
+
+    cr_1 <- fset0;
+    cr_2 <- fset0;
+
+    (i, j, z) <@ A(Oracles).solve();
+    if (0 < i <= n /\ i \notin cr_1 /\ 0 < j <= m /\ j \notin cr_2) {
+      r <- z = shared_key (oget x_map.[i]).`1 (oget y_map.[j]).`2;
+    }
+    return r;
+  }
+}.
