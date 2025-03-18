@@ -1,14 +1,27 @@
 # Intro
 
-This repository brings together a set of examples for the formal analysis of cryptographic primitives and protocols.
+This repository brings together a set of examples for the formal analysis of cryptographic primitives and protocols. Our goal is to provide here a set of cryptographic problems, presented in pdf notes in a way accessible to both cryptographers or formal methods people, as well as a set of solutions for those problems, using distinct tools from the computer-aided cryptography domain.
 
-## Protocols
+If:
+ * you are a *formal method curious cryptographer*, you should be able to understand all the problems, and then use the multiple solutions to discover the mutltiple tools, what kind of guarantees we can obtain with them, see which tools is best suited for which kind of analysis, ...;
+ * if you are *cryptography curious formal verification researcher*,  you should be able to get a feel for the kind of guarantees cryptographers expects, and the variety of techniques that are currently used to get them;
+ * if you are a *tool developper*, you can use this opportunity to showcase your tool and understand how it compares with others, on a set of clearly defined examkples.
 
-The problem sets and possible modeling options are detailed in the [pdf notes](https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/main.pdf), which should be read first.
+We consider three separates set of problems, focusing on 
+ * symmetric primitives;
+ * asymmetric primitves;
+ * protocols.
+
+The following sections provide the details for each of those sets.
+
+
+# Protocols
+
+The problem sets and possible modeling options are detailed in the [pdf notes](https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/main.pdf), which should be read first. Then it is possible to explore the solutions, summarized below. For people hoping to get familiar with cryptographic definitions and proofs of key-exchanges, a pen-and-paper solution is available [here](https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/computational/main.pdf) for problem 2 (the signed DH protocol) and 4 (the simplified NTOR).
 
 The directory structure for problems is as follows: there are top-level directories for each problem. Within these problem directories, there are tool-named subdirectories that contain solutions for that problem with the named tool.
 
-We encourage tool developers to -- in addition to the solution files -- to provide additional repositories with more detailed versions of the solutions, partial solutions with corrections, or additional incremental tutorials and materials.
+We encourage tool developers to -- in addition to the solution files -- provide additional repositories with more detailed versions of the solutions, partial solutions with corrections, or additional incremental tutorials and materials.
 The corresponding repositories are listed as:
 * Tamarin: https://github.com/tamarin-prover/teaching
 
@@ -47,15 +60,6 @@ The corresponding repositories are listed as:
 >This standardized description can be extended at will by the authors, for instance in a dedicated README in the solution subfolder or in their own repository. We provide tables aggregating those standardized description for each problem below.
 >
 
-
-## Primitives
-
-WIP
-
-
-
-# Protocols
-
 ## Problem 1: Basic Hash
 
 subfolder: [basic-hash](basic-hash/)
@@ -73,6 +77,7 @@ subfolder: [basic-hash](basic-hash/)
 ## Problem 2: Signed Diffie-Hellman
 
 subfolder: [signedDH](signedDH/)
+
 <!-- 
 | Proverif | Tamarin | DY* | Squirrel | CryptoVerif | EasyCrypt |
 | -------- | -------:| --- | -------- | ----------- | --------- |
@@ -207,6 +212,14 @@ subfolder: [kemdem](kemdem/)
 | --------:| ----------- |:--------- |
 |  Medium? | Easy        | Easy     |
 
+
+# Symmetric primitives
+
+WIP
+
+# Asymmetric primitives
+
+WIP
 # Acknowledgments
 
 This work was initiated by the HACS workshop. The main contributors for the design of the problems set are: Manuel Barbosa (primitives), Cas Cremers (protocols), François Dupressoir (primitives and protocols), Charlie Jacomme (protocols), Aurora Naska (protocols), Trevor Perrin (main coordinator), Mike Rosulek (primitives). We additionally thank the following for their valuable feedback: Karthikeyan Bhargavan, Jonathan Katz, Devon Tuma, Bas Spitters, and Théophile Wallez. Further authorship attributions can be found in specific solutions.
