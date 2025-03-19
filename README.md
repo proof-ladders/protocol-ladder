@@ -3,9 +3,9 @@
 This repository brings together a set of examples for the formal analysis of cryptographic primitives and protocols. Our goal is to provide here a set of cryptographic problems, presented in pdf notes in a way accessible to both cryptographers or formal methods people, as well as a set of solutions for those problems, using distinct tools from the computer-aided cryptography domain.
 
 If:
- * you are a *formal method curious cryptographer*, you should be able to understand all the problems, and then use the multiple solutions to discover the mutltiple tools, what kind of guarantees we can obtain with them, see which tools is best suited for which kind of analysis, ...;
+ * you are a *formal method curious cryptographer*, you should be able to understand all the problems, and then use the multiple solutions to discover the multiple tools, what kind of guarantees we can obtain with them, see which tools is best suited for which kind of analysis, ...;
  * if you are *cryptography curious formal verification researcher*,  you should be able to get a feel for the kind of guarantees cryptographers expects, and the variety of techniques that are currently used to get them;
- * if you are a *tool developper*, you can use this opportunity to showcase your tool and understand how it compares with others, on a set of clearly defined examkples.
+ * if you are a *tool developper*, you can use this opportunity to showcase your tool and understand how it compares with others, on a set of clearly defined examples.
 
 We consider three separates set of problems, focusing on 
  * symmetric primitives;
@@ -45,8 +45,8 @@ The corresponding repositories are listed as:
 >   // provide here the properties or class of attacks covered by the tool.
 >   // by default, giving a property means it is proved.
 >   // for tools that enable attack finding, a found attack on a property is given by prefixing the property with the  ⚡ emoji.
->   
-> 
+>
+>
 > Analysis features:
 >   * difficulty ratings:	easy/medium/hard/possible/impossible (X), easy/medium/hard/possible/impossible (Y), ...
 >     // relative difficulty of the analysis (in case of WIP, this is of course an expected difficulty rating)
@@ -54,8 +54,8 @@ The corresponding repositories are listed as:
 > 	// if relevant, several distinct ratings may be given, for example X might be a set of easy properties to prove
 > 	// and Y a set of hard properties
 >   * status: ✅/WIP/❎
->     // status of the solution, if the model and proofs are fully complete (✅), do not exist at all (❎), or is partially completed (WIP)	
-> ``` 
+>     // status of the solution, if the model and proofs are fully complete (✅), do not exist at all (❎), or is partially completed (WIP)
+> ```
 >
 >This standardized description can be extended at will by the authors, for instance in a dedicated README in the solution subfolder or in their own repository. We provide tables aggregating those standardized description for each problem below.
 >
@@ -78,7 +78,7 @@ subfolder: [basic-hash](basic-hash/)
 
 subfolder: [signedDH](signedDH/)
 
-<!-- 
+<!--
 | Proverif | Tamarin | DY* | Squirrel | CryptoVerif | EasyCrypt |
 | -------- | -------:| --- | -------- | ----------- | --------- |
 | Easy     |    Easy | ?   | Easy  | Easy        | HARD      | -->
@@ -87,7 +87,7 @@ subfolder: [signedDH](signedDH/)
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | -------------- | ---------- | ------------------ | :----: |
 | Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign     | Auth, FS   | Easy               |        |
 | CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign     | Auth, FS   | Easy               |        |
-| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign     | Auth, FS   | Hard               |        |
+| EasyCrypt   | Active   |    ∞     |   ∞    | EK + LTK    | Computational  | Hash, Sign     | Auth, FS   | Hard               | ✅ (model), WIP (proofs) |
 | Tamarin     | Active   |    ∞     |   ∞    | LTK         | Symbolic       | Hash, DH, Sign | Auth, FS   | Easy (Auth,FS)     |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, Sign     | Auth, FS   | Easy (Auth,FS)     |        |
 
@@ -107,7 +107,7 @@ subfolder: [signedKEM](signedKEM/)
 | :---------- | -------- | :------: | :----: | ---------------- | -------------- | ----------------------- | -------------------------- | ------------------ | :----: |
 | Squirrel    | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Easy               |        |
 | CryptoVerif | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Easy               |        |
-| EasyCrypt   | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Hard               |        |
+| EasyCrypt   | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Hard               |   ❎   |
 | Tamarin     | Active   |    ∞     |   ∞    | LTK, EK, MAL_LTK | Symbolic       | Hash, DH, Sign, AsymEnc | Auth, FS, ⚡UKS, ⚡ReEncap | Easy               |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None             | Symbolic       | Hash, Sign              | Auth, FS                   | Easy (Auth,FS)     |        |
 
@@ -121,7 +121,7 @@ subfolder: [signedDH+KEM](signedDH+KEM/)
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | ----------------- | ----------------- | ------------------ | :----: |
 | Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Easy               |        |
 | CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Easy               |        |
-| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Hard               |        |
+| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Hard               |   ❎   |
 | Tamarin     | Active   |    ∞     |   ∞    | LTK, EK     | Symbolic       | DH, Sign, AsymEnc | Auth, FS, Secrecy | Easy               |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, Sign        | Auth, FS          | Easy (Auth,FS)     |        |
 
@@ -142,7 +142,7 @@ spec: https://spec.torproject.org/proposals/216-ntor-handshake.html
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | ---------- | ----------------- | ------------------ | :----: |
 | Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH   | Auth, FS          | Easy               |        |
 | CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH   | Auth, FS          | Easy               |        |
-| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH   | Auth, FS          | Hard               |        |
+| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH   | Auth, FS          | Hard               |   ❎   |
 | Tamarin     | Active   |    ∞     |   ∞    | LTK, EK     | Symbolic       | Hash, DH   | Auth, FS, Secrecy | Easy               |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, DH   | Auth, FS          | Easy               |        |
 
@@ -164,7 +164,7 @@ subfolder: [acme](acme/)
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | ---------- | ----------- | ------------------ | :----: |
 | Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Easy               |        |
 | CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Easy               |        |
-| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Hard               |        |
+| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Hard               |   ❎   |
 | Tamarin     | Active   |    ∞     |   ∞    | None        | Symbolic       | Sign       | Auth, ⚡DEO  | Easy               |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Sign       | Auth        | Easy               |        |
 
@@ -174,7 +174,7 @@ subfolder: [acme](acme/)
 
 | Tool      | Case-study | Description       | Link                | Model                    |
 | --------- | ---------- | ----------------- | ------------------- | ------------------------ |
-| EasyCrypt | Kyber      | WIP               | WIP                 | WIP                      |                                                                  |
+| EasyCrypt | Kyber      | formosa-ML-KEM is a formalisation of security for a high-performance implementation of ML-KEM, connecting a machine-checked security proof in EasyCrypt with a verifiably-correct and verifiably speculative-constant-time implementation in Jasmin.  | https://github.com/formosa-crypto/formosa-mlkem | https://github.com/formosa-crypto/formosa-mlkem |
 | Tamarin   | SPDM       | SPDM is a protocol that aims to provide platform security, for example for communicating hardware components or cloud computing scenarios. The standard is under development by the DMTF consortium, and supported by major industry players including Broadcom, Cisco, Dell, Google, HP, IBM, Intel, and NVIDIA. | [paper](https://eprint.iacr.org/2024/2047) | [model](https://github.com/ComprehensiveSPDM/TamarinSPDMAnalysis) |
 
 
@@ -186,9 +186,10 @@ subfolder: [acme](acme/)
 Current primitive examples:
 * Encrypt-Then-Mac is IND-CPA + INT-CTXT
 * KEM+DEM is semantically secure as a PKE
+* CCA KEM + CCA DEM is CCA secure as a PKE
 
 Possible ideas:
-* IND-CPA KEM from DH + ROM 
+* IND-CPA KEM from DH + ROM
 * play around DDH/CDH/gapDH
 * biKEM from dualPRF + two IND-CPA KEM
 
@@ -222,5 +223,5 @@ WIP
 WIP
 # Acknowledgments
 
-This work was initiated by the HACS workshop. The main contributors for the design of the problems set are: Manuel Barbosa (primitives), Cas Cremers (protocols), François Dupressoir (primitives and protocols), Charlie Jacomme (protocols), Aurora Naska (protocols), Trevor Perrin (main coordinator), Mike Rosulek (primitives). We additionally thank the following for their valuable feedback: Karthikeyan Bhargavan, Jonathan Katz, Devon Tuma, Bas Spitters, and Théophile Wallez. Further authorship attributions can be found in specific solutions.
+This work was initiated by the HACS workshop. The main contributors for the design of the problems set are: Manuel Barbosa (primitives), Cas Cremers (protocols), François Dupressoir (primitives and protocols), Charlie Jacomme (protocols), Aurora Naska (protocols), Trevor Perrin (main coordinator), Mike Rosulek (primitives). Doreen Riepel and Paul Rösler contributed computational models and detailed proofs for two of the proposed protocols. We additionally thank the following for their valuable feedback: Karthikeyan Bhargavan, Jonathan Katz, Devon Tuma, Bas Spitters, and Théophile Wallez. Further authorship attributions can be found in specific solutions.
 
