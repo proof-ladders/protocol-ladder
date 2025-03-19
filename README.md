@@ -68,7 +68,7 @@ subfolder: [basic-hash](basic-hash/)
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | ---------- | ---------- | --------------------------- | :----: |
 | Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Easy                        |   ✅   |
 | CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Easy                        |   ✅   |
-| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Hard                        |   ✅   |
+| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Medium                      |   ✅   |
 | Tamarin     | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unli)  |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unlo)  |  WIP   |
 
@@ -85,11 +85,11 @@ subfolder: [signedDH](signedDH/)
 
 | Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives     | Properties | Difficulty ratings | Status |
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | -------------- | ---------- | ------------------ | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign     | Auth, FS   | Easy               |        |
-| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign     | Auth, FS   | Easy               |        |
-| EasyCrypt   | Active   |    ∞     |   ∞    | EK + LTK    | Computational  | Hash, Sign     | Auth, FS   | Hard               | ✅ (model), WIP (proofs) |
+| Squirrel    | Active   |    ∞     |   ∞    | LTK         | Computational  | Hash, Sign     | Auth (2-sided), FS   | Easy               |   ✅   |
+| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign (det.) | Auth, FS   | Easy               |   ✅   |
+| EasyCrypt   | Active   |    ∞     |   ∞    | EK (client) + LTK | Computational  | Sign, DH, RO   | Auth, FS   | Hard               | ✅ (model), WIP (proofs) |
 | Tamarin     | Active   |    ∞     |   ∞    | LTK         | Symbolic       | Hash, DH, Sign | Auth, FS   | Easy (Auth,FS)     |   ✅   |
-| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, Sign     | Auth, FS   | Easy (Auth,FS)     |        |
+| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, Sign (det.) | KR         | Easy               |   ✅   |
 
 
 > [!TIP]
@@ -105,11 +105,11 @@ subfolder: [signedKEM](signedKEM/)
 
 | Tool        | Attacker | Sessions | Agents | Compromises      | Attacker Class | Primitives              | Properties                 | Difficulty ratings | Status |
 | :---------- | -------- | :------: | :----: | ---------------- | -------------- | ----------------------- | -------------------------- | ------------------ | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Easy               |        |
-| CryptoVerif | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Easy               |        |
+| Squirrel    | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Easy               |   ❎   |
+| CryptoVerif | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Easy               |   ❎   |
 | EasyCrypt   | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Hard               |   ❎   |
 | Tamarin     | Active   |    ∞     |   ∞    | LTK, EK, MAL_LTK | Symbolic       | Hash, DH, Sign, AsymEnc | Auth, FS, ⚡UKS, ⚡ReEncap | Easy               |   ✅   |
-| Proverif    | Active   |    ∞     |   ∞    | None             | Symbolic       | Hash, Sign              | Auth, FS                   | Easy (Auth,FS)     |        |
+| Proverif    | Active   |    ∞     |   ∞    | None             | Symbolic       | Hash, Sign              | Auth, FS                   | Easy (Auth,FS)     |   ❎   |
 
 
 
@@ -119,11 +119,11 @@ subfolder: [signedDH+KEM](signedDH+KEM/)
 
 | Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives        | Properties        | Difficulty ratings | Status |
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | ----------------- | ----------------- | ------------------ | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Easy               |        |
-| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Easy               |        |
+| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Easy               |   ❎   |
+| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Easy               |   ❎   |
 | EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Hard               |   ❎   |
 | Tamarin     | Active   |    ∞     |   ∞    | LTK, EK     | Symbolic       | DH, Sign, AsymEnc | Auth, FS, Secrecy | Easy               |   ✅   |
-| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, Sign        | Auth, FS          | Easy (Auth,FS)     |        |
+| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, Sign        | Auth, FS          | Easy (Auth,FS)     |   ❎   |
 
 
 
@@ -140,11 +140,11 @@ spec: https://spec.torproject.org/proposals/216-ntor-handshake.html
 
 | Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties        | Difficulty ratings | Status |
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | ---------- | ----------------- | ------------------ | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH   | Auth, FS          | Easy               |        |
-| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH   | Auth, FS          | Easy               |        |
-| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH   | Auth, FS          | Hard               |   ❎   |
+| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH   | Auth, Sec         | Hard               |  WIP   |
+| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH, RO | Auth, Sec          | Easy               |   ✅   |
+| EasyCrypt   | Active   |    ∞     |   ∞    | EK (client) + LTK | Computational  | Hash, DH, RO | Auth, FS         | Hard               |   ❎   |
 | Tamarin     | Active   |    ∞     |   ∞    | LTK, EK     | Symbolic       | Hash, DH   | Auth, FS, Secrecy | Easy               |   ✅   |
-| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, DH   | Auth, FS          | Easy               |        |
+| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, DH   | Auth, Sec         | Easy               |   ✅   |
 
 > [!TIP]
 > Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
@@ -162,11 +162,11 @@ subfolder: [acme](acme/)
 
 | Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties  | Difficulty ratings | Status |
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | ---------- | ----------- | ------------------ | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Easy               |        |
-| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Easy               |        |
+| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Easy               |   ❎   |
+| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Easy               |   ❎   |
 | EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Hard               |   ❎   |
 | Tamarin     | Active   |    ∞     |   ∞    | None        | Symbolic       | Sign       | Auth, ⚡DEO  | Easy               |   ✅   |
-| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Sign       | Auth        | Easy               |        |
+| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Sign       | Auth        | Easy               |   ❎   |
 
 
 
