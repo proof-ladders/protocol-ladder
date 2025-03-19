@@ -1,0 +1,121 @@
+(*
+The following is a model of SUF-CMA, as defined by Riepel and Rösler [0].
+
+We abstract the fact that the operation is some iterated group
+operation to avoid polluting the model, and to introduce an
+abstraction barrier that allows us to later instantiate the assumption
+with a modular group, an elliptic curve group, or even a group action.
+
+[0]: https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/computational/main.pdf
+
+Our goal with this formalisation is to stick as close as possible to
+the pen-and-paper definitions. We hope to:
+1) serve as a Rosetta stone to ease formal methods researcher's
+interpretation of the pen-and-paper definitions without having to
+recover the cryptographic intent of those definitions; and
+2) serve as the basis for a baseline formalisation of Signed DH "as a
+cryptographer would approach it".
+*)
+require import AllCore FSet FMap.
+
+(*
+The type of public keys, of secret keys, of signatures, and of
+messages.
+*)
+type pkey, skey, sig, msg.
+
+(*
+We now define directly the multi-instance q-SUF-CMA experiment
+from Riepel and Rösler [Figure4, 0].
+*)
+
+(**
+We first define the syntax of a signature scheme. Here, we do not
+restrict any of the algorithms to be deterministic, or stateless.
+**)
+module type SigScheme = {
+  proc keygen(): pkey * skey
+  proc sign(_: skey, _: msg): sig
+  proc verify(_: pkey, _: msg, _: sig): bool
+}.
+
+(**
+We then define the adversary's interface: which oracles does she have
+access to?
+**)
+module type CMA_Oracles = {
+  proc gen(): pkey
+  proc corrupt(_: int): skey option
+
+  proc sign(_: int, _: msg): sig option
+}.
+
+(**
+We can then define the class of algorithms we consider for the
+adversary: all `forge` procedures that, given access to the oracles
+declared above, output an instance and a forgery (message and
+signature).
+**)
+module type CMA_Adv (O : CMA_Oracles) = {
+  proc forge(): int * msg * sig
+}.
+
+module SUFCMA (S : SigScheme) (A : CMA_Adv) = {
+  var n: int
+
+  var pk_map: (int, pkey) fmap
+  var sk_map: (int, skey) fmap
+
+  var q: (int * msg * sig) fset
+  var cr: int fset
+
+  module Oracles = {
+    proc gen() = {
+      var pk, sk;
+
+      n <- n + 1;
+      (pk, sk) <@ S.keygen();
+      pk_map.[n] <- pk;
+      sk_map.[n] <- sk;
+      return pk;
+    }
+
+    proc corrupt(j) = {
+      var r <- None;
+
+      if (0 < j <= n) {
+        r <- sk_map.[j];
+        cr <- cr `|` fset1 j;
+      }
+      return r;
+    }
+
+    proc sign(j, m) = {
+      var sig, sk;
+      var r <- None;
+
+      if (0 < j <= n) {
+        sk <- oget sk_map.[j];
+        sig <@ S.sign(sk, m);
+        r <- Some sig;
+        q <- q `|` fset1 (j, m, sig);
+      }
+      return r;
+    }
+  }
+
+  proc run() = {
+    var j, m, sig, pk;
+    var b <- false;
+
+    n <- 0;
+    q <- fset0;
+    cr <- fset0;
+    (j, m, sig) <@ A(Oracles).forge();
+    if (0 < j <= n /\ j \notin cr /\ (j, m, sig) \notin q) {
+      pk <- oget pk_map.[j];
+      b <@ S.verify(pk, m, sig);
+    }
+    return b;
+  }
+}.

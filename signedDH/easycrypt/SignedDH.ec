@@ -1,7 +1,7 @@
 require import AllCore FMap FSet Distr.
 require import PROM.
 
-require (*--*) GDH_NominalGroup UFCMA ProtRO.
+require (*--*) St_CDH_abstract SUFCMA UATPaKE.
 
 (** Buckle Up! **)
 (* Starting notes:
@@ -44,25 +44,20 @@ axiom shared_keyC X x Y y:
 op [lossless full uniform] dssk: sskey distr.
 
 (** Instantiate the GapDH theory **)
-clone import GDH_NominalGroup as GapDH with
+clone import St_CDH_abstract as StCDH with
   type pkey       <= pdh,
   type skey       <= sdh,
-  type sskey      <= sskey,
   op   dkp        <= dkp,
-  op   shared_key <= shared_key,
-  op   dssk       <= dssk
+  op   shared_key <= shared_key
 proof *.
 realize dkp_ll by exact: dkp_ll.
 realize shared_keyC by exact: shared_keyC.
-realize dssk_ll by exact: dssk_ll.
-realize dssk_uni by exact: dssk_uni.
-realize dssk_fu by exact: dssk_fu.
 
 (** Additional types for the signature scheme **)
 type pkey, skey, sig.
 
 (** Instantiate the UFCMA theory **)
-clone import UFCMA as Signature with
+clone import SUFCMA as Signature with
   type pkey   <= pkey,
   type skey   <= skey,
   type sig    <= sig,
@@ -77,7 +72,7 @@ type client_state = { s_id: pkey;    (* The server's identity, as its public key
                       x_sk: sdh   }. (* The client's ephemeral secret *)
 
 clone import FullRO as H with
-  type in_t    <= pdh * pdh * pdh * sig,
+  type in_t    <= pdh * pdh * pdh,
   type out_t   <= sskey,
   op   dout  _ <= dssk,
   type d_in_t  <= unit,
@@ -85,7 +80,7 @@ clone import FullRO as H with
 proof *.
 
 (** Instantiate the ProtRO theory **)
-clone import ProtRO as Security with
+clone import UATPaKE as Security with
   type pkey         <= pkey,
   type skey         <= skey,
   type sskey        <= sskey,
@@ -93,7 +88,7 @@ clone import ProtRO as Security with
   type client_state <= client_state,
   type msg1         <= pdh,
   type msg2         <= pdh * sig,
-  type ro_in        <= pdh * pdh * pdh * sig,
+  type ro_in        <= pdh * pdh * pdh,
   type ro_out       <= sskey,
   op   d_ro         <= Self.dssk
 proof *.
@@ -102,7 +97,7 @@ realize dssk_uni by exact: dssk_uni.
 realize dssk_fu by exact: dssk_fu.
 
 (** Finally, we define the signed DH protocol **)
-module SignedDH (S : SigScheme) (H : RO) : Prot = {
+module SignedDH (S : SigScheme) (H : RO) : UATPaKE = {
   proc gen() = {
     var kp;
 
@@ -123,7 +118,7 @@ module SignedDH (S : SigScheme) (H : RO) : Prot = {
     (y_pk, y_sk) <$ dkp;
     s <@ S.sign(sk_s, (x_pk, y_pk));
     ss <- shared_key x_pk y_sk;
-    ks <@ H.get(ss, x_pk, y_pk, s);
+    ks <@ H.get(ss, x_pk, y_pk);
     return (ks, (y_pk, s));
   }
 
@@ -135,7 +130,7 @@ module SignedDH (S : SigScheme) (H : RO) : Prot = {
     b <@ S.verify(s_id st, (x_pk st, y_pk), s);
     if (b) {
       ss <- shared_key y_pk (x_sk st);
-      kc <@ H.get(ss, x_pk st, y_pk, s);
+      kc <@ H.get(ss, x_pk st, y_pk);
       r <- Some kc;
     }
     return r;

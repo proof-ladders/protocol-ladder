@@ -1,10 +1,34 @@
+(*
+The following is a model of IND for unilateral authenticated two-pass
+key exchange, as defined by Riepel and Rösler [0].
+
+We abstract the fact that the operation is some iterated group
+operation to avoid polluting the model, and to introduce an
+abstraction barrier that allows us to later instantiate the assumption
+with a modular group, an elliptic curve group, or even a group action.
+
+[0]: https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/computational/main.pdf
+
+Our goal with this formalisation is to stick as close as possible to
+the pen-and-paper definitions. We hope to:
+1) serve as a Rosetta stone to ease formal methods researcher's
+interpretation of the pen-and-paper definitions without having to
+recover the cryptographic intent of those definitions; and
+2) serve as the basis for a baseline formalisation of Signed DH "as a
+cryptographer would approach it".
+*)
 require import AllCore FSet FMap Distr.
 
+(**
+Types for long-term public and secret keys (server); client state
+(client); pass-1 and pass-2 messages, and shared sessions keys.
+**)
 type pkey, skey, client_state, msg1, msg2, sskey.
 
 op [lossless full uniform] dssk: sskey distr.
 
-module type Prot = {
+(** The syntax of a UATPaKE **)
+module type UATPaKE = {
   proc gen(): pkey * skey
 
   proc init(s_id: pkey): client_state * msg1
@@ -12,7 +36,17 @@ module type Prot = {
   proc recv(st: client_state, c: msg2): sskey option
 }.
 
-(* We must do this to allow parameterisation by an RO *)
+(**
+We want the definition to be parameterised by a Random Oracle. (There
+are good reasons why we can't just write the definition, then add the
+Random Oracle; but those are kind of complex to explain in a
+tutorial.)
+
+But we do not want to restrict *how* the random oracle is used by the
+protocol. So we declare also abstract types for the input and output
+of the random oracle, as well as the distribution it samples outputs
+from. (Typically, but not always, uniform.)
+**)
 type ro_in, ro_out.
 op d_ro: ro_out distr.
 
@@ -21,9 +55,18 @@ module type RO = {
   proc get(_: ro_in): ro_out
 }.
 
-module type Prot_RO (O : RO) = { include Prot }.
+module type UATPaKE_RO (O : RO) = { include UATPaKE }.
 
-module type Adv_RO_Oracles = {
+(*
+We now define directly the IND experiment from Riepel and Rösler
+[Figure 6, 0].
+*)
+
+(**
+We define the adversary's interface: which oracles does she have
+access to?
+**)
+module type UATPaKE_RO_Oracles = {
   (* Party management *)
   proc gen(): pkey
   proc corrupt(j: int): skey option
@@ -35,21 +78,28 @@ module type Adv_RO_Oracles = {
   proc receive(i: int, c: msg2, b_test: bool): sskey option
 
   (* Random oracle *)
+  (* We expose the random oracle here for similarly complex reasons. *)
   proc h(_: ro_in): ro_out
 }.
 
-module type Adv_RO (P : Adv_RO_Oracles) = {
+(**
+We can then define the class of algorithms we consider for the
+adversary: all `distinguish` procedures that, given access to the
+oracles declared above, output a bit.
+**)
+module type UATPaKE_Adv_RO (P : UATPaKE_RO_Oracles) = {
   proc distinguish(): bool
 }.
 
-module Exp_b (P : Prot_RO) (O : RO) (A : Adv_RO) = {
+module Exp_b (P : UATPaKE_RO) (O : RO) (A : UATPaKE_Adv_RO) = {
   (* The challenge bit *)
   var b_ror : bool
 
   (* Server maps: *)
   var m: int
   (* - server handle to keypair *)
-  var s_map: (int, pkey * skey) fmap
+  var pk_map: (int, pkey) fmap
+  var sk_map: (int, skey) fmap
   (* - server-client handle to partial trace *)
   var r_map: (int option * int, msg2 fset) fmap
 
@@ -74,18 +124,17 @@ module Exp_b (P : Prot_RO) (O : RO) (A : Adv_RO) = {
 
       m <- m + 1;
       (pk, sk) <@ P(O).gen();
-      s_map.[m] <- (pk, sk);
+      pk_map.[m] <- pk;
+      sk_map.[m] <- sk;
       return pk;
     }
 
     proc corrupt(j: int): skey option = {
-      var pk, sk;
       var r <- None;
 
-      if (s_map.[j] is Some kp) {
-        (pk, sk) <- kp;
+      if (0 < j <= m) {
+        r <- sk_map.[j];
         cr <- cr `|` fset1 j;
-        r <- Some sk;
       }
       return r;
     }
@@ -105,7 +154,7 @@ module Exp_b (P : Prot_RO) (O : RO) (A : Adv_RO) = {
 
       n <- n + 1;
       (st, c) <@ P(O).init(pk);
-      jo <- find (fun _ kp=> let (pk_j, _) = kp in pk_j = pk) s_map;
+      jo <- find (fun _ pk_j=> pk_j = pk) pk_map;
       if (jo is Some j) {
         p_map.[n] <- j;
         i_map.[n] <- c;
@@ -114,15 +163,18 @@ module Exp_b (P : Prot_RO) (O : RO) (A : Adv_RO) = {
     }
 
     proc respond(j: int, c: msg1, ch: bool): (sskey * msg2) option = {
-      var k, c', io, pk_j, sk_j;
+      var k, c', io, sk_j;
       var r <- None;
 
-      if (s_map.[j] is Some kp) { (* Equivalently: 0 < j <= m *)
-        (pk_j, sk_j) <- kp;
+      if (0 < j <= m) {
+        sk_j <- oget sk_map.[j];
         (k, c') <@ P(O).resp(sk_j, c);
         io <- find (fun i _=> p_map.[i] = Some j /\ i_map.[i] = Some c) c_map;
         if (io is Some i) {
-          r_map.[Some j, i] <- (oget r_map.[Some j, i]) `|` fset1 c';
+          (*** Instead of initialising all of r_map to output the
+          empty set, we read undefined entries as the empty set
+          here. ***)
+          r_map.[Some j, i] <- (odflt fset0 r_map.[Some j, i]) `|` fset1 c';
           if (ch /\ i \notin xp) {
             if (b_ror) { k <$ dssk; }
             ich <- ich `|` fset1 i;

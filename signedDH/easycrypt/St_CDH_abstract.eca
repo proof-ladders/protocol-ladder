@@ -1,0 +1,174 @@
+(*
+The following is a model of Strong CDH, as defined by Riepel and Rösler [0].
+
+We abstract the fact that the operation is some iterated group
+operation to avoid polluting the model, and to introduce an
+abstraction barrier that allows us to later instantiate the assumption
+with a modular group, an elliptic curve group, or even a group action.
+
+[0]: https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/computational/main.pdf
+
+Our goal with this formalisation is to stick as close as possible to
+the pen-and-paper definitions. We hope to:
+1) serve as a Rosetta stone to ease formal methods researcher's
+interpretation of the pen-and-paper definitions without having to
+recover the cryptographic intent of those definitions; and
+2) serve as the basis for a baseline formalisation of Signed DH "as a
+cryptographer would approach it".
+*)
+require import AllCore FMap FSet Distr.
+require import PROM.
+
+(*
+The type of public keys (notionally: group elements) and secret
+keys (notionally: scalars in Z/pZ where p is the group's (prime)
+order.
+
+A distribution (lossless means true distribution with total
+probability mass 1) over keypairs, and a shared_key operation that
+`commutes' on valid keypairs (notionally: iterated group operation).
+*)
+type pkey, skey.
+
+op [lossless] dkp: (pkey * skey) distr.
+op shared_key: pkey -> skey -> pkey.
+
+axiom shared_keyC X x Y y:
+     (X, x) \in dkp
+  => (Y, y) \in dkp
+  => shared_key X y = shared_key Y x.
+
+(*
+We now define directly the multi-instance (q1, q2)-St_CDH experiment
+from Riepel and Rösler [Figure2, 0].
+*)
+
+(**
+We first define the adversary's interface: which oracles does she have
+access to?
+**)
+module type St_CDH_Oracles = {
+  proc gen_1(): pkey
+  proc corrupt_1(_: int): skey option
+
+  proc gen_2(): pkey
+  proc corrupt_2(_: int): skey option
+
+  proc ddh(_: pkey, _: pkey, _: pkey): bool
+}.
+
+(**
+We can then define the class of algorithms we consider for the
+adversary: all `solve` procedures that, given access to the oracles
+declared above, simply run. - winning is decided based on oracle
+interactions
+**)
+module type St_CDH_Adv (O : St_CDH_Oracles) = {
+  proc solve(): unit
+}.
+
+module St_CDH (A : St_CDH_Adv) = {
+  var win: bool
+
+  var n: int
+  var m: int
+
+  (*** Because we don't assume just a group action, we keep track of
+  the keypair rather than just the secret key. (We don't have a
+  generator.)  We could also have assumed a pk_from_sk operator, but
+  where's the fun in that? ***)
+  var x_map: (int, pkey * skey) fmap
+  var y_map: (int, pkey * skey) fmap
+
+  var cr_1: int fset
+  var cr_2: int fset
+
+  module Oracles = {
+    proc gen_1() = {
+      var pk, sk;
+
+      n <- n + 1;
+      (pk, sk) <$ dkp;
+      x_map.[n] <- (pk, sk);
+      return pk;
+    }
+
+    proc corrupt_1(i) = {
+      var pk, sk;
+      var r <- None;
+
+      if (0 < i <= n) {
+        (pk, sk) <- oget x_map.[i];
+        cr_1 <- cr_1 `|` fset1 i;
+        r <- Some sk;
+      }
+      return r;
+    }
+
+    proc gen_2() = {
+      var pk, sk;
+
+      m <- m + 1;
+      (pk, sk) <$ dkp;
+      y_map.[m] <- (pk, sk);
+      return pk;
+    }
+
+    proc corrupt_2(j) = {
+      var pk, sk;
+      var r <- None;
+
+      if (0 < j <= m) {
+        (pk, sk) <- oget y_map.[j];
+        cr_2 <- cr_2 `|` fset1 j;
+        r <- Some sk;
+      }
+      return r;
+    }
+
+    (*** This is the only oracle that is not a straightforward
+    translation of the pen-and-paper definitions ***)
+    proc ddh(x, y, z) = {
+      var jo, io;
+      var r <- false;
+
+      (* The definition uses an existential condition that *binds* the
+         variable in the if branch; we don't have that.
+         Instead, we search for an element that meets the condition,
+         and branch on whether it exists.
+
+         The rest is straightforward-ish.
+      *)
+      io <- find (fun _ kp=> let (pk_i, x_i) = kp in x = pk_i /\ z = shared_key y x_i) x_map;
+      if (io is Some i) {
+        jo <- find (fun _ kp=> let (pk_j, y_j) = kp in y = pk_j) y_map;
+        if (jo <> None /\ i \notin cr_1 /\ oget jo \notin cr_2) {
+          win <- true;
+        }
+        r <- true;
+      } else {
+        jo <- find (fun _ kp=> let (pk_j, y_j) = kp in y = pk_j) y_map;
+        if (jo is Some j) {
+          r <- z = shared_key x (oget y_map.[j]).`2;
+        }
+      }
+      return r;
+    }
+  }
+
+  proc run() = {
+    win <- false;
+
+    m <- 0;
+    n <- 0;
+
+    x_map <- empty;
+    y_map <- empty;
+
+    cr_1 <- fset0;
+    cr_2 <- fset0;
+
+    A(Oracles).solve();
+    return win;
+  }
+}.
