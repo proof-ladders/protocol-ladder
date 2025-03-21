@@ -1,0 +1,9 @@
+Primitive SymEnc(Set MessageSpace, Set CiphertextSpace, Set KeySpace) {
+    Set Message = MessageSpace;
+    Set Ciphertext = CiphertextSpace;
+    Set Key = KeySpace;
+
+    Key KeyGen();
+    Ciphertext Enc(Key k, Message m);
+    Message Dec(Key k, Ciphertext c);
+}

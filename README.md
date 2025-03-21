@@ -203,15 +203,15 @@ subfolder: [EtM-IND-CPA+CTXT](EtM-IND-CPA+CTXT/)
 
 | Squirrel | CryptoVerif | EasyCrypt |
 | --------:| ----------- |:--------- |
-|  Medium? | Easy        | Easy     |
+|  Medium? | Easy        | Easy      |
 
 ## KEM+DEM is semantically secure as a PKE
 
 subfolder: [kemdem](kemdem/)
 
-| Squirrel | CryptoVerif | EasyCrypt |
-| --------:| ----------- |:--------- |
-|  Medium? | Easy        | Easy     |
+| Squirrel | CryptoVerif | EasyCrypt | ProofFrog |
+| --------:| ----------- |:--------- |:--------- |
+|  Medium? | Easy        | Easy      | Easy      |
 
 
 # Symmetric primitives
