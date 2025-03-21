@@ -1,0 +1,48 @@
+// CPA security for a KEM is defined as indistinguishability between 
+// two games:
+//  - Real:   The adversary receives a real KEM ciphertext and the
+//            real shared secret encapsulated therein
+//  - Random: The adversary receives a real KEM ciphertext and an 
+//            independent randomly sampled shared secret
+
+import 'examples/Primitives/KEM.primitive';
+
+Game Real(KEM K) {
+    K.PublicKey pk;
+    K.SecretKey sk;
+
+    K.PublicKey Initialize() {
+        K.PublicKey * K.SecretKey k = K.KeyGen();
+        pk = k[0];
+        sk = k[1];
+        return pk;
+    }
+
+    K.SharedSecret * K.Ciphertext Challenge() {
+        K.SharedSecret * K.Ciphertext rsp = K.Encaps(pk);
+        K.SharedSecret ss = rsp[0];
+        K.Ciphertext ctxt = rsp[1];
+        return [ss, ctxt];
+    }
+}
+
+Game Random(KEM K) {
+    K.PublicKey pk;
+    K.SecretKey sk;
+
+    K.PublicKey Initialize() {
+        K.PublicKey * K.SecretKey k = K.KeyGen();
+        pk = k[0];
+        sk = k[1];
+        return pk;
+    }
+
+    K.SharedSecret * K.Ciphertext Challenge() {
+        K.SharedSecret * K.Ciphertext rsp = K.Encaps(pk);
+        K.SharedSecret ss <- K.SharedSecret;
+        K.Ciphertext ctxt = rsp[1];
+        return [ss, ctxt];
+    }
+}
+
+export as CPAKEM;

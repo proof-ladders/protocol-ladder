@@ -1,0 +1,17 @@
+import 'examples/Primitives/SymEnc.primitive';
+
+Game Real(SymEnc E) {
+    E.Key Challenge() {
+        E.Key k = E.KeyGen();
+        return k;
+}
+    }
+
+Game Random(SymEnc E) {
+    E.Key Challenge() {
+        E.Key k <- E.Key;
+        return k;
+    }
+}
+
+export as KeyUniformity;

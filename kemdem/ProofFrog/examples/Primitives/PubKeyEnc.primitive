@@ -1,0 +1,10 @@
+Primitive PubKeyEnc(Set MessageSpace, Set CiphertextSpace, Set PKeySpace, Set SKeySpace) {
+    Set Message = MessageSpace;
+    Set Ciphertext = CiphertextSpace;
+    Set PublicKey = PKeySpace;
+    Set SecretKey = SKeySpace;
+
+    PublicKey * SecretKey KeyGen();
+    Ciphertext Enc(PublicKey pk, Message m);
+    Message Dec(SecretKey sk, Ciphertext m);
+}

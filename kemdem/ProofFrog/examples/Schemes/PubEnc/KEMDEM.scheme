@@ -1,0 +1,40 @@
+// The hybrid public key encryption scheme constructed following the 
+// KEM-DEM paradigm uses a KEM to establish a shared secret which is
+// then used as the symmetric key to encrypt the main message.
+
+// Based on Exercise 11.9 of Boneh and Shoup's "Graduate Course in 
+// Applied Cryptography" (https://toc.cryptobook.us/).
+// Note that this example assumes that KEM decapsulation and symmetric
+// decryption always succeed.
+
+import 'examples/Primitives/KEM.primitive';
+import 'examples/Primitives/NonNullableSymEnc.primitive';
+import 'examples/Primitives/PubKeyEnc.primitive';
+
+Scheme KEMDEM(KEM K, SymEnc E) extends PubKeyEnc {
+    requires K.SharedSecret subsets E.Key;
+
+    Set Message = E.Message;
+    Set Ciphertext = K.Ciphertext * E.Ciphertext;
+    Set PublicKey = K.PublicKey;
+    Set SecretKey = K.SecretKey;
+
+    PublicKey * SecretKey KeyGen() {
+        return K.KeyGen();
+    }
+
+    Ciphertext Enc(PublicKey pk, Message m) {
+        K.SharedSecret * K.Ciphertext x = K.Encaps(pk);
+        E.Key k_sym = x[0];
+        K.Ciphertext c_kem = x[1];
+        E.Ciphertext c_sym = E.Enc(k_sym, m);
+        return [c_kem, c_sym];
+    }
+
+    Message Dec(SecretKey sk, Ciphertext c) {
+        K.Ciphertext c_kem = c[0];
+        E.Ciphertext c_sym = c[1];
+        K.SharedSecret k_sym = K.Decaps(sk, c_kem);
+        return E.Dec(k_sym, c_sym);
+    }
+}

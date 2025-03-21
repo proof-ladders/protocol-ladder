@@ -1,0 +1,35 @@
+import 'examples/Primitives/PubKeyEnc.primitive';
+
+Game Left(PubKeyEnc E) {
+    E.PublicKey pk;
+    E.SecretKey sk;
+
+    E.PublicKey Initialize() {
+        E.PublicKey * E.SecretKey k = E.KeyGen();
+        pk = k[0];
+        sk = k[1];
+        return pk;
+    }
+
+    E.Ciphertext Challenge(E.Message mL, E.Message mR) {
+        return E.Enc(pk, mL);
+    }
+}
+
+Game Right(PubKeyEnc E) {
+    E.PublicKey pk;
+    E.SecretKey sk;
+
+    E.PublicKey Initialize() {
+        E.PublicKey * E.SecretKey k = E.KeyGen();
+        pk = k[0];
+        sk = k[1];
+        return pk;
+    }
+
+    E.Ciphertext Challenge(E.Message mL, E.Message mR) {
+        return E.Enc(pk, mR);
+    }
+}
+
+export as CPA;

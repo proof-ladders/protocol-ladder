@@ -1,0 +1,10 @@
+Primitive KEM(Set SharedSecretSpace, Set CiphertextSpace, Set PKeySpace, Set SKeySpace) {
+    Set SharedSecret = SharedSecretSpace;
+    Set Ciphertext = CiphertextSpace;
+    Set PublicKey = PKeySpace;
+    Set SecretKey = SKeySpace;
+
+    PublicKey * SecretKey KeyGen();
+    SharedSecret * Ciphertext Encaps(PublicKey pk);
+    SharedSecret Decaps(SecretKey sk, Ciphertext m);
+}
