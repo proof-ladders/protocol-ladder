@@ -71,6 +71,7 @@ subfolder: [basic-hash](basic-hash/)
 | EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Medium                      |   ✅   |
 | Tamarin     | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unli)  |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unlo)  |  WIP   |
+| DY*         | Active   |    ∞     |   ∞    | Yes         | Symbolic       | MAC        | Auth       | Easy (Auth)                 |  ✅    |
 
 
 
@@ -90,6 +91,7 @@ subfolder: [signedDH](signedDH/)
 | EasyCrypt   | Active   |    ∞     |   ∞    | EK (client) + LTK | Computational  | Sign, DH, RO   | Auth, FS   | Hard               | ✅ (model), WIP (proofs) |
 | Tamarin     | Active   |    ∞     |   ∞    | LTK         | Symbolic       | Hash, DH, Sign | Auth, FS   | Easy (Auth,FS)     |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, Sign (det.) | KR         | Easy               |   ✅   |
+| DY*         | Active   |    ∞     |   ∞    | EK + LTK    | Symbolic       | KDF, DH, Sign  | Auth, FS   | Easy               |   ✅   |
 
 
 > [!TIP]
@@ -176,6 +178,7 @@ subfolder: [acme](acme/)
 | --------- | ---------- | ----------------- | ------------------- | ------------------------ |
 | EasyCrypt | Kyber      | formosa-ML-KEM is a formalisation of security for a high-performance implementation of ML-KEM, connecting a machine-checked security proof in EasyCrypt with a verifiably-correct and verifiably speculative-constant-time implementation in Jasmin.  | https://github.com/formosa-crypto/formosa-mlkem | https://github.com/formosa-crypto/formosa-mlkem |
 | Tamarin   | SPDM       | SPDM is a protocol that aims to provide platform security, for example for communicating hardware components or cloud computing scenarios. The standard is under development by the DMTF consortium, and supported by major industry players including Broadcom, Cisco, Dell, Google, HP, IBM, Intel, and NVIDIA. | [paper](https://eprint.iacr.org/2024/2047) | [model](https://github.com/ComprehensiveSPDM/TamarinSPDMAnalysis) |
+| DY*       | MLS (TreeKEM) | MLS is a secure group messaging protocol standardized at the IETF (RFC 9420). It includes a continuous group key agreement protocol, TreeKEM, where each session features an unbounded number of key derivations, unbounded number of public-key encryption, and a tree data-structure baked-in the protocol, making it difficult to analyze automatically. | [paper](https://eprint.iacr.org/2025/410) | [model](https://github.com/Inria-Prosecco/mls-star/) |
 
 
 
