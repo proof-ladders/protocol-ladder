@@ -1,38 +1,81 @@
-(* Example from CV tutorials
+(*
+ * Protocol:	  Signed Diffie-Hellman
+ * Modeler: 	  Charlie Jacomme
+ * Date:        April 2025
+ *
+ * Status: 	    Finished
+ * 
+ * attacker:    active
+ * sessions:    unbounded ∞ 
+ * agents:      unbounded ∞ 
+ * compromises: long-term keys (LTK)
+ * primitives:  hash, signatures, diffie-hellman
+ * properties:  forward_secrecy, client_side_authentication
+ * difficulty:  easy
+ *
+ ==============================================================================
+Expected result (see end of file for discussion):
 
-https://bblanche.gitlabpages.inria.fr/CryptoVerif/tutorial/index.html
-edited for
-https://github.com/charlie-j/summer-school-2023/tree/master
+RESULT Proved forall y_pk, x_pk: G, s_pk: pkey; inj-event(ClientAccept(s_pk, x_pk, y_pk)) ==> inj-event(ServerAccept(s_pk, x_pk, y_pk)) with public variables kCtest, kStest up to probability (NC * NS2 + 3 * NC^2) * PCollKey1 + NS * PSIGsign(time_1, NS2)
+Adv[Game 1: secrecy of kStest] <= (2 * #OS2^3 * NC + 2 * qH * #OS2^2 * NC) * pCDH(time_2) + (2 * #OS2^2 * NC + 4 * #OS2 * NC * qH + 6 * #OS2^2 * NC^2) * PCollKey2 + (8 * #OS2 * NC + 2 * NC * NS2 + 8 * NC^2) * PCollKey1 + 2 * NS * PSIGsign(time_1, NS2) + Adv[Game 23: secrecy of kStest]
+Adv[Game 23: secrecy of kStest] <= 0
+RESULT Proved secrecy of kStest up to probability (2 * qH * #OS2^2 * NC + 2 * #OS2^3 * NC) * pCDH(time_2) + (6 * #OS2^2 * NC^2 + 4 * #OS2 * NC * qH + 2 * #OS2^2 * NC) * PCollKey2 + (8 * NC^2 + 2 * NC * NS2 + 8 * #OS2 * NC) * PCollKey1 + 2 * NS * PSIGsign(time_1, NS2)
+Adv[Game 1: secrecy of kCtest] <= (2 * #OS2^3 * NC + 2 * qH * #OS2^2 * NC) * pCDH(time_2) + (2 * #OS2^2 * NC + 4 * #OS2 * NC * qH + 6 * #OS2^2 * NC^2) * PCollKey2 + (8 * #OS2 * NC + 2 * NC * NS2 + 8 * NC^2) * PCollKey1 + 2 * NS * PSIGsign(time_1, NS2) + Adv[Game 23: secrecy of kCtest]
+Adv[Game 23: secrecy of kCtest] <= 0
+RESULT Proved secrecy of kCtest up to probability (2 * qH * #OS2^2 * NC + 2 * #OS2^3 * NC) * pCDH(time_2) + (6 * #OS2^2 * NC^2 + 4 * #OS2 * NC * qH + 2 * #OS2^2 * NC) * PCollKey2 + (8 * NC^2 + 2 * NC * NS2 + 8 * #OS2 * NC) * PCollKey1 + 2 * NS * PSIGsign(time_1, NS2)
+RESULT time_1 = (NC + #OS2) * time(msg2) + (NC + #OS2 + qH) * time(Hash) + (2 * NC + 2 * #OS2) * time(exp) + NC * time(([1,NC])) + #OS2 * time(mult) + #OS2 * time(([1,NS2], [1,NS])) + time + (NS * NC - 1) * time(SIGverify) + (NS * NS2 - NS2) * time(sign_r) + (2 * NS - 1) * time(skgen) + (NS - 1) * time(pkgen)
+RESULT time_2 = (NC * NS + NC * NS2 + NS) * time(pkgen) + (NC + #OS2) * time(msg2) + NC * NS2 * time(SIGverify) + (NS + #OS2) * time(skgen) + #OS2 * time(sign_r) + time + (#OS2^2 + qH * #OS2 + 3 * #OS2 + NC - 3) * time(exp)
+All queries proved.
+
+real	0m0,082s
+user	0m0,072s
+sys	0m0,010s
 
 *)
 
 
-(* CryptoVerif is able to prove the queries in this model automatically.
-   We use the interactive mode for illustration. For automatic mode,
-   run `auto` anytime in interactive mode, or delete the proof environment,
-   or use a `proof { auto }` proof environment. *)
+(* CryptoVerif is almost able to prove the queries in this model automatically.
+   In the automated mode, it uses the base uf-cma assumption, which does not
+   allow for the compromise of the longterm key and fails.
+
+   We use the interactive mode to start by applying the corrupt variant of the
+   assumption, and the proof is then automatic.
+
+   We give the end of the proof for the idea however. *)
+
+proof
+{
+
+(* Apply the uf-cma assumption *)
+crypto uf_cma_corrupt(SIGsign);
+
+(*  out_game "g01.ocv";  *)
+(* Here, we already proved the injective authentication. *)
+success;
+
+(* the rest of the proof is automatic if need be, simply uncomment auto. *)
+(* auto *)
+
+(* Otherwise, apply the ROM transform *)
+crypto rom(Hash);
+  
+(*  out_game "g02.ocv";  *)
+
+(* The the cdh transform *)
+crypto cdh(exp);
+
+(* all good! *)
+success
+
+}
+
 
 (*
-proof {
-  out_game "g01.ocv"; 
-  interactive;
-  crypto rom(hash);
-  out_game "g02.ocv";
-  crypto uf_cma(sign) *;
-  out_game "g03.ocv";
-  success;  
-  simplify; 
-  out_game "g04.ocv";
-  crypto cdh(exp);
-  out_game "g05.ocv";
-  success
-}
+=====================
+Function Definitions
+=====================
 *)
 
-
-proof {interactive}
-(* Signed Diffie-Hellman protocol *)
-param NA, NB, NK.
 
 type host [bounded].
 type keyseed [large,fixed].
@@ -46,8 +89,14 @@ type G [large,bounded].
 type key [fixed].
 
 (* Basic Diffie-Hellman declarations *)
+(* expand relies on the CryptoVerif builtin library, found in the cryptoverif folder, `default.ocvl` *)
 expand DH_basic(G, Z, g, exp, exp', mult).
 
+
+letfun DHkeygen() =
+       a <-R Z;
+       (a, exp(g,a)).
+       
 (* This collision assumption is needed to prove an injective
    correspondence, because we use ephemerals to distinguish sessions. *)
 proba PCollKey1.
@@ -81,22 +130,19 @@ expand ROM_hash(
   hashfunction, (* type for hash function choice *)
   G,            (* type of input *)
   key,          (* type of output *)
-  hash,         (* name of hash function *)
-  hashoracle,   (* process defining the hash oracle *)
+  Hash,         (* name of Hash function *)
+  Hashoracle,   (* process defining the Hash oracle *)
   qH            (* parameter: number of calls *)
 ).
 
 (* Concatenation helper functions *)
-fun msg2(host, host, G, G):message [data].
-fun msg3(host, host, G, G):message [data].
-(* We assume the messages have a different encoding. *)
-equation forall x:host, y:host, z:G, t:G, x2:host, y2:host, z2:G, t2:G;
-  msg2(x,y,z,t) <> msg3(x2,y2,z2,t2).
+fun msg2(G, G):message [data].
+
 
 (* Signatures *)
-proba Psign.
-proba Psigncoll.
-(* expand UF_CMA_det_signature( *)
+proba PSIGsign.
+proba PSIGsigncoll.
+(* expand UF_CMA_det_SIGsignature( *)
 expand UF_CMA_proba_signature(
   (* types, to be defined outside the macro *)
   keyseed,
@@ -107,79 +153,127 @@ expand UF_CMA_proba_signature(
   (* names for functions defined by the macro *)
   skgen,
   pkgen,
-  sign,
-  verify,
+  SIGsign,
+  SIGverify,
   (* probabilities, to be defined outside the macro *)
-  Psign,     (* breaking the UF-CMA property *)
-  Psigncoll  (* collision between independently gen. keys *)
+  PSIGsign,     (* breaking the UF-CMA property *)
+  PSIGsigncoll  (* collision between independently gen. keys *)
 ).
 
 table keys(host, pkey).
 
-(* The two honest peers *)
-const A,B:host.
+
+(*
+=====================
+Security queries
+=====================
+*)
 
 (* Queries and Events *)
-query secret keyA.
-query secret keyB.
 
-event endA(host, host, G, G).
-event beginB(host, host, G, G).
-event endB(host, host, G, G).
+(*
+Secrecy query:
 
-query y: G, x: G;
-  inj-event(endA(A, B, x, y)) ==> inj-event(beginB(A, B, x, y))
-  public_vars keyA, keyB.
-query y: G, x: G;
-  inj-event(endB(A, B, x, y)) ==> inj-event(endA(A, B, x, y))
-  public_vars keyA, keyB.
+kCtest is an array of values, each cell being populated by some client session with its
+derived secret key, whenever the client accepted and derived a key
+while talking to an honest server (honest s_pk) which has not been compromised
+yet.
 
-let processA(hf:hashfunction, skA:skey) =
-  OA1(hostX: host) :=
-    a <-R Z;
-    ga <- exp(g,a);
-    return(A, hostX, ga);
+kStest is an array of values, each cell being populated by some server session with its
+derived secret key, whenever the server accepted and derived a key
+after receiving an honest client ephemeral share (honest x_pk)
 
-  OA3(=A, =hostX, gb:G, s:signature) :=
-    get keys(=hostX, pkX) in
-    if verify(msg2(A, hostX, ga, gb), pkX, s) then
-    gba <- exp(gb, a);
-    kA <- hash(hf, gba);
-    event endA(A, hostX, ga, gb);
-    return(sign(msg3(A, hostX, ga, gb), skA));
+CryptoVerif "query secret val" command test if each cell of the array
+(thus each correspinding session key), is real-or-random, assuming the
+rest of the array is compromised.
 
-  OAfin() :=
-    if hostX = B then (
-      keyA:key <- kA
-    ) else
-      return(kA).
+*)
 
-let processB(hf:hashfunction, skB:skey) =
-  OB2(hostY:host, =B, ga:G) :=
-    b <-R Z;
-    gb <- exp(g,b);
-    event beginB(hostY, B, ga, gb);
-    return(hostY, B, gb, sign(msg2(hostY, B, ga, gb), skB));
+query secret kCtest.
+query secret kStest.
 
-  OBfin(s:signature) :=
-    get keys(=hostY, pkY) in
-    if verify(msg3(hostY, B, ga, gb), pkY, s) then
-    gab <- exp(ga, b);
-    kB <- hash(hf, gab);
-    event endB(hostY, B, ga, gb);
+event ClientAccept(pkey, G, G).
+event ServerAccept(pkey, G, G).
 
-    if hostY = A then (
-      keyB:key <- kB
-    ) else
-      return(kB).
+(* CryptoVerif can also prove injective authentication with dedicated queries. *)
+query s_pk:pkey, x_pk,y_pk:G;
+  inj-event(ClientAccept(s_pk,x_pk,y_pk)) ==> inj-event(ServerAccept(s_pk,x_pk,y_pk))
+  public_vars kCtest,kStest.
 
-let pki(pkA:pkey, pkB:pkey) =
-  Opki(hostZ: host, pkZ: pkey) :=
-    if hostZ = B then (insert keys(B, pkB); return)
-    else if hostZ = A then (insert keys(A, pkA); return)
-    else (insert keys(hostZ, pkZ); return)
-    .
 
+
+(*
+=====================
+Protocol model
+=====================
+*)
+
+(* number of replication parameters *)
+param NC, NS, NS2.
+
+
+let Client(hf:hashfunction, s_pkC:pkey) =
+  OC1() :=
+    let (x_sk:Z,x_pk:G) = DHkeygen() in
+    return(x_pk);
+
+  OC3(y_pk:G, s:signature) :=
+
+   (* we declare a boolean on whether this is an honest session or not. *)
+    let honestSession =
+        (* does there exist a server session with the same s_pk *)
+    	find iS <= NS suchthat defined(s_pk[iS]) && s_pk[iS] = s_pkC then
+	   (* and for which the key has not yet been compromised ? *)
+	   (if defined(compromisedServer[iS]) then
+	     false
+           else
+	     true
+	   )
+	else
+	false
+    in
+
+    if SIGverify(msg2(x_pk, y_pk), s_pkC, s) then    
+    (* <!> we use the builtin signature function of CryptoVerif, which
+    does not have the arguments in the same order as the protocol set
+    specification. *)    
+    kC <- Hash(hf, exp(y_pk, x_sk));
+
+   (* if the session is honest *)
+    if honestSession then
+        (* we put the derived key in the target secret array *)
+        kCtest : key <- kC;
+	(* we raise the client side authentication event *)
+    	event ClientAccept(s_pkC,x_pk, y_pk).
+
+
+let Server(hf:hashfunction, s_sk:skey, s_pkS:pkey) =
+  OS2(x_pkS:G) :=
+    (* we declare a boolean on whether this is an honest session or not. *)
+    let honestSession =
+       (* does there exists a client session with the same x_pk ? *)
+       find iC <= NC suchthat defined(x_pk[iC]) && x_pk[iC] = x_pkS then
+            true
+       else
+	    false
+    in
+    
+    let (y_sk:Z,y_pk:G) = DHkeygen() in  
+    sig <- SIGsign(msg2(x_pkS,y_pk),s_sk);
+    kS <- Hash(hf, exp(x_pkS, y_sk));
+    event ServerAccept(s_pkS,x_pkS,y_pk);
+    return(y_pk,sig);
+
+   
+    Otest() :=       
+      (* if the session is honest, we put the derived key in the target secret array. *)
+      if honestSession then
+        kStest : key <- kS;
+	yield
+      else
+       return(kS).
+
+    
 letfun keygen() =
   rk <-R keyseed;
   sk <- skgen(rk);
@@ -187,48 +281,61 @@ letfun keygen() =
   (sk, pk).
 
 process
-  Ostart() :=
-    hf <-R hashfunction;
-    let (skA: skey, pkA: pkey) = keygen() in
-    let (skB: skey, pkB: pkey) = keygen() in
-    return(pkA, pkB);
+  Ostart() := 
+    hf <-R hashfunction;  (* initialize the hash function. *)
+    return ();
 
     (
-     (foreach iA <= NA do
-      run processA(hf, skA))
+     (foreach iC <= NC do
+      (* spawn an unbounded number of clients talking to anybody *)
+      OInitClient(s_pkC:pkey) :=
+         return ();
+         run Client(hf, s_pkC)
+     )
      |
-     (foreach iB <= NB do
-      run processB(hf, skB))
+     (foreach iS <= NS do
+
+     (* spawn an unbounded number of servers *)
+      OInitServer() :=
+          let (s_sk: skey, s_pk: pkey) = keygen() in
+	  return(s_pk);
+
+	  (* enable compromise of server secret keys *)
+	  (OCompromise() := compromisedServer : bool <- true; return(s_sk))
+	  |
+	  (
+
+	  (* spawn an unbounded number of server sessions *)
+	  foreach iS2 <= NS2 do
+	    run Server(hf, s_sk, s_pk))
+	  )  
      |
-     (foreach iK <= NK do
-      run pki(pkA, pkB))
-     |
-      run hashoracle(hf)
+      (* give acces to the attacker to the ROM *)
+      run Hashoracle(hf)
     )
 
 
 (* Bound discussion *)
 (*
-The bound obtained with Cryptoverif for the secrecy of keyA is as follows:
+The bound obtained with Cryptoverif for the secrecy of kCtest is as follows:
 
-RESULT Proved secrecy of keyA up to probability
- (2 * qH * NA * NB + 2 * NB^2 * NA + 2 * NA^2 * NB) * pCDH(time_3)
- + (2 * NB^2 + 4 * NA^2) * PCollKey1
- + 4 * NB^2 * NA^2 * PCollKey2 
-+ 2 * Psign(time_2, NB) 
-+ 2 * Psigncoll 
-+ 2 * Psign(time_1, NA)
-
+RESULT Proved secrecy of kCtest up to probability
+(2 * qH * #OS2^2 * NC + 2 * #OS2^3 * NC) * pCDH(time_2)
++ (6 * #OS2^2 * NC^2 + 4 * #OS2 * NC * qH + 2 * #OS2^2 * NC) * PCollKey2
++ (8 * NC^2 + 2 * NC * NS2 + 8 * #OS2 * NC) * PCollKey1
++ 2 * NS * PSIGsign(time_1, NS2)
 
 The intuitive expected bound is close to:
   the adversary obtain the exponent of a group element +
-  the attacker forges one of the signature either on A or B side +
-  public keys collided +
-  two As or two Bs take the same ephemeral    +
-  two computed keys collide
+  two computed keys collide  
+  DH public keys collided +
+  the attacker forges one of the SIGsignature for a public key 
 
 which yields
- (number of possible DH elements)*pCDH + (2=A signature + B signature) pSign + (number of keys ) * PCollKey1 + (number of possible key pairs)* PCollKey + (a key collide) PsignColl
+ (number of possible DH elements)*pCDH +
+ (number of possible key pairs)* PCollKey2 + 
+ (number of keys) * PCollKey1 +
+ (number of servers) pSIGsign +
 
 
 
