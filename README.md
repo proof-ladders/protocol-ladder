@@ -90,7 +90,7 @@ subfolder: [signedDH](signedDH/)
 | CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign (det.) | Auth, FS   | Easy               |   ✅   |
 | EasyCrypt   | Active   |    ∞     |   ∞    | EK (client) + LTK | Computational  | Sign, DH, RO   | Auth, FS   | Hard               | ✅ (model), WIP (proofs) |
 | Tamarin     | Active   |    ∞     |   ∞    | LTK         | Symbolic       | Hash, DH, Sign | Auth, FS   | Easy (Auth,FS)     |   ✅   |
-| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, Sign (det.) | KR         | Easy               |   ✅   |
+| Proverif    | Active   |    ∞     |   ∞    | EK + LTK        | Symbolic       | Hash, DH, Sign | Auth, FS         | Easy (Auth, FS)              |   ✅   |
 | DY*         | Active   |    ∞     |   ∞    | EK + LTK    | Symbolic       | KDF, DH, Sign  | Auth, FS   | Easy               |   ✅   |
 
 
