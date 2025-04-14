@@ -13,6 +13,10 @@
  * properties:  forward_secrecy, client_side_authentication
  * difficulty:  easy
  *
+
+This is a common example, variants can be found in CryptoVerif tutorials as https://bblanche.gitlabpages.inria.fr/CryptoVerif/tutorial/index.html or https://github.com/charlie-j/summer-school-2023/tree/master. 
+
+
  ==============================================================================
 Expected result (see end of file for discussion):
 

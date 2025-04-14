@@ -13,6 +13,9 @@
  * properties:  executability, session_key_secrecy, forward_secrecy, client_side_authentication
  * difficulty:  easy
  *
+
+This is a usual exercise, with variants for instance found in the git examples directory.
+
  ==============================================================================
  Expected result:
 
