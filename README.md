@@ -86,7 +86,7 @@ subfolder: [signedDH](signedDH/)
 
 | Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives     | Properties | Difficulty ratings | Status |
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | -------------- | ---------- | ------------------ | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | LTK         | Computational  | Hash, Sign     | Auth (2-sided), FS   | Easy               |   ✅   |
+| Squirrel    | Active   |    ∞     |   ∞    | LTK         | Computational  | Sign, DH, RO     | Auth, FS   | Medium               |   ✅   |
 | CryptoVerif | Active   |    ∞     |   ∞    | LTK         | Computational  | Sign,DH, RO | Auth, FS   | Easy               |   ✅   |
 | EasyCrypt   | Active   |    ∞     |   ∞    | EK (client) + LTK | Computational  | Sign, DH, RO   | Auth, FS   | Hard               | ✅ (model), WIP (proofs) |
 | Tamarin     | Active   |    ∞     |   ∞    | LTK         | Symbolic       | Hash, DH, Sign | Auth, FS   | Easy (Auth,FS)     |   ✅   |
