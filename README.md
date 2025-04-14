@@ -69,9 +69,9 @@ subfolder: [basic-hash](basic-hash/)
 | Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Easy                        |   ✅   |
 | CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Easy                        |   ✅   |
 | EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Medium                      |   ✅   |
-| Tamarin     | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unli)  |   ✅   |
-| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, ⚡RA | Easy (Auth,RA), Hard (Unlo)  |  WIP   |
-| DY*         | Active   |    ∞     |   ∞    | Yes         | Symbolic       | MAC        | Auth       | Easy (Auth)                 |  ✅    |
+| Tamarin     | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, ⚡RA  | Easy (Auth,RA), Hard (Unli) |   ✅   |
+| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth       | Easy                        |   ✅   |
+| DY*         | Active   |    ∞     |   ∞    | Yes         | Symbolic       | MAC        | Auth       | Easy (Auth)                 |   ✅   |
 
 
 
