@@ -14,6 +14,26 @@
  * difficulty:  easy
  *
  ==============================================================================
+ Expected result:
+
+--------------------------------------------------------------
+Verification summary:
+
+Query event(ServerAccept(s_pk_2,x_pk_2,y_pk_2,k)) && event(ClientAccept(s_pk_2,x_pk_2,y_pk_2,k)) ==> event(CompromiseServer(s_pk_2)) is false.
+
+Query inj-event(ClientAccept(s_pk_2,x_pk_2,y_pk_2,k)) && event(HonestServer(s_pk_2)) ==> event(CompromiseServer(s_pk_2)) || inj-event(ServerAccept(s_pk_2,x_pk_2,y_pk_2,k)) is true.
+
+Query event(ClientAccept(s_pk_2,x_pk_2,y_pk_2,k))@i && event(HonestServer(s_pk_2)) && attacker(k) ==> (event(CompromiseServer(s_pk_2))@j && i > j) || event(CompromiseClientShare(x_pk_2)) || event(CompromiseServerShare(y_pk_2)) is true.
+
+Query event(ServerAccept(s_pk_2,x_pk_2,y_pk_2,k))@i && event(HonestClientShare(x_pk_2)) && attacker(k) ==> event(CompromiseClientShare(x_pk_2)) || event(CompromiseServerShare(y_pk_2)) is true.
+
+--------------------------------------------------------------
+
+
+real	0m0,023s
+user	0m0,018s
+sys	0m0,004s
+
 *)
 
 (*
