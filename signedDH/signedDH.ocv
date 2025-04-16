@@ -20,15 +20,15 @@ This is a common example, variants can be found in CryptoVerif tutorials as http
  ==============================================================================
 Expected result (see end of file for discussion):
 
-RESULT Proved forall y_pk, x_pk: G, s_pk: pkey; inj-event(ClientAccept(s_pk, x_pk, y_pk)) ==> inj-event(ServerAccept(s_pk, x_pk, y_pk)) with public variables kCtest, kStest up to probability (NC * NS2 + 3 * NC^2) * PCollKey1 + NS * PSIGsign(time_1, NS2)
-Adv[Game 1: secrecy of kStest] <= (2 * #OS2^3 * NC + 2 * qH * #OS2^2 * NC) * pCDH(time_2) + (2 * #OS2^2 * NC + 4 * #OS2 * NC * qH + 6 * #OS2^2 * NC^2) * PCollKey2 + (8 * #OS2 * NC + 2 * NC * NS2 + 8 * NC^2) * PCollKey1 + 2 * NS * PSIGsign(time_1, NS2) + Adv[Game 23: secrecy of kStest]
+RESULT Proved forall y_pk, x_pk: G, s_pk: pkey; inj-event(ClientAccept(s_pk, x_pk, y_pk)) ==> inj-event(ServerAccept(s_pk, x_pk, y_pk)) with public variables kCtest, kStest up to probability (NC * NS2 + 3 * NC^2) * PCollKey1 + NS * PSIGsign(time_1, NS2, length(msg2))
+Adv[Game 1: secrecy of kStest] <= (2 * #OS2^3 * NC + 2 * qH * #OS2^2 * NC) * pCDH(time_2) + (2 * #OS2^2 * NC + 4 * #OS2 * NC * qH + 6 * #OS2^2 * NC^2) * PCollKey2 + (8 * #OS2 * NC + 2 * NC * NS2 + 6 * NC^2) * PCollKey1 + 2 * NS * PSIGsign(time_1, NS2, length(msg2)) + Adv[Game 23: secrecy of kStest]
 Adv[Game 23: secrecy of kStest] <= 0
-RESULT Proved secrecy of kStest up to probability (2 * qH * #OS2^2 * NC + 2 * #OS2^3 * NC) * pCDH(time_2) + (6 * #OS2^2 * NC^2 + 4 * #OS2 * NC * qH + 2 * #OS2^2 * NC) * PCollKey2 + (8 * NC^2 + 2 * NC * NS2 + 8 * #OS2 * NC) * PCollKey1 + 2 * NS * PSIGsign(time_1, NS2)
-Adv[Game 1: secrecy of kCtest] <= (2 * #OS2^3 * NC + 2 * qH * #OS2^2 * NC) * pCDH(time_2) + (2 * #OS2^2 * NC + 4 * #OS2 * NC * qH + 6 * #OS2^2 * NC^2) * PCollKey2 + (8 * #OS2 * NC + 2 * NC * NS2 + 8 * NC^2) * PCollKey1 + 2 * NS * PSIGsign(time_1, NS2) + Adv[Game 23: secrecy of kCtest]
+RESULT Proved secrecy of kStest up to probability (2 * qH * #OS2^2 * NC + 2 * #OS2^3 * NC) * pCDH(time_2) + (6 * #OS2^2 * NC^2 + 4 * #OS2 * NC * qH + 2 * #OS2^2 * NC) * PCollKey2 + (6 * NC^2 + 2 * NC * NS2 + 8 * #OS2 * NC) * PCollKey1 + 2 * NS * PSIGsign(time_1, NS2, length(msg2))
+Adv[Game 1: secrecy of kCtest] <= (2 * #OS2^3 * NC + 2 * qH * #OS2^2 * NC) * pCDH(time_2) + (2 * #OS2^2 * NC + 4 * #OS2 * NC * qH + 6 * #OS2^2 * NC^2) * PCollKey2 + (8 * #OS2 * NC + 2 * NC * NS2 + 6 * NC^2) * PCollKey1 + 2 * NS * PSIGsign(time_1, NS2, length(msg2)) + Adv[Game 23: secrecy of kCtest]
 Adv[Game 23: secrecy of kCtest] <= 0
-RESULT Proved secrecy of kCtest up to probability (2 * qH * #OS2^2 * NC + 2 * #OS2^3 * NC) * pCDH(time_2) + (6 * #OS2^2 * NC^2 + 4 * #OS2 * NC * qH + 2 * #OS2^2 * NC) * PCollKey2 + (8 * NC^2 + 2 * NC * NS2 + 8 * #OS2 * NC) * PCollKey1 + 2 * NS * PSIGsign(time_1, NS2)
-RESULT time_1 = (NC + #OS2) * time(msg2) + (NC + #OS2 + qH) * time(Hash) + (2 * NC + 2 * #OS2) * time(exp) + NC * time(([1,NC])) + #OS2 * time(mult) + #OS2 * time(([1,NS2], [1,NS])) + time + (NS * NC - 1) * time(SIGverify) + (NS * NS2 - NS2) * time(sign_r) + (2 * NS - 1) * time(skgen) + (NS - 1) * time(pkgen)
-RESULT time_2 = (NC * NS + NC * NS2 + NS) * time(pkgen) + (NC + #OS2) * time(msg2) + NC * NS2 * time(SIGverify) + (NS + #OS2) * time(skgen) + #OS2 * time(sign_r) + time + (#OS2^2 + qH * #OS2 + 3 * #OS2 + NC - 3) * time(exp)
+RESULT Proved secrecy of kCtest up to probability (2 * qH * #OS2^2 * NC + 2 * #OS2^3 * NC) * pCDH(time_2) + (6 * #OS2^2 * NC^2 + 4 * #OS2 * NC * qH + 2 * #OS2^2 * NC) * PCollKey2 + (6 * NC^2 + 2 * NC * NS2 + 8 * #OS2 * NC) * PCollKey1 + 2 * NS * PSIGsign(time_1, NS2, length(msg2))
+RESULT time_1 = (NC + #OS2) * time(msg2) + (NC + #OS2 + qH) * time(Hash) + (2 * NC + 2 * #OS2) * time(exp) + NC * time(([1,NC])) + #OS2 * time(mult) + #OS2 * time(([1,NS2], [1,NS])) + time + (NS * NC - 1) * time(SIGverify, length(msg2), maxlength(game 7: s)) + (NS * NS2 - NS2) * time(SIGsign, length(msg2)) + (2 * NS - 1) * time(skgen) + (NS - 1) * time(pkgen)
+RESULT time_2 = (NC * NS + NC * NS2 + NS) * time(pkgen) + (NC + #OS2) * time(msg2) + NC * NS2 * time(SIGverify, maxlength(game 20: m1), maxlength(game 20: s)) + (NS + #OS2) * time(skgen) + #OS2 * time(SIGsign, maxlength(game 20: x_1)) + #OS2 * time(SIGsign, maxlength(game 20: x)) + time + (#OS2^2 + qH * #OS2 + 3 * #OS2 + NC - 3) * time(exp)
 All queries proved.
 
 real	0m0,082s
@@ -82,11 +82,6 @@ Function Definitions
 
 
 type host [bounded].
-type keyseed [large,fixed].
-type pkey [bounded].
-type skey [bounded].
-type message [bounded].
-type signature [bounded].
 
 type Z [large,bounded].
 type G [large,bounded].
@@ -140,13 +135,22 @@ expand ROM_hash(
 ).
 
 (* Concatenation helper functions *)
-fun msg2(G, G):message [data].
+fun msg2(G, G):bitstring [data].
 
 
 (* Signatures *)
+
+type keyseed [large,fixed].
+type pkey [bounded].
+type skey [bounded].
+
 proba PSIGsign.
 proba PSIGsigncoll.
 (* expand UF_CMA_det_SIGsignature( *)
+
+
+(* We do not use the macro expansion, for pedagogical purposes. *)
+(*
 expand UF_CMA_proba_signature(
   (* types, to be defined outside the macro *)
   keyseed,
@@ -163,8 +167,51 @@ expand UF_CMA_proba_signature(
   PSIGsign,     (* breaking the UF-CMA property *)
   PSIGsigncoll  (* collision between independently gen. keys *)
 ).
+*)
+
+
+fun skgen(keyseed):skey.
+fun pkgen(keyseed):pkey.
+
+fun SIGsign(bitstring, skey): bitstring.
+fun SIGverify(bitstring, pkey, bitstring): bool.
+
+equation forall m:bitstring, r:keyseed; 
+	SIGverify(m, pkgen(r), SIGsign(m, skgen(r))) = true.
+
+collision r <-R keyseed; forall Y:pkey; 
+	return(pkgen(r) = Y) <=(PSIGsigncoll)=> return(false) if Y independent-of r.
 
 table keys(host, pkey).
+
+
+(* Big ufcma definition, scary *)
+param N, N2, N3, N4.
+alias skgen2 = skgen.
+alias pkgen2 = pkgen.
+alias SIGsign2 = SIGsign.
+alias SIGverify2 = SIGverify.
+equiv(uf_cma_corrupt(SIGsign))
+       foreach i3 <= N3 do r <-R keyseed; (
+           Opk() [useful_change] [2] := return(pkgen(r)) |
+	   foreach i2 <= N2 do  Osign(x: bitstring) [useful_change] := return(SIGsign(x, skgen(r))) |
+	   foreach i <= N do OSIGverify(m1: bitstring, si1:bitstring) [useful_change] := return(SIGverify(m1, pkgen(r), si1)) |
+	   Ocorrupt() [10] := return(r)) |
+       foreach i4 <= N4 do OSIGverify2(m: bitstring, y: pkey, si: bitstring) [3] := return(SIGverify(m, y, si)) [all]
+     <=(N3 * PSIGsign(time + (N4+N-1) * time(SIGverify, max(maxlength(m1), maxlength(m)), max(maxlength(si1), maxlength(si))) + (N3-1)*(time(pkgen) + time(skgen) + N2 * time(SIGsign, maxlength(x)) + N * time(SIGverify, maxlength(m1), maxlength(si1))), N2, maxlength(x)))=> [manual,computational]
+       foreach i3 <= N3 do r <-R keyseed [unchanged]; (
+           Opk() := return(pkgen2(r)) |
+	   foreach i2 <= N2 do Osign(x: bitstring) := return(SIGsign(x, skgen2(r))) |
+	   foreach i <= N do OSIGverify(m1: bitstring, si1:bitstring) := 
+	        if defined(corrupt) then return(SIGverify2(m1, pkgen2(r), si1)) else
+                find j <= N2 suchthat defined(x[j]) && m1 = x[j] && SIGverify2(m1, pkgen2(r), si1) then return(true) else return(false) |
+	   Ocorrupt() := let corrupt: bool = true in return(r)) |
+       foreach i4 <= N4 do OSIGverify2(m: bitstring, y: pkey, si: bitstring) :=
+		find k <= N3 suchthat defined(r[k],corrupt[k]) && y = pkgen2(r[k]) then return(SIGverify2(m, y, si)) else
+		find j <= N2, k <= N3 suchthat defined(x[j,k],r[k]) && y = pkgen2(r[k]) && m = x[j,k] && SIGverify2(m, y, si) then return(true) else
+		find k <= N3 suchthat defined(r[k]) && y = pkgen2(r[k]) then return(false) else
+		return(SIGverify(m,y,si)).
+
 
 
 (*
@@ -221,7 +268,7 @@ let Client(hf:hashfunction, s_pkC:pkey) =
     let (x_sk:Z,x_pk:G) = DHkeygen() in
     return(x_pk);
 
-  OC3(y_pk:G, s:signature) :=
+  OC3(y_pk:G, s:bitstring) :=
 
    (* we declare a boolean on whether this is an honest session or not. *)
     let honestSession =
@@ -340,8 +387,6 @@ which yields
  (number of possible key pairs)* PCollKey2 + 
  (number of keys) * PCollKey1 +
  (number of servers) pSIGsign +
-
-
 
 
 *)
