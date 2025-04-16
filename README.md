@@ -1,4 +1,4 @@
-# Intro
+# Protocol Ladder
 
 This repository brings together a set of examples for the formal analysis of cryptographic primitives and protocols. Our goal is to provide here a set of cryptographic problems, presented in pdf notes in a way accessible to both cryptographers or formal methods people, as well as a set of solutions for those problems, using distinct tools from the computer-aided cryptography domain.
 
@@ -14,8 +14,7 @@ We consider three separates set of problems, focusing on
 
 The following sections provide the details for each of those sets.
 
-
-# Protocols
+## Protocols
 
 The problem sets and possible modeling options are detailed in the [pdf notes](https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/main.pdf), which should be read first. Then it is possible to explore the solutions, summarized below. For people hoping to get familiar with cryptographic definitions and proofs of key-exchanges, a pen-and-paper solution is available [here](https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/computational/main.pdf) for problem 2 (the signed DH protocol) and 4 (the simplified NTOR).
 
@@ -60,22 +59,22 @@ The corresponding repositories are listed as:
 >This standardized description can be extended at will by the authors, for instance in a dedicated README in the solution subfolder or in their own repository. We provide tables aggregating those standardized description for each problem below.
 >
 
-## Problem 1: Basic Hash
+### Problem 1: Basic Hash
 
 subfolder: [basic-hash](basic-hash/)
 
-| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties | Difficulty ratings          | Status |
-| :---------- | -------- | :------: | :----: | ----------- | -------------- | ---------- | ---------- | --------------------------- | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Easy                        |   ✅   |
-| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Easy                        |   ✅   |
-| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli | Medium                      |   ✅   |
-| Tamarin     | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, ⚡RA  | Easy (Auth,RA), Hard (Unli) |   ✅   |
-| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth       | Easy                        |   ✅   |
-| DY*         | Active   |    ∞     |   ∞    | Yes         | Symbolic       | MAC        | Auth       | Easy (Auth)                 |   ✅   |
+| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties   | Difficulty ratings          | Status |
+| :---------- | -------- | :------: | :----: | ----------- | -------------- | ---------- | ------------ | --------------------------- | :----: |
+| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli   | Easy                        |   ✅   |
+| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli   | Easy                        |   ✅   |
+| EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | PRF        | Auth, Unli   | Medium                      |   ✅   |
+| Tamarin     | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, ⚡RA    | Easy (Auth,RA), Hard (Unli) |   ✅   |
+| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash       | Auth, Replay | Easy                        |   ✅   |
+| DY*         | Active   |    ∞     |   ∞    | Yes         | Symbolic       | MAC        | Auth         | Easy (Auth)                 |   ✅   |
 
 
 
-## Problem 2: Signed Diffie-Hellman
+### Problem 2: Signed Diffie-Hellman
 
 subfolder: [signedDH](signedDH/)
 
@@ -84,14 +83,14 @@ subfolder: [signedDH](signedDH/)
 | -------- | -------:| --- | -------- | ----------- | --------- |
 | Easy     |    Easy | ?   | Easy  | Easy        | HARD      | -->
 
-| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives     | Properties | Difficulty ratings | Status |
-| :---------- | -------- | :------: | :----: | ----------- | -------------- | -------------- | ---------- | ------------------ | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | LTK         | Computational  | Sign, DH, RO     | Auth, FS   | Medium               |   ✅   |
-| CryptoVerif | Active   |    ∞     |   ∞    | LTK         | Computational  | Sign,DH, RO | Auth, FS   | Easy               |   ✅   |
-| EasyCrypt   | Active   |    ∞     |   ∞    | EK (client) + LTK | Computational  | Sign, DH, RO   | Auth, FS   | Hard               | ✅ (model), WIP (proofs) |
-| Tamarin     | Active   |    ∞     |   ∞    | LTK         | Symbolic       | Hash, DH, Sign | Auth, FS   | Easy (Auth,FS)     |   ✅   |
-| Proverif    | Active   |    ∞     |   ∞    | EK + LTK        | Symbolic       | Hash, DH, Sign | Auth, FS         | Easy (Auth, FS)              |   ✅   |
-| DY*         | Active   |    ∞     |   ∞    | EK + LTK    | Symbolic       | KDF, DH, Sign  | Auth, FS   | Easy               |   ✅   |
+| Tool        | Attacker | Sessions | Agents | Compromises       | Attacker Class       | Primitives       | Properties | Difficulty ratings | Status |
+| :---------- | -------- | :------: | :----: | ----------------- | -------------------- | ---------------- | ---------- | ------------------ | :----: |
+| Squirrel    | Active   |    ∞     |   ∞    | LTK               | Computational        | Sign, DH, RO     | Auth, FS   | Medium             |   ✅   |
+| CryptoVerif | Active   |    ∞     |   ∞    | LTK               | Computational        | Sign,DH, RO      | Auth, FS   | Easy               |   ✅   |
+| EasyCrypt   | Active   |    ∞     |   ∞    | EK (client) + LTK | Computational        | Sign, DH, RO     | Auth, FS   | Hard               |   ✅ (model), WIP (proofs) |
+| Tamarin     | Active   |    ∞     |   ∞    | LTK               | Symbolic             | Hash, DH, Sign   | Auth, FS   | Easy (Auth,FS)     |   ✅   |
+| Proverif    | Active   |    ∞     |   ∞    | EK + LTK          | Symbolic             | Hash, DH, Sign   | Auth, FS   | Easy (Auth, FS)    |   ✅   |
+| DY*         | Active   |    ∞     |   ∞    | EK + LTK          | Symbolic             | KDF, DH, Sign    | Auth, FS   | Easy               |   ✅   |
 
 
 > [!TIP]
@@ -99,9 +98,7 @@ subfolder: [signedDH](signedDH/)
 > * LTK compromise: does not really increase difficulty
 > * Ephemeral compromise: OOS for CryptoVerif.
 
-
-
-## Problem 3: Signed KEM
+### Problem 3: Signed KEM
 
 subfolder: [signedKEM](signedKEM/)
 
@@ -110,12 +107,10 @@ subfolder: [signedKEM](signedKEM/)
 | Squirrel    | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Easy               |   ❎   |
 | CryptoVerif | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Easy               |   ❎   |
 | EasyCrypt   | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Hard               |   ❎   |
-| Tamarin     | Active   |    ∞     |   ∞    | LTK, EK, MAL_LTK | Symbolic       | Hash, DH, Sign, AsymEnc | Auth, FS, ⚡UKS, ⚡ReEncap | Easy               |   ✅   |
+| Tamarin     | Active   |    ∞     |   ∞    | LTK, EK, MAL_LTK | Symbolic       | Hash, DH, Sign, AsymEnc | Auth, FS, ⚡UKS, ⚡ReEncap   | Easy               |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None             | Symbolic       | Hash, Sign              | Auth, FS                   | Easy (Auth,FS)     |   ❎   |
 
-
-
-## Problem 4: Signed DH+KEM
+### Problem 4: Signed DH+KEM
 
 subfolder: [signedDH+KEM](signedDH+KEM/)
 
@@ -127,9 +122,7 @@ subfolder: [signedDH+KEM](signedDH+KEM/)
 | Tamarin     | Active   |    ∞     |   ∞    | LTK, EK     | Symbolic       | DH, Sign, AsymEnc | Auth, FS, Secrecy | Easy               |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, Sign        | Auth, FS          | Easy (Auth,FS)     |   ❎   |
 
-
-
-## Problem 5: NTOR protocol
+### Problem 5: NTOR protocol
 
 subfolder: [ntor](ntor/)
 
@@ -140,13 +133,13 @@ spec: https://spec.torproject.org/proposals/216-ntor-handshake.html
 | -------- | -------:| --- | -------- | ----------- | --------- |
 | Easy     |    Easy | ?   | Medium?  | Easy        | HARD      | -->
 
-| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties        | Difficulty ratings | Status |
-| :---------- | -------- | :------: | :----: | ----------- | -------------- | ---------- | ----------------- | ------------------ | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH   | Auth, Sec         | Hard               |  WIP   |
-| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, DH, RO | Auth, Sec          | Easy               |   ✅   |
-| EasyCrypt   | Active   |    ∞     |   ∞    | EK (client) + LTK | Computational  | Hash, DH, RO | Auth, FS         | Hard               |   ❎   |
-| Tamarin     | Active   |    ∞     |   ∞    | LTK, EK     | Symbolic       | Hash, DH   | Auth, FS, Secrecy | Easy               |   ✅   |
-| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Hash, DH   | Auth, Sec         | Easy               |   ✅   |
+| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class       | Primitives   | Properties        | Difficulty ratings | Status |
+| :---------- | -------- | :------: | :----: | ----------- | -------------------- | ------------ | ----------------- | ------------------ | :----: |
+| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational        | Hash, DH     | Auth, Sec         | Hard               |  WIP   |
+| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational        | Hash, DH, RO | Auth, Sec         | Easy               |   ✅   |
+| EasyCrypt   | Active   |    ∞     |   ∞    | EK (client) + LTK | Computational  | Hash, DH, RO | Auth, FS          | Hard               |   ❎   |
+| Tamarin     | Active   |    ∞     |   ∞    | LTK, EK     | Symbolic             | Hash, DH     | Auth, FS, Secrecy | Easy               |   ✅   |
+| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic             | Hash, DH     | Auth, Sec         | Easy               |   ✅   |
 
 > [!TIP]
 > Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
@@ -156,9 +149,7 @@ spec: https://spec.torproject.org/proposals/216-ntor-handshake.html
 > [!NOTE]
 > * Shows that ntor is "harder" than signedDH, due to authentication through static DH keys, which implies authentication based on gDH+ROM.
 
-
-
-## Problem 6: Simplified ACME
+### Problem 6: Simplified ACME
 
 subfolder: [acme](acme/)
 
@@ -170,21 +161,21 @@ subfolder: [acme](acme/)
 | Tamarin     | Active   |    ∞     |   ∞    | None        | Symbolic       | Sign       | Auth, ⚡DEO  | Easy               |   ✅   |
 | Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic       | Sign       | Auth        | Easy               |   ❎   |
 
+### Showcase
 
+#### EasyCrypt
+- **Case Study**: Kyber
+- **Description**: [formosa-ML-KEM](https://github.com/formosa-crypto/formosa-mlkem) is a formalisation of security for a high-performance implementation of ML-KEM, connecting a machine-checked security proof in EasyCrypt with a verifiably-correct and verifiably speculative-constant-time implementation in Jasmin.
 
-## Showcase
+#### Tamarin
+- **Case Study**: SPDM
+- **Description**: SPDM is a protocol that aims to provide platform security, for example for communicating hardware components or cloud computing scenarios. The standard is under development by the DMTF consortium, and supported by major industry players including Broadcom, Cisco, Dell, Google, HP, IBM, Intel, and NVIDIA. [Paper](https://eprint.iacr.org/2024/2047), [Model](https://github.com/ComprehensiveSPDM/TamarinSPDMAnalysis)
 
-| Tool      | Case-study | Description       | Link                | Model                    |
-| --------- | ---------- | ----------------- | ------------------- | ------------------------ |
-| EasyCrypt | Kyber      | formosa-ML-KEM is a formalisation of security for a high-performance implementation of ML-KEM, connecting a machine-checked security proof in EasyCrypt with a verifiably-correct and verifiably speculative-constant-time implementation in Jasmin.  | https://github.com/formosa-crypto/formosa-mlkem | https://github.com/formosa-crypto/formosa-mlkem |
-| Tamarin   | SPDM       | SPDM is a protocol that aims to provide platform security, for example for communicating hardware components or cloud computing scenarios. The standard is under development by the DMTF consortium, and supported by major industry players including Broadcom, Cisco, Dell, Google, HP, IBM, Intel, and NVIDIA. | [paper](https://eprint.iacr.org/2024/2047) | [model](https://github.com/ComprehensiveSPDM/TamarinSPDMAnalysis) |
-| DY*       | MLS (TreeKEM) | MLS is a secure group messaging protocol standardized at the IETF (RFC 9420). It includes a continuous group key agreement protocol, TreeKEM, where each session features an unbounded number of key derivations, unbounded number of public-key encryption, and a tree data-structure baked-in the protocol, making it difficult to analyze automatically. | [paper](https://eprint.iacr.org/2025/410) | [model](https://github.com/Inria-Prosecco/mls-star/) |
+#### DY*
+- **Case Study**: MLS (TreeKEM)
+- **Description**: MLS is a secure group messaging protocol standardized at the IETF (RFC 9420). It includes a continuous group key agreement protocol, TreeKEM, where each session features an unbounded number of key derivations, unbounded number of public-key encryption, and a tree data-structure baked-in the protocol, making it difficult to analyze automatically. [Paper](https://eprint.iacr.org/2025/410), [Model](https://github.com/Inria-Prosecco/mls-star/)
 
-
-
-
-# Primitives
-
+## Primitives
 
 Current primitive examples:
 * Encrypt-Then-Mac is IND-CPA + INT-CTXT
@@ -200,7 +191,7 @@ Basic primitives are OOS for symbolic tools.
 
 All primitives models in Squirrel will have a weaker attacker model (only asymptotic security, limitation being lifted in WIP)
 
-## Encrypt-Then-Mac is IND-CPA + INT-CTXT
+### Encrypt-Then-Mac is IND-CPA + INT-CTXT
 
 subfolder: [EtM-IND-CPA+CTXT](EtM-IND-CPA+CTXT/)
 
@@ -208,7 +199,7 @@ subfolder: [EtM-IND-CPA+CTXT](EtM-IND-CPA+CTXT/)
 | --------:| ----------- |:--------- |
 |  Medium? | Easy        | Easy      |
 
-## KEM+DEM is semantically secure as a PKE
+### KEM+DEM is semantically secure as a PKE
 
 subfolder: [kemdem](kemdem/)
 
@@ -217,14 +208,14 @@ subfolder: [kemdem](kemdem/)
 |  Medium? | Easy        | Easy      | Easy      |
 
 
-# Symmetric primitives
+## Symmetric primitives
 
 WIP
 
-# Asymmetric primitives
+## Asymmetric primitives
 
 WIP
-# Acknowledgments
+
+## Acknowledgments
 
 This work was initiated by the HACS workshop. The main contributors for the design of the problems set are: Manuel Barbosa (primitives), Cas Cremers (protocols), François Dupressoir (primitives and protocols), Charlie Jacomme (protocols), Aurora Naska (protocols), Trevor Perrin (main coordinator), Mike Rosulek (primitives). Doreen Riepel and Paul Rösler contributed computational models and detailed proofs for two of the proposed protocols. We additionally thank the following for their valuable feedback: Karthikeyan Bhargavan, Jonathan Katz, Devon Tuma, Bas Spitters, and Théophile Wallez. Further authorship attributions can be found in specific solutions.
-
