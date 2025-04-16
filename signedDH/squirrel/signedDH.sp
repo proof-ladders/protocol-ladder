@@ -62,7 +62,7 @@ abstract SIGsign : message * skey -> message.
 abstract SIGverify : message * message * pkey -> bool.
 
 axiom [any] SIGverify_correct (x,y:message,k : skey) : 
-     SIGverify(x, SIGsign(x,k), pk(k)).
+     SIGverify(SIGsign(x,k), x, pk(k)).
 
 + UF-CMA axiom
 *)

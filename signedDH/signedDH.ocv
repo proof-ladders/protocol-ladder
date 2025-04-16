@@ -174,10 +174,10 @@ fun skgen(keyseed):skey.
 fun pkgen(keyseed):pkey.
 
 fun SIGsign(bitstring, skey): bitstring.
-fun SIGverify(bitstring, pkey, bitstring): bool.
+fun SIGverify(bitstring, bitstring, pkey): bool.
 
 equation forall m:bitstring, r:keyseed; 
-	SIGverify(m, pkgen(r), SIGsign(m, skgen(r))) = true.
+	SIGverify(SIGsign(m, skgen(r)), m, pkgen(r)) = true.
 
 collision r <-R keyseed; forall Y:pkey; 
 	return(pkgen(r) = Y) <=(PSIGsigncoll)=> return(false) if Y independent-of r.
@@ -195,22 +195,22 @@ equiv(uf_cma_corrupt(SIGsign))
        foreach i3 <= N3 do r <-R keyseed; (
            Opk() [useful_change] [2] := return(pkgen(r)) |
 	   foreach i2 <= N2 do  Osign(x: bitstring) [useful_change] := return(SIGsign(x, skgen(r))) |
-	   foreach i <= N do OSIGverify(m1: bitstring, si1:bitstring) [useful_change] := return(SIGverify(m1, pkgen(r), si1)) |
+	   foreach i <= N do OSIGverify(m1: bitstring, si1:bitstring) [useful_change] := return(SIGverify(si1, m1, pkgen(r))) |
 	   Ocorrupt() [10] := return(r)) |
-       foreach i4 <= N4 do OSIGverify2(m: bitstring, y: pkey, si: bitstring) [3] := return(SIGverify(m, y, si)) [all]
+       foreach i4 <= N4 do OSIGverify2(m: bitstring, y: pkey, si: bitstring) [3] := return(SIGverify(si, m, y)) [all]
      <=(N3 * PSIGsign(time + (N4+N-1) * time(SIGverify, max(maxlength(m1), maxlength(m)), max(maxlength(si1), maxlength(si))) + (N3-1)*(time(pkgen) + time(skgen) + N2 * time(SIGsign, maxlength(x)) + N * time(SIGverify, maxlength(m1), maxlength(si1))), N2, maxlength(x)))=> [manual,computational]
        foreach i3 <= N3 do r <-R keyseed [unchanged]; (
            Opk() := return(pkgen2(r)) |
 	   foreach i2 <= N2 do Osign(x: bitstring) := return(SIGsign(x, skgen2(r))) |
 	   foreach i <= N do OSIGverify(m1: bitstring, si1:bitstring) := 
-	        if defined(corrupt) then return(SIGverify2(m1, pkgen2(r), si1)) else
-                find j <= N2 suchthat defined(x[j]) && m1 = x[j] && SIGverify2(m1, pkgen2(r), si1) then return(true) else return(false) |
+	        if defined(corrupt) then return(SIGverify2(si1, m1, pkgen2(r))) else
+                find j <= N2 suchthat defined(x[j]) && m1 = x[j] && SIGverify2(si1, m1, pkgen2(r)) then return(true) else return(false) |
 	   Ocorrupt() := let corrupt: bool = true in return(r)) |
        foreach i4 <= N4 do OSIGverify2(m: bitstring, y: pkey, si: bitstring) :=
-		find k <= N3 suchthat defined(r[k],corrupt[k]) && y = pkgen2(r[k]) then return(SIGverify2(m, y, si)) else
-		find j <= N2, k <= N3 suchthat defined(x[j,k],r[k]) && y = pkgen2(r[k]) && m = x[j,k] && SIGverify2(m, y, si) then return(true) else
+		find k <= N3 suchthat defined(r[k],corrupt[k]) && y = pkgen2(r[k]) then return(SIGverify2(si, m, y)) else
+		find j <= N2, k <= N3 suchthat defined(x[j,k],r[k]) && y = pkgen2(r[k]) && m = x[j,k] && SIGverify2(si, m, y) then return(true) else
 		find k <= N3 suchthat defined(r[k]) && y = pkgen2(r[k]) then return(false) else
-		return(SIGverify(m,y,si)).
+		return(SIGverify(si, m,y)).
 
 
 
@@ -284,10 +284,7 @@ let Client(hf:hashfunction, s_pkC:pkey) =
 	false
     in
 
-    if SIGverify(msg2(x_pk, y_pk), s_pkC, s) then    
-    (* <!> we use the builtin signature function of CryptoVerif, which
-    does not have the arguments in the same order as the protocol set
-    specification. *)    
+    if SIGverify(s, msg2(x_pk, y_pk), s_pkC) then    
     kC <- Hash(hf, exp(y_pk, x_sk));
 
    (* if the session is honest *)
