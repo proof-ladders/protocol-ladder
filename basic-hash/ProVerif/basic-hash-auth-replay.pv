@@ -1,10 +1,30 @@
 (*
-	Basic Hash Authentication model based on CryptoVerif equivalent found in D. Baelde, S. Delaune, A. Koutsos, C. Jacomme, and S. Moreau,
-	“An Interactive Prover for Protocol Verification in the Computational Model,”
-	in Proceedings of the 42nd IEEE Symposium on Security and Privacy (S&P’21), 2021,
-	https://hal.inria.fr/hal-03172119.
+ * Protocol:	 Basic Hash
+ * Modeler: 	 Nadim Kobeissi
+ * Date:         April 2025
+ *
+ * Status: 	    Finished
+ * 
+ * attacker:    active
+ * sessions:    unbounded ∞ 
+ * agents:      unbounded ∞ 
+ * compromises: None
+ * primitives:  hash
+ * properties:  authentication, replay attack
+ * difficulty:  easy
+ *
 
-	Ported by Nadim Kobeissi, with additional comments to help new students.
+ ==============================================================================
+ Expected result:
+
+ --------------------------------------------------------------
+ Verification summary:
+
+ Query event(acceptR(xn,xh)) ==> event(startT(xn,xh)) is true.
+
+ Query inj-event(acceptR(xn,xh)) ==> inj-event(startT(xn,xh)) is false.
+ --------------------------------------------------------------
+
 *)
 
 (* ProVerif configuration *)
@@ -38,6 +58,9 @@ event startT(nonce,hashed).
 (* Essentially, this query mandates that if a session is accepted by the receiver with a certain nonce and hash, *)
 (* then the session must have started with the same nonce and hash. *)
 query xn: nonce, xh:hashed; event(acceptR(xn,xh)) ==> event(startT(xn,xh)).
+
+(* The injective variant of the above query allows us to capture replay attacks. *)
+query xn: nonce, xh:hashed; inj-event(acceptR(xn,xh)) ==> inj-event(startT(xn,xh)).
 
 (* Channels and Processes *)
 (* We define a channel pub to represent the public channel used for communication between participants. *)
