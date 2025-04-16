@@ -10,7 +10,7 @@
  * agents:      unbounded ∞ 
  * compromises: long-term keys (LTK)
  * primitives:  ROM, signatures, diffie-hellman
- * properties:  auth, forward secrecy
+ * properties:  exec, auth, forward secrecy
  * difficulty:  medium
  *
 
@@ -49,9 +49,23 @@ abstract dlog : G -> Z
 abstract ofG : G -> message.
 abstract toG : message -> G.
 
-
-(* signature *)
+(* signature declaration through builtin construction *)
 signature SIGsign,SIGverify,pk.
+(*
+this declaration can be thought equivalent to
+
+type skey [large].
+type pkey.
+
+abstract pk : skey -> pkey.
+abstract SIGsign : message * skey -> message.
+abstract SIGverify : message * message * pkey -> bool.
+
+axiom [any] SIGverify_correct (x,y:message,k : skey) : 
+     SIGverify(SIGsign(x,k), x, pk(k)).
+
++ UF-CMA axiom
+*)
 
 axiom [any] SIGsign_ax (x,y,k : message) : x = y => SIGverify(x, SIGsign(y,k), pk(k)).
 
@@ -144,6 +158,9 @@ abstract oget : message -> message.
 include DHLib.
 
 
+
+
+
 (*
 =====================
 Security queries
@@ -151,6 +168,32 @@ Security queries
 *)
 
 (* We can write lemma that talk about possible execution traces. *)
+
+(* We start with a sanity check, an honest execution succeeds. *)
+(* Agreement of Client holds whenever S has not been corrupted before A's execution *)
+lemma [default] executable (S,i,k:index):
+    (* A client and a server session appear in the trace,
+       with the actions in the right order. *)
+    C1(i) < S1(S,k) && S1(S,k) < C2(i) &&
+    (* and the client is talking with server S *)
+    input@C1(i) = pk(s_sk S) &&
+    (* and we have a matching conversation. *)
+    input@S1(S,k) = output@C1(i) &&
+    input@C2(i) = output@S1(S,k)
+    =>
+    (* the client accepted *)
+    cond@C2(i) &&   (* cond@X is a shortcut to the possible conditionals inside an action X. *)
+    (* and both derived the same key. *)
+    gCS i@C2(i) = gSC S k@S1(S,k).
+Proof.
+intro [O1 O2 Pk Is1 Ic2].
+(* we expand the let binding defintions and the hypothesis we have. *)
+rewrite /cond /gCS /gSC /y_pk /sig Ic2 /output /sig1 Pk /x_pk1 Is1 /output /=. 
+split. (* we split the conjuction in two goals *)
+ + by apply SIGsign_ax.  (* SIGverify succeeds thanks to the correctness of SIG. *)
+ + rewrite /y_pk1 /x_pk. 
+   by rewrite !exp_mult Z_com.  (* the keys are equal by applying DH based axioms. *)
+Qed.
 
 (*------------------------------------------------------------------*)
 (* Agreement of Client holds whenever S has not been corrupted before A's execution *)
