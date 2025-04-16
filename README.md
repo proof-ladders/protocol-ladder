@@ -133,13 +133,13 @@ spec: https://spec.torproject.org/proposals/216-ntor-handshake.html
 | -------- | -------:| --- | -------- | ----------- | --------- |
 | Easy     |    Easy | ?   | Medium?  | Easy        | HARD      | -->
 
-| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class       | Primitives   | Properties        | Difficulty ratings | Status |
-| :---------- | -------- | :------: | :----: | ----------- | -------------------- | ------------ | ----------------- | ------------------ | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational        | Hash, DH     | Auth, Sec         | Hard               |  WIP   |
-| CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational        | Hash, DH, RO | Auth, Sec         | Easy               |   ✅   |
-| EasyCrypt   | Active   |    ∞     |   ∞    | EK (client) + LTK | Computational  | Hash, DH, RO | Auth, FS          | Hard               |   ❎   |
-| Tamarin     | Active   |    ∞     |   ∞    | LTK, EK     | Symbolic             | Hash, DH     | Auth, FS, Secrecy | Easy               |   ✅   |
-| Proverif    | Active   |    ∞     |   ∞    | None        | Symbolic             | Hash, DH     | Auth, Sec         | Easy               |   ✅   |
+| Tool        | Attacker | Sessions | Agents | Compromises       | Attacker Class       | Primitives   | Properties        | Difficulty ratings | Status |
+| :---------- | -------- | :------: | :----: | ----------------- | -------------------- | ------------ | ----------------- | ------------------ | :----: |
+| Squirrel    | Active   |    ∞     |   ∞    | None              | Computational        | Hash, DH     | Auth, Sec         | Hard               |  WIP   |
+| CryptoVerif | Active   |    ∞     |   ∞    | None              | Computational        | Hash, DH, RO | Auth, Sec         | Easy               |   ✅   |
+| EasyCrypt   | Active   |    ∞     |   ∞    | EK (client) + LTK | Computational        | Hash, DH, RO | Auth, FS          | Hard               |   ❎   |
+| Tamarin     | Active   |    ∞     |   ∞    | LTK, EK           | Symbolic             | Hash, DH     | Auth, FS, Secrecy | Easy               |   ✅   |
+| Proverif    | Active   |    ∞     |   ∞    | None              | Symbolic             | Hash, DH     | Auth, Sec         | Easy               |   ✅   |
 
 > [!TIP]
 > Possible extensions: LTK compromise (for Forward Secrecy) + Ephemeral compromise.
