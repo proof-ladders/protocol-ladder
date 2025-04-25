@@ -30,13 +30,14 @@ probability mass 1) over keypairs, and a shared_key operation that
 *)
 type pkey, skey.
 
-op [lossless] dkp: (pkey * skey) distr.
-op shared_key: pkey -> skey -> pkey.
+op g: pkey.
+op [lossless] dsk: skey distr.
+op (^): pkey -> skey -> pkey.
 
-axiom shared_keyC X x Y y:
-     (X, x) \in dkp
-  => (Y, y) \in dkp
-  => shared_key X y = shared_key Y x.
+axiom shared_keyC x y:
+     x \in dsk
+  => y \in dsk
+  => (g ^ x) ^ y = (g ^ y) ^ x.
 
 (*
 We now define directly the multi-instance (q1, q2)-St_CDH experiment
@@ -77,51 +78,47 @@ module St_CDH (A : St_CDH_Adv) = {
   the keypair rather than just the secret key. (We don't have a
   generator.)  We could also have assumed a pk_from_sk operator, but
   where's the fun in that? ***)
-  var x_map: (int, pkey * skey) fmap
-  var y_map: (int, pkey * skey) fmap
+  var x_map: (int, skey) fmap
+  var y_map: (int, skey) fmap
 
   var cr_1: int fset
   var cr_2: int fset
 
   module Oracles = {
     proc gen_1() = {
-      var pk, sk;
+      var sk;
 
       n <- n + 1;
-      (pk, sk) <$ dkp;
-      x_map.[n] <- (pk, sk);
-      return pk;
+      sk <$ dsk;
+      x_map.[n] <- sk;
+      return g^sk;
     }
 
     proc corrupt_1(i) = {
-      var pk, sk;
       var r <- None;
 
       if (0 < i <= n) {
-        (pk, sk) <- oget x_map.[i];
         cr_1 <- cr_1 `|` fset1 i;
-        r <- Some sk;
+        r <- x_map.[i];
       }
       return r;
     }
 
     proc gen_2() = {
-      var pk, sk;
+      var sk;
 
       m <- m + 1;
-      (pk, sk) <$ dkp;
-      y_map.[m] <- (pk, sk);
-      return pk;
+      sk <$ dsk;
+      y_map.[m] <- sk;
+      return g^sk;
     }
 
     proc corrupt_2(j) = {
-      var pk, sk;
       var r <- None;
 
       if (0 < j <= m) {
-        (pk, sk) <- oget y_map.[j];
         cr_2 <- cr_2 `|` fset1 j;
-        r <- Some sk;
+        r <- y_map.[j];
       }
       return r;
     }
@@ -139,17 +136,17 @@ module St_CDH (A : St_CDH_Adv) = {
 
          The rest is straightforward-ish.
       *)
-      io <- find (fun _ kp=> let (pk_i, x_i) = kp in x = pk_i /\ z = shared_key y x_i) x_map;
+      io <- find (fun _ x_i => x = g ^ x_i /\ z = y ^ x_i) x_map;
       if (io is Some i) {
-        jo <- find (fun _ kp=> let (pk_j, y_j) = kp in y = pk_j) y_map;
+        jo <- find (fun _ y_j => y = g ^ y_j) y_map;
         if (jo <> None /\ i \notin cr_1 /\ oget jo \notin cr_2) {
           win <- true;
         }
         r <- true;
       } else {
-        jo <- find (fun _ kp=> let (pk_j, y_j) = kp in y = pk_j) y_map;
+        jo <- find (fun _ y_j => y = g ^ y_j) y_map;
         if (jo is Some j) {
-          r <- z = shared_key x (oget y_map.[j]).`2;
+          r <- z = x ^ (oget y_map.[j]);
         }
       }
       return r;

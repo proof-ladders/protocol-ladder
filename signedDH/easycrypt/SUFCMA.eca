@@ -111,6 +111,9 @@ module SUFCMA (S : SigScheme) (A : CMA_Adv) = {
     n <- 0;
     q <- fset0;
     cr <- fset0;
+    pk_map <- empty;
+    sk_map <- empty;
+
     (j, m, sig) <@ A(Oracles).forge();
     if (0 < j <= n /\ j \notin cr /\ (j, m, sig) \notin q) {
       pk <- oget pk_map.[j];

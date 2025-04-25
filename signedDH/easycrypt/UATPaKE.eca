@@ -87,11 +87,11 @@ We can then define the class of algorithms we consider for the
 adversary: all `distinguish` procedures that, given access to the
 oracles declared above, output a bit.
 **)
-module type UATPaKE_Adv_RO (P : UATPaKE_RO_Oracles) = {
+module type Adv_UATPaKE_RO (P : UATPaKE_RO_Oracles) = {
   proc distinguish(): bool
 }.
 
-module Exp_b (P : UATPaKE_RO) (O : RO) (A : UATPaKE_Adv_RO) = {
+module Exp_b (P : UATPaKE_RO) (O : RO) (A : Adv_UATPaKE_RO) = {
   (* The challenge bit *)
   var b_ror : bool
 
@@ -154,6 +154,7 @@ module Exp_b (P : UATPaKE_RO) (O : RO) (A : UATPaKE_Adv_RO) = {
 
       n <- n + 1;
       (st, c) <@ P(O).init(pk);
+      c_map.[n] <- st;
       jo <- find (fun _ pk_j=> pk_j = pk) pk_map;
       if (jo is Some j) {
         p_map.[n] <- j;
@@ -191,9 +192,9 @@ module Exp_b (P : UATPaKE_RO) (O : RO) (A : UATPaKE_Adv_RO) = {
 
       if (0 < i <= n /\ i \notin q) {
         st_i <- oget c_map.[i];
-        ko <@ P(O).recv(st_i, c);
         q <- q `|` fset1 i;
         if (c \notin odflt fset0 r_map.[p_map.[i], i]) {
+          ko <@ P(O).recv(st_i, c);
           if (   ch
               /\ i \notin xp
               /\ p_map.[i] <> None /\ 0 < oget p_map.[i] <= m /\ oget p_map.[i] \notin cr
@@ -228,6 +229,10 @@ module Exp_b (P : UATPaKE_RO) (O : RO) (A : UATPaKE_Adv_RO) = {
     p_map <- empty;
     i_map <- empty;
     r_map <- empty;
+
+    pk_map <- empty;
+    sk_map <- empty;
+    c_map <- empty;
 
     b' <@ A(Oracles).distinguish();
     return b';
