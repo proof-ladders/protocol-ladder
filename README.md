@@ -84,14 +84,14 @@ subfolder: [signedDH](signedDH/)
 | -------- | -------:| --- | -------- | ----------- | --------- |
 | Easy     |    Easy | ?   | Easy  | Easy        | HARD      | -->
 
-| Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives     | Properties | Difficulty ratings | Status |
-| :---------- | -------- | :------: | :----: | ----------- | -------------- | -------------- | ---------- | ------------------ | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | LTK         | Computational  | Sign, DH, RO     | Exec, Auth, FS   | Medium               |   ✅   |
-| CryptoVerif | Active   |    ∞     |   ∞    | LTK         | Computational  | Sign,DH, RO | Auth, FS   | Easy               |   ✅   |
-| EasyCrypt   | Active   |    ∞     |   ∞    | EK (client) + LTK | Computational  | Sign, DH, RO   | Auth, FS   | Hard               | ✅ (model), WIP (proofs) |
-| Tamarin     | Active   |    ∞     |   ∞    | LTK         | Symbolic       | Hash, DH, Sign | Exec, Auth, FS   | Easy     |   ✅   |
-| Proverif    | Active   |    ∞     |   ∞    | EK + LTK        | Symbolic       | Hash, DH, Sign | Exec, Auth, FS         | Easy              |   ✅   |
-| DY*         | Active   |    ∞     |   ∞    | EK + LTK    | Symbolic       | KDF, DH, Sign  | Auth, FS   | Easy               |   ✅   |
+| Tool        | Attacker | Sessions | Agents | Compromises       | Attacker Class | Primitives     | Properties     | Difficulty ratings |          Status          |
+| :---------- | -------- | :------: | :----: | ----------------- | -------------- | -------------- | -------------- | ------------------ | :----------------------: |
+| Squirrel    | Active   |    ∞     |   ∞    | LTK               | Computational  | Sign, DH, RO   | Exec, Auth, FS | Medium             |            ✅            |
+| CryptoVerif | Active   |    ∞     |   ∞    | LTK               | Computational  | Sign,DH, RO    | Auth, FS       | Easy               |            ✅            |
+| EasyCrypt   | Active   |    ∞     |   ∞    | EK (client) + LTK | Computational  | Sign, DH, RO   | Auth, FS       | Hard               | ✅ (model), WIP (proofs) |
+| Tamarin     | Active   |    ∞     |   ∞    | EK + LTK          | Symbolic       | Hash, DH, Sign | Exec, Auth, FS | Easy               |            ✅            |
+| Proverif    | Active   |    ∞     |   ∞    | EK + LTK          | Symbolic       | Hash, DH, Sign | Exec, Auth, FS | Easy               |            ✅            |
+| DY\*        | Active   |    ∞     |   ∞    | EK + LTK          | Symbolic       | KDF, DH, Sign  | Auth, FS       | Easy               |            ✅            |
 
 
 > [!TIP]
