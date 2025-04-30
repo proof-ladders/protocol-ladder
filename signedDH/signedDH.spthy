@@ -18,7 +18,7 @@
 
   analyzed: signedDH.spthy
 
-  processing time: 0.41s
+  processing time: 0.40s
   
   ExecutabilityClient (exists-trace): verified (2 steps)
   ExecutabilityServer (exists-trace): verified (4 steps)
@@ -34,8 +34,8 @@
 ==============================================================================
 
 real	0m0,447s
-user	0m1,255s
-sys	  0m0,073s
+user	0m1,261s
+sys	  0m0,062s
  */
  
 theory SignedDH
@@ -66,7 +66,7 @@ rule Client_Init:
   in
   [ Fr(~x_sk)]
   --[ ClientInitMessage()]->
-  [ Out(x_pk), StateC($C, ~x_sk), !EK($C, ~x_sk) ]
+  [ Out(x_pk), StateC($C, ~x_sk), !EK(~x_sk, x_pk) ]
 
 /*Server generates their own DH pair (y_sk, y_pk),
   sign the public keys of client and server (serverSign),
@@ -86,7 +86,7 @@ rule Server_Init:
   --[ ServerInitMessage(),
       ServerAccepts($S, x_pk, y_pk, pk(~s_sk), serverSign, K_S),
       SecretServer($S, K_S) ]->
-  [ Out(m), !EK($S, ~y_sk) ]
+  [ Out(m), !EK(~y_sk, y_pk) ]
 
 /*Client receives message In(<y_pk serversign>), 
   verifies the server's signature and derives the session key K_C.*/
@@ -102,7 +102,7 @@ rule Client_Accepts:
     In(m) ]
   --[  Eq(verify(serverSign, <x_pk, y_pk>, s_pk), true),
       ClientAccepts($S, x_pk, y_pk, s_pk, serverSign, K_C),
-      SecretClient($S, K_C),
+      SecretClient($S, K_C, ~x_sk, y_pk),
       ClientRecvMessage()]->
   [ ]
 
@@ -114,8 +114,8 @@ rule Compromise_LTK:
 
 // The attacker learns the emphemeral key.
 rule Compromise_EphemeralKey:
-  [  !EK($A, ~x_sk)]
-  --[CompromiseEphemeralKey(~x_sk)]->
+  [  !EK(~x_sk, x_pk)]
+  --[CompromiseEphemeralKey(~x_sk, x_pk)]->
   [ Out(~x_sk) ]
 
 // Sanity Traces to check executability of the model
@@ -146,28 +146,30 @@ lemma ServerKeySecrecy:
     ==> 
       not(Ex #j. K(sessKey) @ #j)
     | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)
-    | (Ex eKey #j. CompromiseEphemeralKey(eKey)@ #j)"
+    | (Ex eKey ePubKey #j. CompromiseEphemeralKey(eKey, ePubKey)@ #j)"
 
 /* If a client establishes successfully a session with key: sesskey, 
   the attacker does not know this secret, unless they compromise 
   the server's long-term key, or the DH ephemeral keys. */
 lemma SessionKey_Secrecy:
-  "All S sessKey #i. SecretClient(S, sessKey) @ #i 
+  "All S sessKey x_sk y_pk #i. SecretClient(S, sessKey, x_sk, y_pk) @ #i 
     ==> 
       not(Ex #j. K(sessKey) @ #j)
     | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)
-    | (Ex eKey #j. CompromiseEphemeralKey(eKey)@ #j)"
+    | (Ex x_pk #j. CompromiseEphemeralKey(x_sk, x_pk)@ #j)
+    | (Ex y_sk #j. CompromiseEphemeralKey(y_sk, y_pk)@ #j)"
 
 /* If the attacker learns the session key sessKey, then they must have 
   compromised the server before or they compromised the ephemeral keys. 
   Compromising the server in the future, does not break the secrecy of previous sessions.*/
 lemma ForwardSecrecy:
-  "All S sessKey #i #k. 
-      SecretClient(S, sessKey) @ #i &
+  "All S sessKey x_sk y_pk #i #k. 
+      SecretClient(S, sessKey, x_sk, y_pk) @ #i &
       K(sessKey) @ k
     ==>
         (Ex s_sk #j. CompromiseLtk(S, s_sk) @ j & j < i )
-      | (Ex eKey #j. CompromiseEphemeralKey(eKey)@ #j)"
+      | (Ex x_pk #j. CompromiseEphemeralKey(x_sk, x_pk)@ #j)
+      | (Ex y_sk #j. CompromiseEphemeralKey(y_sk, y_pk)@ #j)"
 
 /* At the end of the protocol, if the client establishes a session with key: sessKey,
   then there is a corresponding server S session with the same parameters and
