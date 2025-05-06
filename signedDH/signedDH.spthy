@@ -8,7 +8,7 @@
  * attacker:    active
  * sessions:    unbounded ∞ 
  * agents:      unbounded ∞ 
- * compromises: long-term keys (LTK)
+ * compromises: long-term keys (LTK) + emphemeral keys (EK)
  * primitives:  hash, signatures, diffie-hellman
  * properties:  executability, session_key_secrecy, forward_secrecy, client_side_authentication
  * difficulty:  easy
@@ -18,23 +18,24 @@
 
   analyzed: signedDH.spthy
 
-  processing time: 0.33s
+  processing time: 0.40s
   
   ExecutabilityClient (exists-trace): verified (2 steps)
   ExecutabilityServer (exists-trace): verified (4 steps)
   ExecutabilityClientEnd (exists-trace): verified (7 steps)
   BothPartiesCanReachEnd (exists-trace): verified (8 steps)
   ServerKeySecrecy (all-traces): falsified - found trace (6 steps)
-  SessionKey_Secrecy (all-traces): verified (11 steps)
-  ForwardSecrecy (all-traces): verified (11 steps)
+  SessionKey_Secrecy (all-traces): verified (14 steps)
+  ForwardSecrecy (all-traces): verified (14 steps)
   ClientSide_Injective_Authentication (all-traces): verified (11 steps)
   Unique_Commits (all-traces): verified (10 steps)
+  ClientSide_Injective_Authentication_simplified (all-traces): verified (7 steps)
 
 ==============================================================================
 
-real	0m0,357s
-user	0m0,878s
-sys	0m0,056s
+real	0m0,447s
+user	0m1,261s
+sys	  0m0,062s
  */
  
 theory SignedDH
@@ -49,7 +50,7 @@ any rule where such an equality is desired, e.g., check that signature verificat
 restriction Eq:
   "All x y #i. Eq(x, y) @ #i ==> x = y"
 
-// Generate Server's long-term (s_sk, s_pk)
+// Generate Server's long-term (s_sk, s_pk).
 rule Generate_serverLtk:
   let pkS = pk(~sk) 
   in
@@ -59,19 +60,18 @@ rule Generate_serverLtk:
     !Pk($S, pkS), 
     Out(pkS) ]
 
-// Client generates DH pair, and sends public key
+// Client generates DH pair (x_sk, x_pk), and sends the public key Out(x_pk).
 rule Client_Init:
   let x_pk = 'g'^~x_sk
   in
   [ Fr(~x_sk)]
   --[ ClientInitMessage()]->
-  [ Out(<x_pk>), StateC($C, ~x_sk) ]
+  [ Out(x_pk), StateC($C, ~x_sk), !EK(~x_sk, x_pk) ]
 
 /*Server generates their own DH pair (y_sk, y_pk),
-  sign the public keys of client and server,
-  calculates the session key, and
-  send the public key and signature to client.
-*/
+  sign the public keys of client and server (serverSign),
+  calculates the session key (K_S), and
+  send the public key and signature to client Out(<y_pk, serverSign>).*/
 rule Server_Init:
   let 
     y_pk = 'g'^~y_sk 
@@ -86,9 +86,10 @@ rule Server_Init:
   --[ ServerInitMessage(),
       ServerAccepts($S, x_pk, y_pk, pk(~s_sk), serverSign, K_S),
       SecretServer($S, K_S) ]->
-  [ Out(m) ]
+  [ Out(m), !EK(~y_sk, y_pk) ]
 
-// Client verifies the server's signature and derives the session key K_C
+/*Client receives message In(<y_pk serversign>), 
+  verifies the server's signature and derives the session key K_C.*/
 rule Client_Accepts:
   let
     m = <y_pk, serverSign>
@@ -101,15 +102,21 @@ rule Client_Accepts:
     In(m) ]
   --[  Eq(verify(serverSign, <x_pk, y_pk>, s_pk), true),
       ClientAccepts($S, x_pk, y_pk, s_pk, serverSign, K_C),
-      SecretClient($S, K_C),
+      SecretClient($S, K_C, ~x_sk, y_pk),
       ClientRecvMessage()]->
   [ ]
 
-// The attacker learns the server's long-term key
+// The attacker learns the server's long-term key.
 rule Compromise_LTK:
   [ !Ltk($S, ~sk)]
   --[CompromiseLtk($S, ~sk)]->
   [ Out(~sk) ]
+
+// The attacker learns the emphemeral key.
+rule Compromise_EphemeralKey:
+  [  !EK(~x_sk, x_pk)]
+  --[CompromiseEphemeralKey(~x_sk, x_pk)]->
+  [ Out(~x_sk) ]
 
 // Sanity Traces to check executability of the model
 lemma ExecutabilityClient:
@@ -131,35 +138,43 @@ lemma BothPartiesCanReachEnd:
     ClientAccepts(S, x_pk, y_pk, s_pk, serverSign, sessKey) @ #j "
 
 
-// Secrecy of established session key for the server.
-// Does not hold, Tamarin finds an attack trace. 
-// (The client could have been an attacker, therefore it knows the established key.)
+/* Secrecy of established session key for the server.
+   Should not hold, Tamarin shows the falsified trace. 
+   (The client could have been an attacker, therefore it knows the established key.)*/
 lemma ServerKeySecrecy:
   "All S sessKey #i. SecretServer(S, sessKey) @ #i 
     ==> 
       not(Ex #j. K(sessKey) @ #j)
-    | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
+    | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)
+    | (Ex eKey ePubKey #j. CompromiseEphemeralKey(eKey, ePubKey)@ #j)"
 
-// If a client establishes successfully a session with key: sesskey, the attacker does not know 
-// this secret, unless they compromise the server's long-term key.
+/* If a client establishes successfully a session with key: sesskey, 
+  the attacker does not know this secret, unless they compromise 
+  the server's long-term key, or the DH ephemeral keys. */
 lemma SessionKey_Secrecy:
-  "All S sessKey #i. SecretClient(S, sessKey) @ #i 
+  "All S sessKey x_sk y_pk #i. SecretClient(S, sessKey, x_sk, y_pk) @ #i 
     ==> 
       not(Ex #j. K(sessKey) @ #j)
-    | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
+    | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)
+    | (Ex x_pk #j. CompromiseEphemeralKey(x_sk, x_pk)@ #j)
+    | (Ex y_sk #j. CompromiseEphemeralKey(y_sk, y_pk)@ #j)"
 
-// The attacker cannot learn the session key, even if they compromise the server in the future.
+/* If the attacker learns the session key sessKey, then they must have 
+  compromised the server before or they compromised the ephemeral keys. 
+  Compromising the server in the future, does not break the secrecy of previous sessions.*/
 lemma ForwardSecrecy:
-  "All S sessKey #i #k. 
-      SecretClient(S, sessKey) @ #i &
+  "All S sessKey x_sk y_pk #i #k. 
+      SecretClient(S, sessKey, x_sk, y_pk) @ #i &
       K(sessKey) @ k
     ==>
-      (Ex s_sk #j. CompromiseLtk(S, s_sk) @ j & j < i )"
+        (Ex s_sk #j. CompromiseLtk(S, s_sk) @ j & j < i )
+      | (Ex x_pk #j. CompromiseEphemeralKey(x_sk, x_pk)@ #j)
+      | (Ex y_sk #j. CompromiseEphemeralKey(y_sk, y_pk)@ #j)"
 
-// At the end of the protocol, if the client establishes a session with key: sessKey,
-// then there is a corresponding server S session with the same parameters and
-// there are no two commits with the same parameters.
-// Otherwise the server was compromised
+/* At the end of the protocol, if the client establishes a session with key: sessKey,
+  then there is a corresponding server S session with the same parameters and
+  there are no two commits with the same parameters.
+  Otherwise the server was compromised */
 lemma ClientSide_Injective_Authentication:
   "All S x_pk y_pk s_pk serverSign sessKey #i. 
       ClientAccepts(S, x_pk, y_pk, s_pk, serverSign, sessKey) @ #i 
@@ -174,5 +189,17 @@ lemma Unique_Commits:
       ClientAccepts(S, x_pk, y_pk, s_pk, serverSign, sessKey) @ #i &
       ClientAccepts(S, x_pk, y_pk, s_pk, serverSign, sessKey) @ #j
     ==> #i=#j"
+
+/* At the end of the protocol, if the client establishes a session with key: sessKey,
+  then there is a corresponding server S session with the same parameters, 
+  otherwise the server was compromised.
+  The previous lemma: Unique Commits proved that: 
+  There are no two client commits with the same parameters.*/
+lemma ClientSide_Injective_Authentication_simplified:
+  "All S x_pk y_pk s_pk serverSign sessKey #i. 
+      ClientAccepts(S, x_pk, y_pk, s_pk, serverSign, sessKey) @ #i 
+   ==>  
+      (Ex #j. j<i & ServerAccepts(S, x_pk, y_pk, s_pk, serverSign, sessKey) @ #j)
+    | (Ex s_sk #j. CompromiseLtk(S, s_sk)@ #j)"
 
 end
