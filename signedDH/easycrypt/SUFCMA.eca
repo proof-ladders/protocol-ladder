@@ -48,6 +48,7 @@ module type CMA_Oracles = {
   proc corrupt(_: int): skey option
 
   proc sign(_: int, _: msg): sig option
+  proc verify(_: int, _: msg, _: sig): bool option
 }.
 
 (**
@@ -57,10 +58,12 @@ declared above, output an instance and a forgery (message and
 signature).
 **)
 module type CMA_Adv (O : CMA_Oracles) = {
-  proc forge(): int * msg * sig
+  proc forge(): unit
 }.
 
 module SUFCMA (S : SigScheme) (A : CMA_Adv) = {
+  var win: bool
+
   var n: int
 
   var pk_map: (int, pkey) fmap
@@ -102,23 +105,32 @@ module SUFCMA (S : SigScheme) (A : CMA_Adv) = {
       }
       return r;
     }
+
+    proc verify(j, m, s) = {
+      var pk, b;
+      var r <- None;
+
+      if (0 < j <= n) {
+        pk <- oget pk_map.[j];
+        b <@ S.verify(pk, m, s);
+        r <- Some b;
+        if (j \notin cr /\ (j, m, s) \notin q /\ b) {
+          win <- true;
+        }
+      }
+      return r;
+    }
   }
 
   proc run() = {
-    var j, m, sig, pk;
-    var b <- false;
-
+    win <- false;
     n <- 0;
     q <- fset0;
     cr <- fset0;
     pk_map <- empty;
     sk_map <- empty;
 
-    (j, m, sig) <@ A(Oracles).forge();
-    if (0 < j <= n /\ j \notin cr /\ (j, m, sig) \notin q) {
-      pk <- oget pk_map.[j];
-      b <@ S.verify(pk, m, sig);
-    }
-    return b;
+    A(Oracles).forge();
+    return win;
   }
 }.
