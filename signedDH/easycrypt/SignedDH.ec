@@ -10,10 +10,10 @@ require (*--*) St_CDH_abstract SUFCMA UATPaKE.
 (* Starting notes:
    - We (try to) follow Doreen and Paul's model as closely as possible
      while remaining precise.
-   - The NIKE is split out as Nominal Group with Gap-DH + RO. The
+   - The NIKE is split out as a Nominal Group with St-CDH + ROM. The
      entire scheme could be proved assuming an abstract NIKE (with
-     m-CKS-heavy security), and that be constructed from NG + Gap-DH +
-     RO.
+     (simple) m-CKS-heavy security), and that be constructed from
+     NG + St-CDH + ROM.
 *)
 
 (** Types and operators for the DH group **)
@@ -30,7 +30,7 @@ axiom shared_keyC x y:
 
 op [lossless full uniform] dssk: sskey distr.
 
-(** Instantiate the GapDH theory **)
+(** Instantiate the St-CDH theory **)
 clone import St_CDH_abstract as StCDH with
   type pkey <= pdh,
   type skey <= sdh,
@@ -44,7 +44,7 @@ realize shared_keyC by exact: shared_keyC.
 (** Additional types for the signature scheme **)
 type pkey, skey, sig.
 
-(** Instantiate the UFCMA theory **)
+(** Instantiate the SUFCMA theory **)
 clone import SUFCMA as Signature with
   type pkey   <= pkey,
   type skey   <= skey,
@@ -55,9 +55,11 @@ proof *.
 (** Additional types for defining protocols,
     plus RO instantiation
 **)
-type client_state = { pk: pkey;     (* The server's identity, as its public key *)
-                      epk: pdh;     (* The client's ephemeral public key *)
-                      esk: sdh   }. (* The client's ephemeral secret *)
+type client_state = {
+  pk: pkey;     (* The server's identity, as its public key *)
+  epk: pdh;     (* The client's ephemeral public key *)
+  esk: sdh      (* The client's ephemeral secret *)
+}.
 
 clone import FullRO as H with
   type in_t    <= pdh * pdh * pdh,
@@ -67,7 +69,8 @@ clone import FullRO as H with
   type d_out_t <= bool
 proof *.
 
-(** Instantiate the ProtRO theory **)
+(** Instantiate the UATPaKE theory
+    Note: this builds the ROM in   **)
 clone import UATPaKE as Security with
   type pkey         <= pkey,
   type skey         <= skey,
