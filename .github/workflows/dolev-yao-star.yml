@@ -17,5 +17,5 @@ jobs:
     - uses: DeterminateSystems/magic-nix-cache-action@main
     - name: Build
       run: |
-        cp .ci/dolev-yao-star/* .
+        git mv .ci/dolev-yao-star/* .
         nix flake check
