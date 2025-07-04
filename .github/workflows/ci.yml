@@ -1,0 +1,16 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  merge_group:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  dolev-yao-star:
+    name: dolev-yao-star
+    uses: ./.github/workflows/dolev-yao-star.yml
