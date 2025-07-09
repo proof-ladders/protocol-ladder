@@ -17,7 +17,7 @@ The following sections provide the details for each of those sets.
 
 # Protocols
 
-The problem sets and possible modeling options are detailed in the [pdf notes](https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/main.pdf), which should be read first. Then it is possible to explore the solutions, summarized below. For people hoping to get familiar with cryptographic definitions and proofs of key-exchanges, a pen-and-paper solution is available [here](https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/computational/main.pdf) for problem 2 (the signed DH protocol) and 4 (the simplified NTOR).
+The problem sets and possible modeling options are detailed in the [pdf notes](/Notes/main.pdf), which should be read first. Then it is possible to explore the solutions, summarized below. For people hoping to get familiar with cryptographic definitions and proofs of key-exchanges, a pen-and-paper solution is available [here](/Notes/computational/main.pdf) for problem 2 (the signed DH protocol) and 4 (the simplified NTOR).
 
 The directory structure for problems is as follows: there are top-level directories for each problem. Within these problem directories, there are tool-named subdirectories that contain solutions for that problem with the named tool.
 

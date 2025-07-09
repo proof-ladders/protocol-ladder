@@ -6,7 +6,7 @@ operation to avoid polluting the model, and to introduce an
 abstraction barrier that allows us to later instantiate the assumption
 with a modular group, an elliptic curve group, or even a group action.
 
-[0]: https://github.com/charlie-j/fm-crypto-lib/blob/main/Notes/computational/main.pdf
+[0]: https://github.com/proof-ladders/protocol-ladder/blob/main/Notes/computational/main.pdf
 
 Our goal with this formalisation is to stick as close as possible to
 the pen-and-paper definitions. We hope to:
