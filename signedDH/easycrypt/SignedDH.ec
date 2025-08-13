@@ -1001,10 +1001,169 @@ qed.
 (** Hop 2: Game 1 and Game 2 are equivalent unless (and until) the
     adversary successfully triggers bad_2 in Game 2.
 **)
+local module Game15_b = {
+  include var Exp_b(SignedDH(S), RO, A) [-run]
+  include var Game0_b [-run]
+
+  module Oracles = {
+    include Game1_b.Oracles [-receive]
+
+    proc receive(i: int, c: pdh * sig, ch: bool): sskey option = {
+      var st_i, k, h, sig, b;
+      var ko <- None;
+
+      if (!halt_bad /\ 0 < i <= n /\ i \notin q) {
+        st_i <- oget c_map.[i];
+        q <- q `|` fset1 i;
+        
+        if (c \notin odflt fset0 r_map.[p_map.[i], i]) {
+          (h, sig) <- c;
+          b <@ S.verify(st_i.`pk, (st_i.`epk, h), sig);
+          if (b) {
+            k <@ RO.get(st_i.`epk, h, h ^ st_i.`esk);
+            ko <- Some k;
+          }
+          if (   ch
+              /\ i \notin xp
+              /\ p_map.[i] <> None /\ 0 < oget p_map.[i] <= m /\ oget p_map.[i] \notin cr
+              /\ ko <> None) {
+            Game1_b.bad_2 <- true;
+            if (Exp_b.b_ror) {
+              k <$ dssk;
+              ko <- Some k;
+            }
+            Exp_b.ich <- Exp_b.ich `|` fset1 i;
+          }
+        }
+      }
+      return ko;
+    }
+  }
+
+  proc run(b) = {
+    var b';
+
+    RO.init();
+
+    halt_bad <- false;
+    b_ror <- b;
+
+    m <- 0;
+    n <- 0;
+
+    q <- fset0;
+    ich <- fset0;
+    rch <- fset0;
+    xp <- fset0;
+    cr <- fset0;
+
+    p_map <- empty;
+    i_map <- empty;
+    r_map <- empty;
+
+    pk_map <- empty;
+    sk_map <- empty;
+    c_map <- empty;
+
+    Game1_b.bad_1 <- false;
+    Game1_b.bad_2 <- false;
+
+    b' <@ A(Oracles).distinguish();
+    return b' /\ !halt_bad;
+  }
+}.
+
+local lemma Hop1_bad (b : bool) &m:
+  Pr[Game1_b.run(b) @ &m: res] = Pr[Game15_b.run(b) @ &m: res].
+proof.
+byequiv (: ={glob A, glob S, b} ==> ={res})=> //.
+by proc; sim.
+qed.
+
 local lemma Hop2 b &m:
   `|Pr[Game1_b.run(b) @ &m: res] - Pr[Game2_b.run(b) @ &m: res]|
   <= Pr[Game2_b.run(b) @ &m: Game1_b.bad_2].
-admitted.
+proof.
+rewrite (Hop1_bad b &m).
+byequiv (: ={glob A, glob S, b} ==> _): Game1_b.bad_2=> [||/#] //.
+proc.
+call (: Game1_b.bad_2 (* the bad event *)
+      (* The invariant that holds until bad happens *)
+      , ={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2}
+      (* the invariant that holds after bad happens *)
+      , ={Game1_b.bad_2}).
+(* Goal 1: the adversary terminates if its oracles terminate. See above. *)
++ exact: A_ll.
+(* Goal i.0: if bad does not hold, and the non-bad invariant holds
+   initially, then executing the oracles leads us to memories that are
+   such that the correct invariant holds (depending on whether bad
+   happened during the oracles' execution *)
++ by proc; if; auto; call (: true); auto.
+(* Goal i.1: the left-hand side oracle terminates and preserves bad *)
++ move=> &2 bad; proc; if; auto.
+  by call S_keygen_ll; auto=> />; rewrite bad.
+(* Goal i.2: the right-hand side oracle terminates and preserves bad *)
++ move=> &1; proc; if; auto.
+  by call S_keygen_ll; auto=> />.
+(* Do those three again for all oracles *)
++ conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
+  by sim.
++ by move=> &2 bad; proc; auto.
++ by move=> &1; proc; auto.
+(* And again *)
++ conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
+  by sim.
++ by move=> &2 bad; proc; auto.
++ by move=> &1; proc; auto.
+(* And again *)
++ conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
+  by sim.
++ move=> &2 bad; proc; if; auto=> /> &0.
+  by rewrite dsk_ll /= /#.
++ move=> &1; proc; if; auto=> /> &0.
+  by rewrite dsk_ll /= /#.
+(* And again *)
++ conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
+  by sim.
++ move=> &2 bad; conseq (: true); proc; islossless.
+  + by match; islossless.
+  + exact: S_sign_ll.
++ move=> &1; conseq (: true); proc; islossless.
+  + by match; islossless.
+  + exact: S_sign_ll.
+(* And again *)
++ proc; sp; if; auto.
+  sp; if; 1,3:auto.
+  seq 2 2: (={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2, i, c, ch, h, sig, b, ko, st_i}
+         /\ ko{1} = None).
+  + by call (: true); auto.
+  if; 1:auto; last first.
+  + rcondf {1} 1; 1:by auto=> /#.
+    rcondf {2} 1; 1:by auto=> /#.
+    by auto.
+  seq 2 2: (={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2, i, c, ch, h, sig, b, ko, st_i, k}).
+  + by sim.
+  if; 1,3:by auto.
+  by auto; sp; if {1}; auto.
++ move=> &2 bad; rewrite bad.
+  proc; sp; if; auto; sp; if; auto=> />.
+  seq 3: true 1%r 1%r 0%r _ Game1_b.bad_2=> //.
+  + by conseq (: _ ==> true)=> />.
+  + by islossless; exact: S_verify_ll.
+  + if; 2:by auto=> />.
+    by sp; conseq (: _ ==> true)=> />; islossless.
++ move=> &2; proc; sp; if; auto; sp; if; auto=> />.
+  conseq (: _ ==> true)=> />.
+  by islossless; exact: S_verify_ll.
+(* And again *)
++ conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
+  by sim.
++ by move=> &2 bad; conseq (: true); proc; islossless.
++ by move=> &1; conseq (: true); proc; islossless.
+(* Finally, show that the invariant implies what we wanted (and that
+   the program's preamble establishes the invariant) *)
+by inline; auto=> /> /#.
+qed.
 
 (** Reduction for Hop 2: If bad_2 happens, then we can extract a
     forgery, regardless of the challenge bit.
