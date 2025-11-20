@@ -9,7 +9,7 @@ defaults:
     shell: bash
 
 jobs:
-  dolev-yao-star:
+  tamarin:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4

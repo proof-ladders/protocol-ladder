@@ -7,19 +7,42 @@ open BasicHash.Specification
 
 #set-options "--fuel 0 --ifuel 0 --z3cliopt 'smt.qi.eager_threshold=100'"
 
+/// Security proofs of Basic Hash.
+/// Note: this file is only a proof artifact
+/// and isn't part of what must be reviewed.
+/// Only the protocol model (BasicHash.Specification)
+/// and the security theorems (BasicHash.Theorem)
+/// need to be reviewed.
+///
+/// We proceed in three steps:
+/// - define trace invariant
+/// - prove that each protocol step preserves the trace invariant
+/// - prove that trace invariant implies security properties
+/// The last step is done in BasicHash.Theorem
+
+/// We now define the trace invariant,
+/// which are composed of a MAC, state and event predicates.
+/// We will only comment the MAC predicate,
+/// which is our most important tool to conduct the proof.
+
+/// The MAC predicate.
+
 #push-options "--ifuel 2"
 let basic_hash_mac_pred {|crypto_usages|}: mac_crypto_predicate = {
-  pred = (fun tr key_usg key msg -> (
-    let MacKey _ usg_data = key_usg in
-    match parse mac_key_usage_data usg_data with
-    | None -> False
-    | Some { usg_tag_id } -> (
-      event_triggered tr usg_tag_id (TagSend msg)
-    )
+  pred = (fun tr key_usg key nonce -> (
+    // we only compute a MAC of a nonce when
+    // there exists a tag identifier
+    exists tag_id.
+      // that corresponds to the key usage
+      key_usg = MacKey "BasicHash.MacKey" (serialize _ { tag_id }) /\
+      // and this tag triggered an event `TagSend` with this nonce
+      event_triggered tr tag_id (TagSend nonce)
   ));
-  pred_later = (fun tr1 tr2 key_usg key msg -> ());
+  pred_later = (fun tr1 tr2 key_usg key nonce -> ());
 }
 #pop-options
+
+/// The tag state predicate.
 
 let tag_state_predicate {|crypto_invariants|}: local_state_predicate tag_state = {
   pred = (fun tr me key_sid (st:tag_state) ->
@@ -32,10 +55,12 @@ let tag_state_predicate {|crypto_invariants|}: local_state_predicate tag_state =
   );
 }
 
+/// The reader state predicate.
+
 let reader_state_predicate {|crypto_invariants|}: local_state_predicate reader_state = {
   pred = (fun tr me key_sid (st:reader_state) ->
-    st.key `has_usage tr` (mac_key_usage st.tag_id) /\
     bytes_invariant tr st.key /\
+    st.key `has_usage tr` (mac_key_usage st.tag_id) /\
     get_label tr st.key `equivalent tr` (mac_key_label st.tag_id me)
   );
   pred_later = (fun tr1 tr2 me key_sid st -> ());
@@ -43,6 +68,8 @@ let reader_state_predicate {|crypto_invariants|}: local_state_predicate reader_s
     assert(is_well_formed _ (is_knowable_by (principal_label me) tr) st)
   );
 }
+
+/// The event predicate.
 
 #push-options "--ifuel 1"
 let basic_hash_event_predicate: event_predicate basic_hash_event =
@@ -57,6 +84,9 @@ let basic_hash_event_predicate: event_predicate basic_hash_event =
     )
   )
 #pop-options
+
+/// The following is boilerplate to combine all of our predicates
+/// into the trace invariant.
 
 instance _: crypto_usages = default_crypto_usages
 
@@ -89,10 +119,16 @@ instance _: protocol_invariants = {
   };
 }
 
-let _ = do_boilerplate mk_mac_predicate_correct all_mac_preds
-let _ = do_boilerplate mk_state_pred_correct all_state_preds
-let _ = do_boilerplate mk_event_pred_correct all_event_preds
+let _ = do_split_boilerplate mk_mac_predicate_correct all_mac_preds
+let _ = do_split_boilerplate mk_state_pred_correct all_state_preds
+let _ = do_split_boilerplate mk_event_pred_correct all_event_preds
 let _ = enable_comparse_wf_lemmas_smtpats ()
+
+/// We now prove that each protocol step
+/// preserves the trace invariant.
+/// In this case,
+/// proofs are simple enough
+/// to be performed automatically by F*.
 
 val pair_tag_reader_proof:
   tag_id:principal -> reader_id:principal ->

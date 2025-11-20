@@ -9,16 +9,52 @@ open SignedDH.Specification
 
 let _ = enable_comparse_wf_lemmas_smtpats ()
 
+/// Security proofs of Signed DH.
+/// Note: this file is only a proof artifact
+/// and isn't part of what must be reviewed.
+/// Only the protocol model (SignedDH.Specification)
+/// and the security theorems (SignedDH.Theorem)
+/// need to be reviewed.
+///
+/// We proceed in three steps:
+/// - define trace invariant
+/// - prove that each protocol step preserves the trace invariant
+/// - prove that trace invariant implies security properties
+/// The last step is done in SignedDH.Theorem
+
+/// We now define the trace invariant,
+/// which are composed of a signature, state and event predicates.
+/// We will only comment the signature predicate,
+/// which is our most important tool to conduct the proof.
+
+/// The signature predicate.
+
 #push-options "--ifuel 1"
 let signed_dh_sign_pred {|crypto_usages|}: sign_crypto_predicate = {
   pred = (fun tr sk_usg vk msg -> (
-    exists server. sk_usg == long_term_key_type_to_usage (LongTermSigKey "SignedDH") server /\ (
+    // we only compute a signature of a bytestring when
+    // there exists a server
+    exists server.
+      // that corresponds to the signature key usage
+      sk_usg == long_term_key_type_to_usage (LongTermSigKey "SignedDH") server /\ (
+      // furthermore the signed bytestring is a SignedDH signature input
+      // that contains `x_pk` and `y_pk`
       match parse sig_input msg with
       | None -> False
       | Some { x_pk; y_pk; } -> (
+        // now the interesting part,
+        // where we state secrecy properties about y
+        // and authentication properties (i.e. that the server finished a handshake).
+        // to do so, we existentially quantify on `y_sk` (the secret counterpart of `y_pk`)
+        // and the server session identifier where `y_sk` is stored
         exists y_sk server_sid.
+          // `y_pk` is indeed the public key corresponding to `y_sk`
           y_pk == dh_pk y_sk /\
+          // the attacker may only know `y_sk` by compromising the corresponding server ephemeral key session
+          // (we state this using security labels)
           get_label tr y_sk == server_ephemeral_key_label server server_sid /\
+          // the server finished a handshake with the same parameters as the signature input
+          // (and derived some key `kdf_extract (dh ...) ...`)
           event_triggered tr server (ServerFinishEvent server_sid x_pk y_pk (kdf_extract (dh y_sk x_pk) empty))
       )
     )
@@ -28,6 +64,8 @@ let signed_dh_sign_pred {|crypto_usages|}: sign_crypto_predicate = {
   );
 }
 #pop-options
+
+/// The client state predicate.
 
 #push-options "--ifuel 1"
 let client_state_predicate {|crypto_invariants|}: local_state_predicate client_state = {
@@ -48,6 +86,8 @@ let client_state_predicate {|crypto_invariants|}: local_state_predicate client_s
 }
 #pop-options
 
+/// The server state predicate.
+
 #push-options "--ifuel 1"
 let server_state_predicate {|crypto_invariants|}: local_state_predicate server_state = {
   pred = (fun tr me sid (st:server_state) ->
@@ -61,6 +101,8 @@ let server_state_predicate {|crypto_invariants|}: local_state_predicate server_s
   pred_knowable = (fun tr me key_sid st -> ());
 }
 #pop-options
+
+/// The event predicate.
 
 #push-options "--ifuel 1"
 let signed_dh_event_predicate {|crypto_invariants|}: event_predicate signed_dh_event =
@@ -85,6 +127,9 @@ let signed_dh_event_predicate {|crypto_invariants|}: event_predicate signed_dh_e
     )
   )
 #pop-options
+
+/// The following is boilerplate to combine all of our predicates
+/// into the trace invariant.
 
 instance _: crypto_usages = default_crypto_usages
 
@@ -119,9 +164,15 @@ instance _: protocol_invariants = {
   };
 }
 
-let _ = do_boilerplate mk_sign_predicate_correct all_sign_preds
-let _ = do_boilerplate mk_state_pred_correct all_state_preds
-let _ = do_boilerplate mk_event_pred_correct all_event_preds
+let _ = do_split_boilerplate mk_sign_predicate_correct all_sign_preds
+let _ = do_split_boilerplate mk_state_pred_correct all_state_preds
+let _ = do_split_boilerplate mk_event_pred_correct all_event_preds
+
+/// We now prove that each protocol step
+/// preserves the trace invariant.
+/// In this case,
+/// proofs are simple enough
+/// to be performed mostly automatically by F*.
 
 val client_initiate_proof:
   client:principal ->
@@ -153,6 +204,7 @@ let server_receive_proof server private_keys_sid msg_ts tr =
     is_publishable tr x_pk /\ is_publishable tr y_pk ==> is_publishable tr (serialize sig_input { x_pk; y_pk; })
   )
 
+// This lemma can be removed once REPROSEC/dolev-yao-star-extrinsic#109 is merged
 val dh_shared_secret_lemma_smtpat:
   x:bytes -> y:bytes ->
   Lemma (dh x (dh_pk y) == dh y (dh_pk x))
