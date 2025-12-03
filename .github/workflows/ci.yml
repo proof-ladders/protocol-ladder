@@ -14,6 +14,9 @@ jobs:
   tamarin:
     name: tamarin
     uses: ./.github/workflows/tamarin.yml
+  proverif:
+    name: proverif
+    uses: ./.github/workflows/proverif.yml
   dolev-yao-star:
     name: dolev-yao-star
     uses: ./.github/workflows/dolev-yao-star.yml
