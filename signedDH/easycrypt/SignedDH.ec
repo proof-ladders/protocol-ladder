@@ -10,10 +10,12 @@ require (*--*) St_CDH_abstract SUFCMA UATPaKE.
 (* Starting notes:
    - We (try to) follow Doreen and Paul's model as closely as possible
      while remaining precise.
-   - The NIKE is split out as a Nominal Group with St-CDH + ROM. The
-     entire scheme could be proved assuming an abstract NIKE (with
-     (simple) m-CKS-heavy security), and that be constructed from
-     NG + St-CDH + ROM.
+   - Therefore, we stick to the presentation of Signed DH as involving
+     nominal groups with St-CDH in the ROM. A slightly more idiomatic
+     EasyCrypt approach (enabling more reuse) would be to consider
+     instead a signed NIKE (assuming m-CKS-heavy security on a simple
+     NIKE), then showing that that can be constructed, in the ROM,
+     from a Nominal Group in which Strong CDH is hard.
 *)
 
 (** Types and operators for the DH group **)
