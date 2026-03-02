@@ -123,15 +123,16 @@ module SignedDH (S : SigScheme) (H : RO) : UATPaKE = {
   }
 }.
 
-module B1 (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
+module B1 (S : SigScheme) (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
   var b_ror : bool
+
+  var halt_bad : bool
 
   var n : int
   var m : int
   
   var p_map : (int, int) fmap
   var i_map : (int, pdh) fmap
-  var h_map : (pdh * pdh * pdh, sskey) fmap
   var r_map : (int option * int, (pdh * sig) fset) fmap
 
   var pk_map : (int, pkey) fmap
@@ -147,20 +148,30 @@ module B1 (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
     proc gen(): pkey = {
       var pk;
 
-      m <- m + 1;
-      pk <@ O.gen();
-      pk_map.[m] <- pk;
-      if (has (fun i pk_i=> pk_i = pk /\ p_map.[i] = None) pk_map) {
+      if (!halt_bad) {
+        m <- m + 1;
+        pk <@ O.gen();
+        pk_map.[m] <- pk;
+        (* The reduction fails if:
+           1. the adversary predicts an honest public key before it is
+              generated; OR
+           2. two servers generate the same public key.
+        *)
+        if (has (fun i st=> st.`pk = pk /\ p_map.[i] = None) c_map) {
+          halt_bad <- true;
+          pk <- witness;
+        }
+      }  else {
         pk <- witness;
       }
-      
+     
       return pk;
     }
 
     proc corrupt(j: int): skey option = {
       var r <- None;
 
-      if (0 < j <= m) {
+      if (!halt_bad /\ 0 < j <= m) {
         r <@ O.corrupt(j);
         cr <- cr `|` fset1 j;
       }
@@ -170,7 +181,7 @@ module B1 (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
     proc expose(i) = {
       var r <- None;
 
-      if (0 < i <= n /\ i \notin ich) {
+      if (!halt_bad /\ 0 < i <= n /\ i \notin ich) {
         xp <- xp `|` fset1 i;
         r <- c_map.[i];
       }
@@ -178,17 +189,21 @@ module B1 (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
     }
 
     proc init(pk: pkey): pdh = {
-      var st, jo, c, x;
+      var st, c, x, jo;
 
-      n <- n + 1;
-      x <$ dsk;
-      c <- g ^ x;
-      st <- {| pk = pk; epk = c; esk = x; |};
-      c_map.[n] <- st;
-      jo <- find (fun _ pk_j=> pk_j = pk) pk_map;
-      if (jo is Some j) {
-        p_map.[n] <- j;
-        i_map.[n] <- c;
+      if (!halt_bad) {
+        n <- n + 1;
+        x <$ dsk;
+        c <- g ^ x;
+        st <- {| pk = pk; epk = c; esk = x; |};
+        c_map.[n] <- st;
+        jo <- find (fun _ pk_j=> pk_j = pk) pk_map;
+        if (jo is Some j) {
+          p_map.[n] <- j;
+          i_map.[n] <- c;
+        }
+      } else {
+        c <- witness;
       }
       return c;
     }
@@ -197,13 +212,13 @@ module B1 (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
       var k, c', io, h, y, sig;
       var r <- None;
 
-      if (0 < j <= m) {
+      if (!halt_bad /\ 0 < j <= m) {
         y <$ dsk;
         h <- g ^ y;
         sig <@ O.sign(j, (c, h));
         k <@ RO.get(c, h, c ^ y);
         c' <- (h, oget sig);
-        io <- find (fun i j' => j' = j /\ i_map.[i] = Some c) p_map;
+        io <- find (fun i _=> p_map.[i] = Some j /\ i_map.[i] = Some c) c_map;
         if (io is Some i) {
           r_map.[Some j, i] <- (odflt fset0 r_map.[Some j, i]) `|` fset1 c';
           if (ch /\ i \notin xp) {
@@ -217,17 +232,33 @@ module B1 (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
     }
 
     proc receive(i: int, c: pdh * sig, ch: bool): sskey option = {
-      var st_i, k, h, sig, b;
+      var st_i, k, h, sig, jo, bo, b;
       var ko <- None;
 
-      if (0 < i <= n /\ i \notin q) {
+      if (!halt_bad /\ 0 < i <= n /\ i \notin q) {
         st_i <- oget c_map.[i];
         q <- q `|` fset1 i;
         
         if (c \notin odflt fset0 r_map.[p_map.[i], i]) {
           (h, sig) <- c;
-          b <@ O.verify(i, (st_i.`epk, h), sig);
-          if (b = Some true) {
+          jo <- find (fun _ pk_j=> pk_j = st_i.`pk) pk_map;
+          if (jo is Some j) {
+            bo <@ O.verify(j, (st_i.`epk, h), sig);
+            b <- odflt false bo;
+          } else {
+            (* If the adversary gives us a key that is not registered
+               as honest, we just simulate stuff:
+               1. It is impossible for it to trigger the iffy case
+                  below (because p_map.[i] would necessarily be
+                  set); and
+               2. The only way the adversary could trigger the iffy
+                  case below on the same value later is to get the same
+                  public key registered honestly, which halts the game-so
+                  we would still not break the invariant)
+            *)
+            b <@ S.verify(st_i.`pk, (st_i.`epk, h), sig);
+          }
+          if (b) {
             k <@ RO.get(st_i.`epk, h, h ^ st_i.`esk);
             ko <- Some k;
           }
@@ -235,6 +266,7 @@ module B1 (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
               /\ i \notin xp
               /\ p_map.[i] <> None /\ 0 < oget p_map.[i] <= m /\ oget p_map.[i] \notin cr
               /\ ko <> None) {
+            halt_bad <- true;
             if (b_ror) { k <$ dssk; ko <- Some k; }
             ich <- ich `|` fset1 i;
           }
@@ -243,13 +275,24 @@ module B1 (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
       return ko;
     }
 
-    proc h = RO.get
+    proc h(x) = {
+      var r;
+
+      if (!halt_bad) {
+        r <@ RO.get(x);
+      } else {
+        r <- witness;
+      }
+      return r;
+    }
   }
 
   proc forge() = {
     var b';
 
     RO.init();
+
+    halt_bad <- false;
 
     m <- 0;
     n <- 0;
@@ -267,23 +310,21 @@ module B1 (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
     pk_map <- empty;
     c_map <- empty;
 
-    h_map <- empty;
-
     b' <@ A(Oracles).distinguish();
   }
 }.
 
-module B1_0 (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
+module B1_0 (S : SigScheme) (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
   proc forge() = {
     B1.b_ror <- false;
-    B1(A, O).forge();
+    B1(S, A, O).forge();
   }
 }.
 
-module B1_1 (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
+module B1_1 (S : SigScheme) (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
   proc forge() = {
     B1.b_ror <- true;
-    B1(A, O).forge();
+    B1(S, A, O).forge();
   }
 }.
 
@@ -729,7 +770,8 @@ local module Game2_b = {
               /\ ko <> None) {
             bad_2 <- true;
             halt_bad <- true;
-            ko <- None;
+            if (b_ror) { k <$ dssk; ko <- Some k; }
+            ich <- ich `|` fset1 i;
           }
         }
       }
@@ -1091,7 +1133,7 @@ call (: Game1_b.bad_2 (* the bad event *)
       (* The invariant that holds until bad happens *)
       , ={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2}
       (* the invariant that holds after bad happens *)
-      , ={Game1_b.bad_2}).
+      , ={Game1_b.bad_2} /\ (Game1_b.bad_2 => Game0_b.halt_bad){2}).
 (* Goal 1: the adversary terminates if its oracles terminate. See above. *)
 + exact: A_ll.
 (* Goal i.0: if bad does not hold, and the non-bad invariant holds
@@ -1120,8 +1162,7 @@ call (: Game1_b.bad_2 (* the bad event *)
   by sim.
 + move=> &2 bad; proc; if; auto=> /> &0.
   by rewrite dsk_ll /= /#.
-+ move=> &1; proc; if; auto=> /> &0.
-  by rewrite dsk_ll /= /#.
++ by move=> &1; proc; if; auto=> />.
 (* And again *)
 + conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
   by sim.
@@ -1135,26 +1176,28 @@ call (: Game1_b.bad_2 (* the bad event *)
 + proc; sp; if; auto.
   sp; if; 1,3:auto.
   seq 2 2: (={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2, i, c, ch, h, sig, b, ko, st_i}
-         /\ ko{1} = None).
+         /\ ko{1} = None
+         /\ (Game1_b.bad_2 => Game0_b.halt_bad){2}).
   + by call (: true); auto.
   if; 1:auto; last first.
   + rcondf {1} 1; 1:by auto=> /#.
     rcondf {2} 1; 1:by auto=> /#.
     by auto.
-  seq 2 2: (={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2, i, c, ch, h, sig, b, ko, st_i, k}).
-  + by sim.
+  seq 2 2: (={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2, i, c, ch, h, sig, b, ko, st_i, k}
+         /\ (Game1_b.bad_2 => Game0_b.halt_bad){2}).
+  + by wp; call (: ={glob RO}); auto.
   if; 1,3:by auto.
-  by auto; sp; if {1}; auto.
+  by sp; if; auto.
 + move=> &2 bad; rewrite bad.
   proc; sp; if; auto; sp; if; auto=> />.
-  seq 3: true 1%r 1%r 0%r _ Game1_b.bad_2=> //.
+  seq 3: true 1%r 1%r 0%r _ (Game1_b.bad_2 /\ Game0_b.halt_bad{2})=> //.
   + by conseq (: _ ==> true)=> />.
   + by islossless; exact: S_verify_ll.
   + if; 2:by auto=> />.
     by sp; conseq (: _ ==> true)=> />; islossless.
-+ move=> &2; proc; sp; if; auto; sp; if; auto=> />.
-  conseq (: _ ==> true)=> />.
-  by islossless; exact: S_verify_ll.
++ move=> &2; proc.
+  rcondf 2; 1:by auto=> />.
+  by auto.
 (* And again *)
 + conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
   by sim.
@@ -1171,7 +1214,7 @@ qed.
 local lemma Reduction1 b &m:
      B1.b_ror{m} = b
   => Pr[Game2_b.run(b) @ &m: Game1_b.bad_2]
-     <= Pr[SUFCMA(S, B1(A)).run() @ &m: res].
+     <= Pr[SUFCMA(S, B1(S, A)).run() @ &m: res].
 abort.
 
 (* We'd need to prove the same thing twice (once for each b) if we
@@ -1179,29 +1222,187 @@ abort.
    by going one level down.
 *)
 local equiv Reduction1_equiv:
-  Game2_b.run ~ SUFCMA(S, B1(A)).run:
+  Game2_b.run ~ SUFCMA(S, B1(S, A)).run:
        ={glob A, glob S, glob RO}
     /\ b{1} = B1.b_ror{2}
     ==> Game1_b.bad_2{1} => res{2}.
 proof.
-(* Admit this for now---this is likely slightly less than true because
-   of the halting we have introduced in the games---we probably want
-   to make the reduction halt as well, but halting on bad_2 cannot
-   make the reduction fail (that is exactly the case where we have a
-   forgery available).
-   Everything here has to be so bespoke, it's like breathing in manual mode.
-*)
+proc.
+inline {2} 7.
+(** The invariant here must guarantee that the executions are and stay in sync
+    *and* that they preserve the postcondition: if bad happens on the
+    left, then the reduction wins.
+**)
+print B1.
+call (: (** Equivalences **)
+        ={glob RO, glob S}
+     /\ ={halt_bad}(Game0_b, B1)
+     /\ ={m, n, q, ich, rch, xp, cr, pk_map, p_map, i_map, r_map, c_map, b_ror}(Exp_b, B1)
+     /\ ={cr, pk_map, sk_map}(Exp_b, SUFCMA)
+(*     /\ true (* if a message was sent by the server in Game 2, then the associated signature is in the log of the SUFCMA game *) *)
+     /\ (B1.m = SUFCMA.n){2}
+     /\ (B1.pk_map = SUFCMA.pk_map){2}
+        (** One-sided invariants **)
+     /\ (0 <= B1.m){2}
+     /\ (0 <= B1.n){2}
+     /\ (forall j, B1.pk_map.[j] <> None <=> 0 < j <= B1.m){2}
+     /\ (forall j, B1.c_map.[j] <> None <=> 0 < j <= B1.n){2}
+     /\ (forall j i,
+              B1.p_map.[j] = Some i
+           => exists st, B1.c_map.[j] = Some st /\ B1.pk_map.[i] = Some st.`pk){2}
+     /\ (Game1_b.bad_1 => Game0_b.halt_bad){1}
+     /\ (Game1_b.bad_2 => Game0_b.halt_bad){1}
+        (** THE CRUX **)
+     /\ (Game1_b.bad_2{1} => SUFCMA.win{2})); last first.
++ by inline *; auto=> />; smt(emptyE).
++ proc; if; 1,3:by auto.
+  inline {2} 2; auto; call (: true).
+  by auto=> /> &1 &2; smt(get_setE).
++ proc; sp 1 1; if; 1,3:by auto.
+  by inline {2} 1; rcondt {2} 3; auto.
++ by proc; auto.
++ proc; if; 1,3:by auto.
+  auto=> /> &1 &2 ge0_SUFn ge0_B1n.
+  move=> dom_pk dom_c partnering + + + not_halted.
+  rewrite not_halted=> /> nbad1 nbad2 esk _.
+  smt(find_some get_setE).
++ conseq (: ={glob RO, glob S, res}
+         /\ ={halt_bad}(Game0_b, B1)
+         /\ ={m, n, q, ich, rch, xp, cr, p_map, i_map, r_map, pk_map, c_map, b_ror}(Exp_b, B1)
+         /\ ={cr, pk_map, sk_map}(Exp_b, SUFCMA)
+         /\ (B1.m = SUFCMA.n){2}
+         /\ (B1.pk_map = SUFCMA.pk_map){2})=> />.
+  proc; sp; if; 1,3:by auto.
+  inline {2} 3; rcondt {2} 6; 1:by auto.
+  sim.
+  auto; call (: ={glob RO}); 1:by sim.
+  by auto; call (: true); auto.
++ proc; sp; if; 1,3:by auto.
+  sp; if; 1,3:by auto.
+  exlim (find (fun _ pk_j=> pk_j = st_i.`pk) B1.pk_map){2}.
+  elim.
+  + match None {2} 3; 1:by auto=> /> &0 -> + ->> ->>.
+    (** Since the public key `i` is speaking with is not registered
+        yet (`find _ B1.pk_map = None`), it *must* be that
+        `B1.p_map.[i] = None`. Therefore, the final conditional
+        simplifies out and we cannot forge in this run.
+    **)
+    rcondf {1} 4.
+    + move=> &1; conseq (: Exp_b.p_map.[i] = None ==> Exp_b.p_map.[i] = None)=> //>.
+      (* LORD THIS IS UGLY *)
+      + move=> /> &2 /eq_sym not_found_pk.
+        case _: (B1.c_map.[i]{1})=> [/#|/>].
+        move=> st_i0 /> cmap_i0 + + ->> <<-.
+        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _.
+        case _: (B1.p_map.[i]{1})=> [/#|/>].
+        move=> j; rewrite -negP=> /partnering=> - [] [].
+        move=> pk0 epk0 esk0 []; rewrite cmap_i0=> />.
+        case: (findP (fun _ pk_j=> pk_j = pk0) SUFCMA.pk_map{1}); last first.
+        + by rewrite not_found_pk.
+        move=> _ /(_ j); rewrite domE.
+        by case: (SUFCMA.pk_map.[j]{1}).
+      by auto.
+    rcondf {2} 5.
+    + move=> &1; conseq (: B1.p_map.[i] = None ==> B1.p_map.[i] = None)=> //>.
+      (* LORD THIS IS UGLY *)
+      + move=> /> &2 /eq_sym not_found_pk.
+        case _: (B1.c_map.[i]{2})=> [/#|/>].
+        move=> st_i0 /> cmap_i0 + + ->> <<-.
+        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _.
+        case _: (B1.p_map.[i]{2})=> [/#|/>].
+        move=> j; rewrite -negP=> /partnering=> - [] [].
+        move=> pk0 epk0 esk0 []; rewrite cmap_i0=> />.
+        case: (findP (fun _ pk_j=> pk_j = pk0) SUFCMA.pk_map{2}); last first.
+        + by rewrite not_found_pk.
+        move=> _ /(_ j); rewrite domE.
+        by case: (SUFCMA.pk_map.[j]{2}).
+      by auto.
+    seq 2 3: (#pre /\ ={h, sig, b}).
+    + by call (: true); auto=> /> /#.
+    if; 1,3:by auto.
+    by wp; call (: ={glob RO}); auto.
+  move=> j; match Some {2} 3.
+  + by auto=> /> &0 + + ->> ->> - <- /#.
+  inline {2} 4.
+  rcondt {2} 8.
+  + auto=> /> &0 + + ->> ->> - ^ jP <- @/get_as_Some /=.
+    have /#: SUFCMA.pk_map.[j]{0} <> None.
+    by move: jP=> /eq_sym /find_some /> ->.
+  sp; seq 1 1: (={c_map, q, m, n, ich, rch, xp, cr, pk_map, p_map, i_map, r_map, b_ror}(Exp_b, B1)
+             /\ ={cr, pk_map, sk_map}(Exp_b, SUFCMA)
+             /\ ={halt_bad}(Game0_b, B1)
+             /\ ={glob RO, glob S}
+             /\ ={st_i, ko, i, c, ch, h, sig}
+             /\ b{1} = b0{2}
+             /\ ko{1} = None
+             /\ find (fun _ pk_j=> pk_j = st_i{2}.`pk) B1.pk_map{2} = Some j
+             /\ B1.c_map.[i]{2} = Some st_i{2}
+             /\ 0 <= B1.m{2}
+             /\ 0 <= B1.n{2}
+             /\ (forall j, B1.pk_map.[j] <> None <=> 0 < j <= B1.m){2}
+             /\ (forall j, B1.c_map.[j] <> None <=> 0 < j <= B1.n){2}
+             /\ (forall j i,
+                      B1.p_map.[j] = Some i
+                   => exists st, B1.c_map.[j] = Some st /\ B1.pk_map.[i] = Some st.`pk){2}
+             /\ (B1.pk_map = SUFCMA.pk_map){2}
+             /\ (B1.m = SUFCMA.n){2}
+             /\ (Game1_b.bad_1 => Game0_b.halt_bad){1}
+             /\ (Game1_b.bad_2 => Game0_b.halt_bad){1}
+             /\ (Game1_b.bad_2{1} => SUFCMA.win{2})
+             /\ !Game0_b.halt_bad{1}
+             /\ 0 < i{1} <= Exp_b.n{1}
+             /\ c{1} \notin odflt fset0 Exp_b.r_map.[Exp_b.p_map.[i], i]{1}).
+  + call (: true); auto=> /> &1.
+    by move=> &2 + qR /> - ^ /eq_sym + <- /> - /find_some @/get_as_Some /#.
+  swap {2} 2 -1.
+  seq 0 4: (={c_map, q, m, n, ich, rch, xp, cr, pk_map, p_map, i_map, r_map, b_ror}(Exp_b, B1)
+         /\ ={cr, pk_map, sk_map}(Exp_b, SUFCMA)
+         /\ ={halt_bad}(Game0_b, B1)
+         /\ ={glob RO, glob S}
+         /\ ={st_i, ko, i, c, ch, b, h, sig}
+         /\ ko{1} = None
+         /\ find (fun _ pk_j=> pk_j = st_i{2}.`pk) B1.pk_map{2} = Some j
+         /\ B1.c_map.[i]{2} = Some st_i{2}
+         /\ 0 <= B1.m{2}
+         /\ 0 <= B1.n{2}
+         /\ (forall j, B1.pk_map.[j] <> None <=> 0 < j <= B1.m){2}
+         /\ (forall j, B1.c_map.[j] <> None <=> 0 < j <= B1.n){2}
+         /\ (forall j i,
+                  B1.p_map.[j] = Some i
+               => exists st, B1.c_map.[j] = Some st /\ B1.pk_map.[i] = Some st.`pk){2}
+         /\ (B1.pk_map = SUFCMA.pk_map){2}
+         /\ (B1.m = SUFCMA.n){2}
+         /\ (Game1_b.bad_1 => Game0_b.halt_bad){1}
+         /\ (Game1_b.bad_2 => Game0_b.halt_bad){1}
+         /\ (Game1_b.bad_2{1} => SUFCMA.win{2})
+         /\ !Game0_b.halt_bad{1}
+         /\ 0 < i{1} <= Exp_b.n{1}
+         /\ c{1} \notin odflt fset0 Exp_b.r_map.[Exp_b.p_map.[i], i]{1}
+         /\ ((   Game1_b.bad_2{1}
+              \/ ((j0 \notin SUFCMA.cr /\ (j0, m, s) \notin SUFCMA.q /\ b0){2})) => SUFCMA.win{2})).
+  + by auto=> />.
+  if=> //; last first.
+  + rcondf {1} 1; 1:by auto.
+    rcondf {2} 1; 1:by auto.
+    by auto.
+  seq 1 1: (#pre /\ ={k}); first by conseq />; sim.
+  sp; if=> //.
+  admit. (* PROBLEM: we need to know that the j we find is always the
+            same as the one we initially partnered with; this is not
+            guarnateed in our semantics, and we need an additional bad
+            event if two honest servers generate the same public key. *)
 admitted.
+
 
 local lemma Reduction1_0 &m:
   Pr[Game2_b.run(false) @ &m: Game1_b.bad_2]
-  <= Pr[SUFCMA(S, B1_0(A)).run() @ &m: res].
+  <= Pr[SUFCMA(S, B1_0(S, A)).run() @ &m: res].
 proof.
 byequiv (: ={glob A, glob S, glob RO} /\ !b{1} ==> Game1_b.bad_2{1} => res{2})=> //.
 proc *.
 transitivity {2}
   { B1.b_ror <- false;
-    r <@ SUFCMA(S, B1(A)).run(); }
+    r <@ SUFCMA(S, B1(S, A)).run(); }
   (={glob A, glob S, glob RO} /\ !b{1} ==> Game1_b.bad_2{1} => r{2})
   (={glob A, glob S, glob RO} ==> ={r})=> [/#|/>||].
 + by call Reduction1_equiv; auto=> />.
@@ -1211,13 +1412,13 @@ qed.
 
 local lemma Reduction1_1 &m:
   Pr[Game2_b.run(true) @ &m: Game1_b.bad_2]
-  <= Pr[SUFCMA(S, B1_1(A)).run() @ &m: res].
+  <= Pr[SUFCMA(S, B1_1(S, A)).run() @ &m: res].
 proof.
 byequiv (: ={glob A, glob S, glob RO} /\ b{1} ==> Game1_b.bad_2{1} => res{2})=> //.
 proc *.
 transitivity {2}
   { B1.b_ror <- true;
-    r <@ SUFCMA(S, B1(A)).run(); }
+    r <@ SUFCMA(S, B1(S, A)).run(); }
   (={glob A, glob S, glob RO} /\ b{1} ==> Game1_b.bad_2{1} => r{2})
   (={glob A, glob S, glob RO} ==> ={r})=> [/#|/>||].
 + by call Reduction1_equiv; auto=> />.
@@ -1430,8 +1631,8 @@ local lemma Security_of_SignedDH &m:
     - Pr[Exp_b(SignedDH(S), RO, A).run(true) @ &m : res]|
   <=   Pr[Game1_b.run(true) @ &m: Game1_b.bad_1]
      + Pr[Game1_b.run(false) @ &m: Game1_b.bad_1]
-     + Pr[SUFCMA(S, B1_0(A)).run() @ &m: res]
-     + Pr[SUFCMA(S, B1_1(A)).run() @ &m: res]
+     + Pr[SUFCMA(S, B1_0(S, A)).run() @ &m: res]
+     + Pr[SUFCMA(S, B1_1(S, A)).run() @ &m: res]
      + 2%r * p
      + Pr[St_CDH(B2(S,A)).run() @ &m: res].
 proof.
