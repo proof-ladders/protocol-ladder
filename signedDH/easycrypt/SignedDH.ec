@@ -156,16 +156,17 @@ module B1 (S : SigScheme) (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
       if (!halt_bad) {
         m <- m + 1;
         pk <@ O.gen();
-        pk_map.[m] <- pk;
         (* The reduction fails if:
            1. the adversary predicts an honest public key before it is
               generated; OR
            2. two servers generate the same public key.
         *)
-        if (has (fun i st=> st.`pk = pk /\ p_map.[i] = None) c_map) {
+        if (has (fun i st=> st.`pk = pk /\ p_map.[i] = None) c_map
+         \/ rng pk_map pk) {
           halt_bad <- true;
           pk <- witness;
         }
+        pk_map.[m] <- pk;
       }  else {
         pk <- witness;
       }
@@ -521,6 +522,7 @@ declare module S <: SigScheme { -Exp_b, -SUFCMA, -RO, -B1, -B2 }.
 declare module A <: Adv_UATPaKE_RO { -Exp_b, -SUFCMA, -RO, -B1, -B2, -S }.
 
 local module Game0_b = {
+  (* Inline and add (non-operational) infrastructure for early halting *)
   include var Exp_b(SignedDH(S), RO, A) [-run]
 
   var halt_bad: bool
@@ -676,12 +678,22 @@ local module Game0_b = {
   }
 }.
 
+(* Pen and paper says "Stop"; we can't stop because our
+   reductions *must* be black-box. We execute the adversary,
+   we do not simulate them: so we can't interrupt them
+   either. This is where the infrastructure we added in Hop
+   0 comes in: we set a flag that silences oracles and
+   causes the adversary to lose.
+*)
 local module Game1_b = {
+  (* Halt if the adversary predicts an honest public key before it is
+     generated *)
   include var Exp_b(SignedDH(S), RO, A) [-run]
   include var Game0_b [-run]
 
   var bad_1: bool
   var bad_2: bool
+  var bad_3: bool
 
   module Oracles = {
     include Game0_b.Oracles [-gen]
@@ -692,19 +704,17 @@ local module Game1_b = {
       if (!halt_bad) {
         m <- m + 1;
         (pk, sk) <@ S.keygen();
-        pk_map.[m] <- pk;
-        sk_map.[m] <- sk;
-        if (has (fun i st=> st.`pk = pk /\ p_map.[i] = None) c_map) {
-          bad_1 <- true;
-          (* Pen and paper says "Stop"; we can't stop because our
-             reductions *must* be black-box. We execute the adversary,
-             we do not simulate them: so we can't interrupt them
-             either. This is where the infrastructure we added in Hop
-             0 comes in.
-          *)
+        (* bad_1: the adversary predicts a public key later generated
+           honestly *)
+        bad_1 <- bad_1 \/ has (fun i st=> st.`pk = pk /\ p_map.[i] = None) c_map;
+        (* bad_2: two honest servers generate the same public key *)
+        bad_2 <- bad_2 \/ rng pk_map pk;
+        if (bad_1 \/ bad_2) {
           halt_bad <- true;
           pk <- witness;
         }
+        pk_map.[m] <- pk;
+        sk_map.[m] <- sk;
       } else {
         pk <- witness;
       }
@@ -740,6 +750,7 @@ local module Game1_b = {
 
     bad_1 <- false;
     bad_2 <- false;
+    bad_3 <- false;
 
     b' <@ A(Oracles).distinguish();
     return b' /\ !halt_bad;
@@ -773,7 +784,7 @@ local module Game2_b = {
               /\ i \notin xp
               /\ p_map.[i] <> None /\ 0 < oget p_map.[i] <= m /\ oget p_map.[i] \notin cr
               /\ ko <> None) {
-            bad_2 <- true;
+            bad_3 <- true;
             halt_bad <- true;
             if (b_ror) { k <$ dssk; ko <- Some k; }
             ich <- ich `|` fset1 i;
@@ -811,6 +822,7 @@ local module Game2_b = {
 
     bad_1 <- false;
     bad_2 <- false;
+    bad_3 <- false;
 
     b' <@ A(Oracles).distinguish();
     return b' /\ !halt_bad;
@@ -864,14 +876,18 @@ qed.
 
 (** Hop 1: Game 0 and Game 1 are equivalent (regardless of the value
     of the challenge bit) unless (and until) the gen oracle outputs a
-    public key that was already used by the adversary.
+    public key that was already used by the adversary (bad_1) OR one
+    that was already honestly generated (bad_2).
 
-    This happens with a probability bounded by the guessing entropy of
-    the distribution induced on public keys by key generation.
+    bad_1 happens with a probability bounded by the guessing entropy
+    of the distribution induced on public keys by key generation.
+
+    bad_2 is the probability of collision in taking q_gen samples from
+    that same distributions.
 **)
 local lemma Hop1 (b : bool) &m:
   `|Pr[Game0_b.run(b) @ &m: res] - Pr[Game1_b.run(b) @ &m: res]|
-  <= Pr[Game1_b.run(b) @ &m: Game1_b.bad_1].
+  <= Pr[Game1_b.run(b) @ &m: Game1_b.bad_1] + Pr[Game1_b.run(b) @ &m: Game1_b.bad_2].
 (* This aborts the proof - we simply use the statement as a section heading. *)
 abort.
 
@@ -898,7 +914,31 @@ declare axiom S_keygen_ll: islossless S.keygen.
 declare axiom S_sign_ll: islossless S.sign.
 declare axiom S_verify_ll: islossless S.verify.
 
-(* To get absolute values, we must make the event appear on the left *)
+(* To get absolute values, we must make the event appear on the left.
+   Why? Because we make the failure immediately visible to the
+   adversary and change the behaviour of the oracles after it; so the
+   adversary on the right could in theory do extremely weird things,
+   including giving up.
+
+   The logic gives us this:
+
+     Pr[Game0: res] <= Pr[Game1: res] + Pr[Game1: bad]
+
+   If the adversary gives up in Game 1 when bad happens (and the games
+   are equivalent otherwise) then it is easy to see that
+
+     |Pr[Game0: res] - Pr[Game1: res]| = Pr[Game1: res] - Pr[Game0: res]
+
+   This makes us sad. We become a lot less sad if we can also show that
+
+     Pr[Game0: bad] = Pr[Game1: bad]
+
+   But this requires being able to refer to the bad event before the
+   hop. So each up to bad hop becomes two half-hops: one "free" hop
+   where we just log that the bad event happens; and the actual
+   meaningful hop where we change the oracles' behaviour after bad
+   happens.
+*)
 local module Game05_b = {
   include var Exp_b(SignedDH(S), RO, A) [-run]
   include var Game0_b [-run]
@@ -913,11 +953,16 @@ local module Game05_b = {
       if (!halt_bad) {
         m <- m + 1;
         (pk, sk) <@ S.keygen();
+        (* we need to guard this so we can keep bad1 and bad2
+           individually synchronised... may have been easier to deal
+           with them one by one...
+        *)
+        if (!bad_1 /\ !bad_2) {
+          bad_1 <- has (fun i st=> st.`pk = pk /\ p_map.[i] = None) c_map;
+          bad_2 <- rng pk_map pk;
+        }
         pk_map.[m] <- pk;
         sk_map.[m] <- sk;
-        if (has (fun i st=> st.`pk = pk /\ p_map.[i] = None) c_map) {
-          bad_1 <- true;
-        }
       } else {
         pk <- witness;
       }
@@ -953,6 +998,7 @@ local module Game05_b = {
 
     bad_1 <- false;
     bad_2 <- false;
+    bad_3 <- false;
 
     b' <@ A(Oracles).distinguish();
     return b' /\ !halt_bad;
@@ -968,10 +1014,12 @@ qed.
 
 local lemma Hop1 (b : bool) &m:
   `|Pr[Game0_b.run(b) @ &m: res] - Pr[Game1_b.run(b) @ &m: res]|
-  <= Pr[Game1_b.run(b) @ &m: Game1_b.bad_1].
+  <= Pr[Game1_b.run(b) @ &m: Game1_b.bad_1] + Pr[Game1_b.run(b) @ &m: Game1_b.bad_2].
 proof.
 rewrite Hop0_bad.
-byequiv (: ={glob A, glob S, b} ==> _): Game1_b.bad_1=> [||/#] //.
+apply: (ler_trans Pr[Game1_b.run(b) @ &m: Game1_b.bad_1 \/ Game1_b.bad_2]); last first.
++ rewrite Pr [mu_or]; smt(ge0_mu).
+byequiv (: ={glob A, glob S, b} ==> _): (Game1_b.bad_1 \/ Game1_b.bad_2)=> [||/#] //.
 proc.
 (* And now we lift the reasoning up to bad to the oracles the
    adversary has access to. Because we're in manual mode, and the
@@ -983,22 +1031,23 @@ proc.
    that it is simply a property of the state (here, the value of a
    boolean variable), and that the state can be modified
    programmatically. It isn't some external, untouchable truth. *)
-call (: Game1_b.bad_1 (* the bad event *)
+call (: Game1_b.bad_1 \/ Game1_b.bad_2 (* the bad event *)
       (* The invariant that holds until bad happens *)
       , ={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2}
      /\ !Game0_b.halt_bad{2}
       (* the invariant that holds after bad happens *)
-      , ={Game1_b.bad_1}).
+      , ={Game1_b.bad_1, Game1_b.bad_2} /\ Game0_b.halt_bad{2}).
 (* Goal 1: the adversary terminates if its oracles terminate. See above. *)
 + exact: A_ll.
 (* Goal i.0: if bad does not hold, and the non-bad invariant holds
    initially, then executing the oracles leads us to memories that are
    such that the correct invariant holds (depending on whether bad
    happened during the oracles' execution *)
-+ by proc; if; auto; call (: true); auto.
++ by proc; if; auto; call (: true); auto=> /> /#.
 (* Goal i.1: the left-hand side oracle terminates and preserves bad *)
-+ move=> &2 bad; proc; if; auto=> />.
-  by auto; call S_keygen_ll; auto=> />; rewrite bad.
++ move=> &2 bad; proc; if; auto.
+  call S_keygen_ll; auto=> />.
+  by case: bad.
 (* Goal i.2: the right-hand side oracle terminates and preserves bad *)
 + move=> &1; proc; if; auto.
   by call S_keygen_ll; auto=> />.
@@ -1017,8 +1066,7 @@ call (: Game1_b.bad_1 (* the bad event *)
   by sim.
 + move=> &2 bad; proc; if; auto=> /> &0.
   by rewrite dsk_ll /= /#.
-+ move=> &1; proc; if; auto=> /> &0.
-  by rewrite dsk_ll /= /#.
++ by move=> &1; proc; if; auto.
 (* And again *)
 + conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
   by sim.
@@ -1046,14 +1094,15 @@ by inline; auto=> /> /#.
 qed.
 
 (** Hop 2: Game 1 and Game 2 are equivalent unless (and until) the
-    adversary successfully triggers bad_2 in Game 2.
+    adversary successfully triggers bad_3 in Game 2.
 **)
 local module Game15_b = {
   include var Exp_b(SignedDH(S), RO, A) [-run]
   include var Game0_b [-run]
+  include var Game1_b [-run]
 
   module Oracles = {
-    include Game1_b.Oracles [-receive]
+    include Game2_b.Oracles [-receive]
 
     proc receive(i: int, c: pdh * sig, ch: bool): sskey option = {
       var st_i, k, h, sig, b;
@@ -1074,7 +1123,7 @@ local module Game15_b = {
               /\ i \notin xp
               /\ p_map.[i] <> None /\ 0 < oget p_map.[i] <= m /\ oget p_map.[i] \notin cr
               /\ ko <> None) {
-            Game1_b.bad_2 <- true;
+            bad_3 <- true;
             if (Exp_b.b_ror) {
               k <$ dssk;
               ko <- Some k;
@@ -1112,8 +1161,9 @@ local module Game15_b = {
     sk_map <- empty;
     c_map <- empty;
 
-    Game1_b.bad_1 <- false;
-    Game1_b.bad_2 <- false;
+    bad_1 <- false;
+    bad_2 <- false;
+    bad_3 <- false;
 
     b' <@ A(Oracles).distinguish();
     return b' /\ !halt_bad;
@@ -1129,16 +1179,17 @@ qed.
 
 local lemma Hop2 b &m:
   `|Pr[Game1_b.run(b) @ &m: res] - Pr[Game2_b.run(b) @ &m: res]|
-  <= Pr[Game2_b.run(b) @ &m: Game1_b.bad_2].
+  <= Pr[Game2_b.run(b) @ &m: Game1_b.bad_3].
 proof.
 rewrite (Hop1_bad b &m).
-byequiv (: ={glob A, glob S, b} ==> _): Game1_b.bad_2=> [||/#] //.
+byequiv (: ={glob A, glob S, b} ==> _): Game1_b.bad_3=> [||/#] //.
 proc.
-call (: Game1_b.bad_2 (* the bad event *)
+call (: Game1_b.bad_3 (* the bad event *)
       (* The invariant that holds until bad happens *)
-      , ={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2}
+      , ={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3}
+     /\ !Game1_b.bad_3{1}
       (* the invariant that holds after bad happens *)
-      , ={Game1_b.bad_2} /\ (Game1_b.bad_2 => Game0_b.halt_bad){2}).
+      , ={Game1_b.bad_3} /\ Game0_b.halt_bad{2}).
 (* Goal 1: the adversary terminates if its oracles terminate. See above. *)
 + exact: A_ll.
 (* Goal i.0: if bad does not hold, and the non-bad invariant holds
@@ -1180,22 +1231,22 @@ call (: Game1_b.bad_2 (* the bad event *)
 (* And again *)
 + proc; sp; if; auto.
   sp; if; 1,3:auto.
-  seq 2 2: (={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2, i, c, ch, h, sig, b, ko, st_i}
+  seq 2 2: (={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3, i, c, ch, h, sig, b, ko, st_i}
          /\ ko{1} = None
-         /\ (Game1_b.bad_2 => Game0_b.halt_bad){2}).
+         /\ (Game1_b.bad_3 => Game0_b.halt_bad){2}).
   + by call (: true); auto.
   if; 1:auto; last first.
   + rcondf {1} 1; 1:by auto=> /#.
     rcondf {2} 1; 1:by auto=> /#.
-    by auto.
-  seq 2 2: (={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2, i, c, ch, h, sig, b, ko, st_i, k}
-         /\ (Game1_b.bad_2 => Game0_b.halt_bad){2}).
+    by auto=> /> /#.
+  seq 2 2: (={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3, i, c, ch, h, sig, b, ko, st_i, k}
+         /\ (Game1_b.bad_3 => Game0_b.halt_bad){2}).
   + by wp; call (: ={glob RO}); auto.
-  if; 1,3:by auto.
+  if; 1,3:by auto=> /> /#.
   by sp; if; auto.
 + move=> &2 bad; rewrite bad.
   proc; sp; if; auto; sp; if; auto=> />.
-  seq 3: true 1%r 1%r 0%r _ (Game1_b.bad_2 /\ Game0_b.halt_bad{2})=> //.
+  seq 3: true 1%r 1%r 0%r _ (Game1_b.bad_3 /\ Game0_b.halt_bad{2})=> //.
   + by conseq (: _ ==> true)=> />.
   + by islossless; exact: S_verify_ll.
   + if; 2:by auto=> />.
@@ -1204,7 +1255,7 @@ call (: Game1_b.bad_2 (* the bad event *)
   rcondf 2; 1:by auto=> />.
   by auto.
 (* And again *)
-+ conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
++ conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3, res})=> //.
   by sim.
 + by move=> &2 bad; conseq (: true); proc; islossless.
 + by move=> &1; conseq (: true); proc; islossless.
@@ -1218,7 +1269,7 @@ qed.
 **)
 local lemma Reduction1 b &m:
      B1.b_ror{m} = b
-  => Pr[Game2_b.run(b) @ &m: Game1_b.bad_2]
+  => Pr[Game2_b.run(b) @ &m: Game1_b.bad_3]
      <= Pr[SUFCMA(S, B1(S, A)).run() @ &m: res].
 abort.
 
@@ -1230,7 +1281,7 @@ local equiv Reduction1_equiv:
   Game2_b.run ~ SUFCMA(S, B1(S, A)).run:
        ={glob A, glob S, glob RO}
     /\ b{1} = B1.b_ror{2}
-    ==> Game1_b.bad_2{1} => res{2}.
+    ==> Game1_b.bad_3{1} => res{2}.
 proof.
 proc.
 inline {2} 7.
@@ -1238,7 +1289,6 @@ inline {2} 7.
     *and* that they preserve the postcondition: if bad happens on the
     left, then the reduction wins.
 **)
-print B1.
 call (: (** Equivalences **)
         ={glob RO, glob S}
      /\ ={halt_bad}(Game0_b, B1)
@@ -1257,19 +1307,20 @@ call (: (** Equivalences **)
            => exists st, B1.c_map.[j] = Some st /\ B1.pk_map.[i] = Some st.`pk){2}
      /\ (Game1_b.bad_1 => Game0_b.halt_bad){1}
      /\ (Game1_b.bad_2 => Game0_b.halt_bad){1}
+     /\ (Game1_b.bad_3 => Game0_b.halt_bad){1}
         (** THE CRUX **)
-     /\ (Game1_b.bad_2{1} => SUFCMA.win{2})); last first.
+     /\ (Game1_b.bad_3{1} => SUFCMA.win{2})); last first.
 + by inline *; auto=> />; smt(emptyE).
 + proc; if; 1,3:by auto.
   inline {2} 2; auto; call (: true).
-  by auto=> /> &1 &2; smt(get_setE).
+  admit (*by auto=> /> &1 &2; smt(get_setE).*).
 + proc; sp 1 1; if; 1,3:by auto.
   by inline {2} 1; rcondt {2} 3; auto.
 + by proc; auto.
 + proc; if; 1,3:by auto.
   auto=> /> &1 &2 ge0_SUFn ge0_B1n.
-  move=> dom_pk dom_c partnering + + + not_halted.
-  rewrite not_halted=> /> nbad1 nbad2 esk _.
+  move=> dom_pk dom_c partnering + + + + not_halted.
+  rewrite not_halted=> /> nbad1 nbad2 nbad3 esk _.
   smt(find_some get_setE).
 + conseq (: ={glob RO, glob S, res}
          /\ ={halt_bad}(Game0_b, B1)
@@ -1298,7 +1349,7 @@ call (: (** Equivalences **)
       + move=> /> &2 /eq_sym not_found_pk.
         case _: (B1.c_map.[i]{1})=> [/#|/>].
         move=> st_i0 /> cmap_i0 + + ->> <<-.
-        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _.
+        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _ _.
         case _: (B1.p_map.[i]{1})=> [/#|/>].
         move=> j; rewrite -negP=> /partnering=> - [] [].
         move=> pk0 epk0 esk0 []; rewrite cmap_i0=> />.
@@ -1313,7 +1364,7 @@ call (: (** Equivalences **)
       + move=> /> &2 /eq_sym not_found_pk.
         case _: (B1.c_map.[i]{2})=> [/#|/>].
         move=> st_i0 /> cmap_i0 + + ->> <<-.
-        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _.
+        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _ _.
         case _: (B1.p_map.[i]{2})=> [/#|/>].
         move=> j; rewrite -negP=> /partnering=> - [] [].
         move=> pk0 epk0 esk0 []; rewrite cmap_i0=> />.
@@ -1353,7 +1404,8 @@ call (: (** Equivalences **)
              /\ (B1.m = SUFCMA.n){2}
              /\ (Game1_b.bad_1 => Game0_b.halt_bad){1}
              /\ (Game1_b.bad_2 => Game0_b.halt_bad){1}
-             /\ (Game1_b.bad_2{1} => SUFCMA.win{2})
+             /\ (Game1_b.bad_3 => Game0_b.halt_bad){1}
+             /\ (Game1_b.bad_3{1} => SUFCMA.win{2})
              /\ !Game0_b.halt_bad{1}
              /\ 0 < i{1} <= Exp_b.n{1}
              /\ c{1} \notin odflt fset0 Exp_b.r_map.[Exp_b.p_map.[i], i]{1}).
@@ -1379,11 +1431,12 @@ call (: (** Equivalences **)
          /\ (B1.m = SUFCMA.n){2}
          /\ (Game1_b.bad_1 => Game0_b.halt_bad){1}
          /\ (Game1_b.bad_2 => Game0_b.halt_bad){1}
-         /\ (Game1_b.bad_2{1} => SUFCMA.win{2})
+         /\ (Game1_b.bad_3 => Game0_b.halt_bad){1}
+         /\ (Game1_b.bad_3{1} => SUFCMA.win{2})
          /\ !Game0_b.halt_bad{1}
          /\ 0 < i{1} <= Exp_b.n{1}
          /\ c{1} \notin odflt fset0 Exp_b.r_map.[Exp_b.p_map.[i], i]{1}
-         /\ ((   Game1_b.bad_2{1}
+         /\ ((   Game1_b.bad_3{1}
               \/ ((j0 \notin SUFCMA.cr /\ (j0, m, s) \notin SUFCMA.q /\ b0){2})) => SUFCMA.win{2})).
   + by auto=> />.
   if=> //; last first.
@@ -1396,19 +1449,19 @@ call (: (** Equivalences **)
             same as the one we initially partnered with; this is not
             guarnateed in our semantics, and we need an additional bad
             event if two honest servers generate the same public key. *)
+         (* Modulo earlier admit and new invariants, we should now have this! *)
 admitted.
 
-
 local lemma Reduction1_0 &m:
-  Pr[Game2_b.run(false) @ &m: Game1_b.bad_2]
+  Pr[Game2_b.run(false) @ &m: Game1_b.bad_3]
   <= Pr[SUFCMA(S, B1_0(S, A)).run() @ &m: res].
 proof.
-byequiv (: ={glob A, glob S, glob RO} /\ !b{1} ==> Game1_b.bad_2{1} => res{2})=> //.
+byequiv (: ={glob A, glob S, glob RO} /\ !b{1} ==> Game1_b.bad_3{1} => res{2})=> //.
 proc *.
 transitivity {2}
   { B1.b_ror <- false;
     r <@ SUFCMA(S, B1(S, A)).run(); }
-  (={glob A, glob S, glob RO} /\ !b{1} ==> Game1_b.bad_2{1} => r{2})
+  (={glob A, glob S, glob RO} /\ !b{1} ==> Game1_b.bad_3{1} => r{2})
   (={glob A, glob S, glob RO} ==> ={r})=> [/#|/>||].
 + by call Reduction1_equiv; auto=> />.
 + inline *; swap {2} 7 -6.
@@ -1416,15 +1469,15 @@ transitivity {2}
 qed.
 
 local lemma Reduction1_1 &m:
-  Pr[Game2_b.run(true) @ &m: Game1_b.bad_2]
+  Pr[Game2_b.run(true) @ &m: Game1_b.bad_3]
   <= Pr[SUFCMA(S, B1_1(S, A)).run() @ &m: res].
 proof.
-byequiv (: ={glob A, glob S, glob RO} /\ b{1} ==> Game1_b.bad_2{1} => res{2})=> //.
+byequiv (: ={glob A, glob S, glob RO} /\ b{1} ==> Game1_b.bad_3{1} => res{2})=> //.
 proc *.
 transitivity {2}
   { B1.b_ror <- true;
     r <@ SUFCMA(S, B1(S, A)).run(); }
-  (={glob A, glob S, glob RO} /\ b{1} ==> Game1_b.bad_2{1} => r{2})
+  (={glob A, glob S, glob RO} /\ b{1} ==> Game1_b.bad_3{1} => r{2})
   (={glob A, glob S, glob RO} ==> ={r})=> [/#|/>||].
 + by call Reduction1_equiv; auto=> />.
 + inline *; swap {2} 7 -6.
@@ -1635,7 +1688,9 @@ local lemma Security_of_SignedDH &m:
   `|  Pr[Exp_b(SignedDH(S), RO, A).run(false) @ &m : res]
     - Pr[Exp_b(SignedDH(S), RO, A).run(true) @ &m : res]|
   <=   Pr[Game1_b.run(true) @ &m: Game1_b.bad_1]
+     + Pr[Game1_b.run(true) @ &m: Game1_b.bad_2]  
      + Pr[Game1_b.run(false) @ &m: Game1_b.bad_1]
+     + Pr[Game1_b.run(false) @ &m: Game1_b.bad_2]  
      + Pr[SUFCMA(S, B1_0(S, A)).run() @ &m: res]
      + Pr[SUFCMA(S, B1_1(S, A)).run() @ &m: res]
      + 2%r * p
