@@ -151,7 +151,7 @@ module B1 (S : SigScheme) (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
   
   module Oracles = {
     proc gen(): pkey = {
-      var pk;
+      var pk, bad;
 
       if (!halt_bad) {
         m <- m + 1;
@@ -161,12 +161,13 @@ module B1 (S : SigScheme) (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
               generated; OR
            2. two servers generate the same public key.
         *)
-        if (has (fun i st=> st.`pk = pk /\ p_map.[i] = None) c_map
-         \/ rng pk_map pk) {
+        bad <-    has (fun i st=> st.`pk = pk /\ p_map.[i] = None) c_map
+               \/ rng pk_map pk;
+        pk_map.[m] <- pk;
+        if (bad) {
           halt_bad <- true;
           pk <- witness;
         }
-        pk_map.[m] <- pk;
       }  else {
         pk <- witness;
       }
@@ -446,8 +447,8 @@ module B2 (S : SigScheme) (A : Adv_UATPaKE_RO) (O : St_CDH_Oracles) = {
         io <- find (fun i j' => j' = j /\ i_map.[i] = Some c) p_map;
         if (io is Some i) {
           (*** Instead of initialising all of r_map to output the
-          empty set, we read undefined entries as the empty set
-          here. ***)
+               empty set, we read undefined entries as the empty set
+               here. ***)
           r_map.[Some j, i] <- (odflt fset0 r_map.[Some j, i]) `|` fset1 c';
           if (ch /\ i \notin xp) {
             ich <- ich `|` fset1 i;
@@ -709,12 +710,12 @@ local module Game1_b = {
         bad_1 <- bad_1 \/ has (fun i st=> st.`pk = pk /\ p_map.[i] = None) c_map;
         (* bad_2: two honest servers generate the same public key *)
         bad_2 <- bad_2 \/ rng pk_map pk;
+        pk_map.[m] <- pk;
+        sk_map.[m] <- sk;
         if (bad_1 \/ bad_2) {
           halt_bad <- true;
           pk <- witness;
         }
-        pk_map.[m] <- pk;
-        sk_map.[m] <- sk;
       } else {
         pk <- witness;
       }
@@ -1282,6 +1283,13 @@ local equiv Reduction1_equiv:
        ={glob A, glob S, glob RO}
     /\ b{1} = B1.b_ror{2}
     ==> Game1_b.bad_3{1} => res{2}.
+(** This says, if we have two memories that agree on the globals of A,
+    S and RO and such that the value of the b argument is equal to the
+    value of the B1.b_ror global variable in the right memory, then the
+    two programs have the same probability of terminating, and we can
+    couple the randomness in both programs so that the bad_3 flag being
+    set implies that the right hand side program outputs true.
+**)
 proof.
 proc.
 inline {2} 7.
@@ -1294,40 +1302,45 @@ call (: (** Equivalences **)
      /\ ={halt_bad}(Game0_b, B1)
      /\ ={m, n, q, ich, rch, xp, cr, pk_map, p_map, i_map, r_map, c_map, b_ror}(Exp_b, B1)
      /\ ={cr, pk_map, sk_map}(Exp_b, SUFCMA)
-(*     /\ true (* if a message was sent by the server in Game 2, then the associated signature is in the log of the SUFCMA game *) *)
      /\ (B1.m = SUFCMA.n){2}
      /\ (B1.pk_map = SUFCMA.pk_map){2}
         (** One-sided invariants **)
      /\ (0 <= B1.m){2}
      /\ (0 <= B1.n){2}
      /\ (forall j, B1.pk_map.[j] <> None <=> 0 < j <= B1.m){2}
-     /\ (forall j, B1.c_map.[j] <> None <=> 0 < j <= B1.n){2}
-     /\ (forall j i,
-              B1.p_map.[j] = Some i
-           => exists st, B1.c_map.[j] = Some st /\ B1.pk_map.[i] = Some st.`pk){2}
+     /\ (forall i, B1.c_map.[i] <> None <=> 0 < i <= B1.n){2}
+     /\ (forall i j,
+              B1.p_map.[i] = Some j
+           => exists st,
+                   B1.c_map.[i] = Some st
+                /\ B1.pk_map.[j] = Some st.`pk){2}
+     /\ (   !Game1_b.bad_2
+         => forall j j' pk,
+                 Exp_b.pk_map.[j] = Some pk
+              => Exp_b.pk_map.[j'] = Some pk
+              => j = j'){1}
      /\ (Game1_b.bad_1 => Game0_b.halt_bad){1}
      /\ (Game1_b.bad_2 => Game0_b.halt_bad){1}
      /\ (Game1_b.bad_3 => Game0_b.halt_bad){1}
         (** THE CRUX **)
      /\ (Game1_b.bad_3{1} => SUFCMA.win{2})); last first.
-+ by inline *; auto=> />; smt(emptyE).
++ by inline *; auto=> />; smt(emptyE in_fset0).
 + proc; if; 1,3:by auto.
   inline {2} 2; auto; call (: true).
-  admit (*by auto=> /> &1 &2; smt(get_setE).*).
+  by auto=> /> &1 &2; smt(get_setE).
 + proc; sp 1 1; if; 1,3:by auto.
   by inline {2} 1; rcondt {2} 3; auto.
 + by proc; auto.
 + proc; if; 1,3:by auto.
   auto=> /> &1 &2 ge0_SUFn ge0_B1n.
-  move=> dom_pk dom_c partnering + + + + not_halted.
-  rewrite not_halted=> /> nbad1 nbad2 nbad3 esk _.
+  move=> dom_pk dom_c partnering + + + + + not_halted.
+  rewrite not_halted=> /> + nbad1 nbad2 nbad3 esk _.
+  rewrite nbad2=> /= inj_pk.
   smt(find_some get_setE).
 + conseq (: ={glob RO, glob S, res}
          /\ ={halt_bad}(Game0_b, B1)
          /\ ={m, n, q, ich, rch, xp, cr, p_map, i_map, r_map, pk_map, c_map, b_ror}(Exp_b, B1)
-         /\ ={cr, pk_map, sk_map}(Exp_b, SUFCMA)
-         /\ (B1.m = SUFCMA.n){2}
-         /\ (B1.pk_map = SUFCMA.pk_map){2})=> />.
+         /\ ={cr, pk_map, sk_map}(Exp_b, SUFCMA))=> |>.
   proc; sp; if; 1,3:by auto.
   inline {2} 3; rcondt {2} 6; 1:by auto.
   sim.
@@ -1349,7 +1362,7 @@ call (: (** Equivalences **)
       + move=> /> &2 /eq_sym not_found_pk.
         case _: (B1.c_map.[i]{1})=> [/#|/>].
         move=> st_i0 /> cmap_i0 + + ->> <<-.
-        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _ _.
+        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _ _ _.
         case _: (B1.p_map.[i]{1})=> [/#|/>].
         move=> j; rewrite -negP=> /partnering=> - [] [].
         move=> pk0 epk0 esk0 []; rewrite cmap_i0=> />.
@@ -1364,7 +1377,7 @@ call (: (** Equivalences **)
       + move=> /> &2 /eq_sym not_found_pk.
         case _: (B1.c_map.[i]{2})=> [/#|/>].
         move=> st_i0 /> cmap_i0 + + ->> <<-.
-        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _ _.
+        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _ _ _.
         case _: (B1.p_map.[i]{2})=> [/#|/>].
         move=> j; rewrite -negP=> /partnering=> - [] [].
         move=> pk0 epk0 esk0 []; rewrite cmap_i0=> />.
@@ -1392,6 +1405,9 @@ call (: (** Equivalences **)
              /\ b{1} = b0{2}
              /\ ko{1} = None
              /\ find (fun _ pk_j=> pk_j = st_i{2}.`pk) B1.pk_map{2} = Some j
+             /\ j0{2} = j
+             /\ (h, s){2} = c{2}
+             /\ m{2} = (st_i.`epk, h){2}
              /\ B1.c_map.[i]{2} = Some st_i{2}
              /\ 0 <= B1.m{2}
              /\ 0 <= B1.n{2}
@@ -1400,6 +1416,11 @@ call (: (** Equivalences **)
              /\ (forall j i,
                       B1.p_map.[j] = Some i
                    => exists st, B1.c_map.[j] = Some st /\ B1.pk_map.[i] = Some st.`pk){2}
+             /\ (   !Game1_b.bad_2
+                 => forall i i' pk,
+                         Exp_b.pk_map.[i] = Some pk
+                      => Exp_b.pk_map.[i'] = Some pk
+                      => i = i'){1}
              /\ (B1.pk_map = SUFCMA.pk_map){2}
              /\ (B1.m = SUFCMA.n){2}
              /\ (Game1_b.bad_1 => Game0_b.halt_bad){1}
@@ -1419,6 +1440,9 @@ call (: (** Equivalences **)
          /\ ={st_i, ko, i, c, ch, b, h, sig}
          /\ ko{1} = None
          /\ find (fun _ pk_j=> pk_j = st_i{2}.`pk) B1.pk_map{2} = Some j
+         /\ j0{2} = j
+         /\ (h, s){2} = c{2}
+         /\ m{2} = (st_i.`epk, h){2}
          /\ B1.c_map.[i]{2} = Some st_i{2}
          /\ 0 <= B1.m{2}
          /\ 0 <= B1.n{2}
@@ -1426,7 +1450,14 @@ call (: (** Equivalences **)
          /\ (forall j, B1.c_map.[j] <> None <=> 0 < j <= B1.n){2}
          /\ (forall j i,
                   B1.p_map.[j] = Some i
-               => exists st, B1.c_map.[j] = Some st /\ B1.pk_map.[i] = Some st.`pk){2}
+               => exists st,
+                       B1.c_map.[j] = Some st
+                    /\ B1.pk_map.[i] = Some st.`pk){2}
+         /\ (   !Game1_b.bad_2
+             => forall i i' pk,
+                     Exp_b.pk_map.[i] = Some pk
+                  => Exp_b.pk_map.[i'] = Some pk
+                  => i = i'){1}
          /\ (B1.pk_map = SUFCMA.pk_map){2}
          /\ (B1.m = SUFCMA.n){2}
          /\ (Game1_b.bad_1 => Game0_b.halt_bad){1}
@@ -1437,7 +1468,7 @@ call (: (** Equivalences **)
          /\ 0 < i{1} <= Exp_b.n{1}
          /\ c{1} \notin odflt fset0 Exp_b.r_map.[Exp_b.p_map.[i], i]{1}
          /\ ((   Game1_b.bad_3{1}
-              \/ ((j0 \notin SUFCMA.cr /\ (j0, m, s) \notin SUFCMA.q /\ b0){2})) => SUFCMA.win{2})).
+              \/ ((j0 \notin SUFCMA.cr /\ (j0, m, s) \notin SUFCMA.q /\ b){2})) => SUFCMA.win{2})).
   + by auto=> />.
   if=> //; last first.
   + rcondf {1} 1; 1:by auto.
@@ -1445,11 +1476,21 @@ call (: (** Equivalences **)
     by auto.
   seq 1 1: (#pre /\ ={k}); first by conseq />; sim.
   sp; if=> //.
-  admit. (* PROBLEM: we need to know that the j we find is always the
-            same as the one we initially partnered with; this is not
-            guarnateed in our semantics, and we need an additional bad
-            event if two honest servers generate the same public key. *)
-         (* Modulo earlier admit and new invariants, we should now have this! *)
+  sp; wp.
+  conseq (: _ ==> ={ko}).
+  + auto=> |> &1 &2 [] |> [] |>.
+    case: (Game1_b.bad_2{1})=> |>.
+    case _: (B1.p_map.[i]{2})=> |>.
+    move=> j1 + nbad2 /find_some [] |>.
+    case: (st_i{2})=> |> pk_j1 epk_i esk_i p_i_j1 pk_j0_pk_j1 c_i.
+    move=> SUFCMA_ge0_n ge0_B1_n dom_pk dom_p /(_ _ _ p_i_j1).
+    rewrite c_i=> |> pk_j1_pk_j1 /(_ _ _ _ pk_j1_pk_j1 pk_j0_pk_j1)=> |>.
+    move=> nbad1 gt0_i gei_B1n hs_notin_rmap + has_b _ _ gt0_j0 gej0_SUFCMA_n j0_notin_cr.
+    rewrite j0_notin_cr has_b /=.
+    admit. (* We need to show and keep that the SUFCMA query log
+              contains all messages sent by honest servers. We cannot
+              be processing one of those right now, given path
+              conditions. (More invariants.) *)
 admitted.
 
 local lemma Reduction1_0 &m:
