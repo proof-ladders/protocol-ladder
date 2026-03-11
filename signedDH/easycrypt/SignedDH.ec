@@ -148,6 +148,7 @@ module B1 (S : SigScheme) (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
   var rch : int fset
   var xp : int fset
   var cr : int fset
+  var c_epks : pdh fset
   
   module Oracles = {
     proc gen(): pkey = {
@@ -202,12 +203,18 @@ module B1 (S : SigScheme) (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
         n <- n + 1;
         x <$ dsk;
         c <- g ^ x;
-        st <- {| pk = pk; epk = c; esk = x; |};
-        c_map.[n] <- st;
-        jo <- find (fun _ pk_j=> pk_j = pk) pk_map;
-        if (jo is Some j) {
-          p_map.[n] <- j;
-          i_map.[n] <- c;
+        if (c \in c_epks) {
+          halt_bad <- true;
+          c <- witness;
+          n <- n - 1;
+        } else {
+          st <- {| pk = pk; epk = c; esk = x; |};
+          c_map.[n] <- st;
+          jo <- find (fun _ pk_j=> pk_j = pk) pk_map;
+          if (jo is Some j) {
+            p_map.[n] <- j;
+            i_map.[n] <- c;
+          }
         }
       } else {
         c <- witness;
@@ -220,6 +227,7 @@ module B1 (S : SigScheme) (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
       var r <- None;
 
       if (!halt_bad /\ 0 < j <= m) {
+        c_epks <- c_epks `|` fset1 c;
         y <$ dsk;
         h <- g ^ y;
         sig <@ O.sign(j, (c, h));
@@ -282,10 +290,11 @@ module B1 (S : SigScheme) (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
       return ko;
     }
 
-    proc h(x) = {
+    proc h(x : pdh * pdh * pdh) = {
       var r;
 
       if (!halt_bad) {
+        c_epks <- c_epks `|` fset1 x.`1;
         r <@ RO.get(x);
       } else {
         r <- witness;
@@ -309,6 +318,7 @@ module B1 (S : SigScheme) (A : Adv_UATPaKE_RO) (O : CMA_Oracles) = {
     rch <- fset0;
     xp <- fset0;
     cr <- fset0;
+    c_epks <- fset0;
 
     p_map <- empty;
     i_map <- empty;
@@ -527,6 +537,7 @@ local module Game0_b = {
   include var Exp_b(SignedDH(S), RO, A) [-run]
 
   var halt_bad: bool
+  var c_epks: pdh fset
 
   module Oracles = {
     proc gen(): pkey = {
@@ -588,6 +599,7 @@ local module Game0_b = {
       var r <- None;
 
       if (!halt_bad /\ 0 < j <= m) {
+        c_epks <- c_epks `|` fset1 c;
         sk_j <- oget sk_map.[j];
         y <$ dsk;
         h <- g ^ y;
@@ -637,10 +649,11 @@ local module Game0_b = {
       return ko;
     }
 
-    proc h(x) = {
+    proc h(x: pdh * pdh * pdh) = {
       var r;
 
       if (!halt_bad) {
+        c_epks <- c_epks `|` fset1 x.`1;
         r <@ RO.get(x);
       } else {
         r <- witness;
@@ -665,6 +678,7 @@ local module Game0_b = {
     rch <- fset0;
     xp <- fset0;
     cr <- fset0;
+    c_epks <- fset0;
 
     p_map <- empty;
     i_map <- empty;
@@ -695,6 +709,7 @@ local module Game1_b = {
   var bad_1: bool
   var bad_2: bool
   var bad_3: bool
+  var bad_4: bool
 
   module Oracles = {
     include Game0_b.Oracles [-gen]
@@ -740,6 +755,7 @@ local module Game1_b = {
     rch <- fset0;
     xp <- fset0;
     cr <- fset0;
+    c_epks <- fset0;
 
     p_map <- empty;
     i_map <- empty;
@@ -752,6 +768,7 @@ local module Game1_b = {
     bad_1 <- false;
     bad_2 <- false;
     bad_3 <- false;
+    bad_4 <- false;
 
     b' <@ A(Oracles).distinguish();
     return b' /\ !halt_bad;
@@ -764,7 +781,79 @@ local module Game2_b = {
   include var Game1_b [-run]
 
   module Oracles = {
-    include Game1_b.Oracles [-receive]
+    include Game1_b.Oracles [-init]
+
+    proc init(pk: pkey): pdh = {
+      var st, jo, x, c;
+
+      if (!halt_bad) {
+        n <- n + 1;
+        x <$ dsk;
+        c <- g ^ x;
+        if (c \in c_epks) {
+          bad_4 <- true;
+          halt_bad <- true;
+          n <- n - 1; (* walk away whistling, like nothing happened *)
+          c <- witness;
+        } else {
+          st <- {| pk = pk; epk = c; esk = x |};
+          c_map.[n] <- st;
+          jo <- find (fun _ pk_j=> pk_j = pk) pk_map;
+          if (jo is Some j) {
+            p_map.[n] <- j;
+            i_map.[n] <- c;
+          }
+        }
+      } else {
+        c <- witness;
+      }
+      return c;
+    }
+  }
+
+  proc run(b) = {
+    var b';
+
+    RO.init();
+
+    halt_bad <- false;
+    b_ror <- b;
+
+    m <- 0;
+    n <- 0;
+
+    q <- fset0;
+    ich <- fset0;
+    rch <- fset0;
+    xp <- fset0;
+    cr <- fset0;
+    c_epks <- fset0;
+
+    p_map <- empty;
+    i_map <- empty;
+    r_map <- empty;
+
+    pk_map <- empty;
+    sk_map <- empty;
+    c_map <- empty;
+
+    bad_1 <- false;
+    bad_2 <- false;
+    bad_3 <- false;
+    bad_4 <- false;
+
+    b' <@ A(Oracles).distinguish();
+    return b' /\ !halt_bad;
+  }
+}.
+
+local module Game3_b = {
+  include var Exp_b(SignedDH(S), RO, A) [-run]
+  include var Game0_b [-run]
+  include var Game1_b [-run]
+
+  module Oracles = {
+    include Game2_b.Oracles [-receive]
 
     proc receive(i: int, c: pdh * sig, ch: bool): sskey option = {
       var st_i, k, h, sig, b;
@@ -812,6 +901,7 @@ local module Game2_b = {
     rch <- fset0;
     xp <- fset0;
     cr <- fset0;
+    c_epks <- fset0;
 
     p_map <- empty;
     i_map <- empty;
@@ -824,6 +914,7 @@ local module Game2_b = {
     bad_1 <- false;
     bad_2 <- false;
     bad_3 <- false;
+    bad_4 <- false;
 
     b' <@ A(Oracles).distinguish();
     return b' /\ !halt_bad;
@@ -1095,9 +1186,161 @@ by inline; auto=> /> /#.
 qed.
 
 (** Hop 2: Game 1 and Game 2 are equivalent unless (and until) the
-    adversary successfully triggers bad_3 in Game 2.
+    adversary successfully triggers bad_4 in Game 2.
 **)
 local module Game15_b = {
+  include var Exp_b(SignedDH(S), RO, A) [-run]
+  include var Game0_b [-run]
+  include var Game1_b [-run]
+
+  module Oracles = {
+    include Game1_b.Oracles [-init]
+
+    proc init(pk: pkey): pdh = {
+      var st, jo, x, c;
+
+      if (!halt_bad) {
+        n <- n + 1;
+        x <$ dsk;
+        c <- g ^ x;
+        bad_4 <- bad_4 \/ c \in c_epks;
+        st <- {| pk = pk; epk = c; esk = x |};
+        c_map.[n] <- st;
+        jo <- find (fun _ pk_j=> pk_j = pk) pk_map;
+        if (jo is Some j) {
+          p_map.[n] <- j;
+          i_map.[n] <- c;
+        }
+      } else {
+        c <- witness;
+      }
+      return c;
+    }
+  }
+
+  proc run(b) = {
+    var b';
+
+    RO.init();
+
+    halt_bad <- false;
+    b_ror <- b;
+
+    m <- 0;
+    n <- 0;
+
+    q <- fset0;
+    ich <- fset0;
+    rch <- fset0;
+    xp <- fset0;
+    cr <- fset0;
+    c_epks <- fset0;
+
+    p_map <- empty;
+    i_map <- empty;
+    r_map <- empty;
+
+    pk_map <- empty;
+    sk_map <- empty;
+    c_map <- empty;
+
+    bad_1 <- false;
+    bad_2 <- false;
+    bad_3 <- false;
+    bad_4 <- false;
+
+    b' <@ A(Oracles).distinguish();
+    return b' /\ !halt_bad;
+  }
+}.
+
+local lemma Hop1_bad (b : bool) &m:
+  Pr[Game1_b.run(b) @ &m: res] = Pr[Game15_b.run(b) @ &m: res].
+proof.
+byequiv (: ={glob A, glob S, b} ==> ={res})=> //.
+by proc; sim.
+qed.
+
+local lemma Hop2 b &m:
+  `|Pr[Game1_b.run(b) @ &m: res] - Pr[Game2_b.run(b) @ &m: res]|
+  <= Pr[Game2_b.run(b) @ &m: Game1_b.bad_4].
+proof.
+rewrite (Hop1_bad b &m).
+byequiv (: ={glob A, glob S, b} ==> _): Game1_b.bad_4=> [||/#] //.
+proc.
+call (: Game1_b.bad_4 (* the bad event *)
+      (* The invariant that holds until bad happens *)
+      , ={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game0_b.c_epks,
+          Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3, Game1_b.bad_4}
+     /\ !Game1_b.bad_4{1}
+      (* the invariant that holds after bad happens *)
+      , ={Game1_b.bad_4} /\ Game0_b.halt_bad{2}).
+(* Goal 1: the adversary terminates if its oracles terminate. See above. *)
++ exact: A_ll.
+(* Goal i.0: if bad does not hold, and the non-bad invariant holds
+   initially, then executing the oracles leads us to memories that are
+   such that the correct invariant holds (depending on whether bad
+   happened during the oracles' execution *)
++ by proc; if; auto; call (: true); auto.
+(* Goal i.1: the left-hand side oracle terminates and preserves bad *)
++ move=> &2 bad; proc; if; auto.
+  by call S_keygen_ll; auto=> />; rewrite bad.
+(* Goal i.2: the right-hand side oracle terminates and preserves bad *)
++ move=> &1; proc; if; auto.
+  by call S_keygen_ll; auto=> />.
+(* Do those three again for all oracles *)
++ conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
+  by sim.
++ by move=> &2 bad; proc; auto.
++ by move=> &1; proc; auto.
+(* And again *)
++ conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
+  by sim.
++ by move=> &2 bad; proc; auto.
++ by move=> &1; proc; auto.
+(* And again *)
++ proc; if; 1,3:by auto.
+  sp; seq 1 1: (#pre /\ ={x}); 1:by auto=> |>.
+  by auto=> |> /#.
++ move=> &2 bad; proc; if; auto=> /> &0.
+  by rewrite dsk_ll /= /#.
++ by move=> &1; proc; if; auto=> />.
+(* And again *)
++ conseq (: ={glob Exp_b, glob S, glob RO, Game0_b.c_epks, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
+  by sim.
++ move=> &2 bad; conseq (: true); proc; islossless.
+  + by match; islossless.
+  + exact: S_sign_ll.
++ move=> &1; conseq (: true); proc; islossless.
+  + by match; islossless.
+  + exact: S_sign_ll.
+(* And again *)
++ conseq (: ={glob Exp_b, glob S, glob RO, Game0_b.c_epks, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
+  by sim.
++ move=> &2 bad; rewrite bad.
+  proc; sp; if; auto; sp; if; auto=> />.
+  seq 3: true 1%r 1%r 0%r _ (Game1_b.bad_4 /\ Game0_b.halt_bad{2})=> //.
+  + by conseq (: _ ==> true)=> />.
+  + by islossless; exact: S_verify_ll.
+  + if; 2:by auto=> />.
+    by sp; conseq (: _ ==> true)=> />; islossless.
++ move=> &2; proc.
+  rcondf 2; 1:by auto=> />.
+  by auto.
+(* And again *)
++ conseq (: ={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game0_b.c_epks, Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3, Game1_b.bad_4, res})=> //.
+  by sim.
++ by move=> &2 bad; conseq (: true); proc; islossless.
++ by move=> &1; conseq (: true); proc; islossless.
+(* Finally, show that the invariant implies what we wanted (and that
+   the program's preamble establishes the invariant) *)
+by inline; auto=> /> /#.
+qed.
+
+(** Hop 3: Game 2 and Game 3 are equivalent unless (and until) the
+    adversary successfully triggers bad_3 in Game 3.
+**)
+local module Game25_b = {
   include var Exp_b(SignedDH(S), RO, A) [-run]
   include var Game0_b [-run]
   include var Game1_b [-run]
@@ -1153,6 +1396,7 @@ local module Game15_b = {
     rch <- fset0;
     xp <- fset0;
     cr <- fset0;
+    c_epks <- fset0;
 
     p_map <- empty;
     i_map <- empty;
@@ -1165,29 +1409,31 @@ local module Game15_b = {
     bad_1 <- false;
     bad_2 <- false;
     bad_3 <- false;
+    bad_4 <- false;
 
     b' <@ A(Oracles).distinguish();
     return b' /\ !halt_bad;
   }
 }.
 
-local lemma Hop1_bad (b : bool) &m:
-  Pr[Game1_b.run(b) @ &m: res] = Pr[Game15_b.run(b) @ &m: res].
+local lemma Hop2_bad (b : bool) &m:
+  Pr[Game2_b.run(b) @ &m: res] = Pr[Game25_b.run(b) @ &m: res].
 proof.
 byequiv (: ={glob A, glob S, b} ==> ={res})=> //.
 by proc; sim.
 qed.
 
-local lemma Hop2 b &m:
-  `|Pr[Game1_b.run(b) @ &m: res] - Pr[Game2_b.run(b) @ &m: res]|
-  <= Pr[Game2_b.run(b) @ &m: Game1_b.bad_3].
+local lemma Hop3 b &m:
+  `|Pr[Game2_b.run(b) @ &m: res] - Pr[Game3_b.run(b) @ &m: res]|
+  <= Pr[Game3_b.run(b) @ &m: Game1_b.bad_3].
 proof.
-rewrite (Hop1_bad b &m).
+rewrite (Hop2_bad b &m).
 byequiv (: ={glob A, glob S, b} ==> _): Game1_b.bad_3=> [||/#] //.
 proc.
 call (: Game1_b.bad_3 (* the bad event *)
       (* The invariant that holds until bad happens *)
-      , ={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3}
+      , ={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game0_b.c_epks,
+          Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3, Game1_b.bad_4}
      /\ !Game1_b.bad_3{1}
       (* the invariant that holds after bad happens *)
       , ={Game1_b.bad_3} /\ Game0_b.halt_bad{2}).
@@ -1215,13 +1461,13 @@ call (: Game1_b.bad_3 (* the bad event *)
 + by move=> &2 bad; proc; auto.
 + by move=> &1; proc; auto.
 (* And again *)
-+ conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
++ conseq (: ={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game0_b.c_epks, Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_4, res})=> //.
   by sim.
 + move=> &2 bad; proc; if; auto=> /> &0.
   by rewrite dsk_ll /= /#.
 + by move=> &1; proc; if; auto=> />.
 (* And again *)
-+ conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
++ conseq (: ={glob Exp_b, glob S, glob RO, Game0_b.c_epks, Game1_b.bad_1, Game1_b.bad_2, res})=> //.
   by sim.
 + move=> &2 bad; conseq (: true); proc; islossless.
   + by match; islossless.
@@ -1232,7 +1478,7 @@ call (: Game1_b.bad_3 (* the bad event *)
 (* And again *)
 + proc; sp; if; auto.
   sp; if; 1,3:auto.
-  seq 2 2: (={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3, i, c, ch, h, sig, b, ko, st_i}
+  seq 2 2: (={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game0_b.c_epks, Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3, Game1_b.bad_4, i, c, ch, h, sig, b, ko, st_i}
          /\ ko{1} = None
          /\ (Game1_b.bad_3 => Game0_b.halt_bad){2}).
   + by call (: true); auto.
@@ -1240,7 +1486,7 @@ call (: Game1_b.bad_3 (* the bad event *)
   + rcondf {1} 1; 1:by auto=> /#.
     rcondf {2} 1; 1:by auto=> /#.
     by auto=> /> /#.
-  seq 2 2: (={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3, i, c, ch, h, sig, b, ko, st_i, k}
+  seq 2 2: (={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game0_b.c_epks, Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3, Game1_b.bad_4, i, c, ch, h, sig, b, ko, st_i, k}
          /\ (Game1_b.bad_3 => Game0_b.halt_bad){2}).
   + by wp; call (: ={glob RO}); auto.
   if; 1,3:by auto=> /> /#.
@@ -1256,7 +1502,7 @@ call (: Game1_b.bad_3 (* the bad event *)
   rcondf 2; 1:by auto=> />.
   by auto.
 (* And again *)
-+ conseq (: ={glob Exp_b, glob S, glob RO, Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3, res})=> //.
++ conseq (: ={glob Exp_b, glob S, glob RO, Game0_b.halt_bad, Game0_b.c_epks, Game1_b.bad_1, Game1_b.bad_2, Game1_b.bad_3, Game1_b.bad_4, res})=> //.
   by sim.
 + by move=> &2 bad; conseq (: true); proc; islossless.
 + by move=> &1; conseq (: true); proc; islossless.
@@ -1279,7 +1525,7 @@ abort.
    by going one level down.
 *)
 local equiv Reduction1_equiv:
-  Game2_b.run ~ SUFCMA(S, B1(S, A)).run:
+  Game3_b.run ~ SUFCMA(S, B1(S, A)).run:
        ={glob A, glob S, glob RO}
     /\ b{1} = B1.b_ror{2}
     ==> Game1_b.bad_3{1} => res{2}.
@@ -1294,12 +1540,12 @@ proof.
 proc.
 inline {2} 7.
 (** The invariant here must guarantee that the executions are and stay in sync
-    *and* that they preserve the postcondition: if bad happens on the
-    left, then the reduction wins.
+    *and* that they preserve the postcondition: if bad_3 happens on the
+    left, then the reduction wins on the right.
 **)
 call (: (** Equivalences **)
         ={glob RO, glob S}
-     /\ ={halt_bad}(Game0_b, B1)
+     /\ ={c_epks, halt_bad}(Game0_b, B1)
      /\ ={m, n, q, ich, rch, xp, cr, pk_map, p_map, i_map, r_map, c_map, b_ror}(Exp_b, B1)
      /\ ={cr, pk_map, sk_map}(Exp_b, SUFCMA)
      /\ (B1.m = SUFCMA.n){2}
@@ -1309,6 +1555,19 @@ call (: (** Equivalences **)
      /\ (0 <= B1.n){2}
      /\ (forall j, B1.pk_map.[j] <> None <=> 0 < j <= B1.m){2}
      /\ (forall i, B1.c_map.[i] <> None <=> 0 < i <= B1.n){2}
+     (*/\ (forall j i,
+              B1.r_map.[Some j, i] <> None
+           => B1.p_map.[i] = Some j){2}
+     /\ (forall i epk,
+              B1.i_map.[i] = Some epk
+           => (exists j pk esk,
+                    B1.p_map.[i] = Some j
+                 /\ B1.c_map.[i] = Some {| pk = pk; epk = epk; esk = esk |})){2}
+     /\ (forall j epk h s i,
+              (j, (epk, h), s) \in SUFCMA.q
+           => B1.p_map.[i] = Some j
+           => B1.i_map.[i] = Some epk
+           => (h, s) \in odflt fset0 B1.r_map.[Some j, i]){2}*)
      /\ (forall i j,
               B1.p_map.[i] = Some j
            => exists st,
@@ -1322,6 +1581,7 @@ call (: (** Equivalences **)
      /\ (Game1_b.bad_1 => Game0_b.halt_bad){1}
      /\ (Game1_b.bad_2 => Game0_b.halt_bad){1}
      /\ (Game1_b.bad_3 => Game0_b.halt_bad){1}
+     /\ (Game1_b.bad_4 => Game0_b.halt_bad){1}
         (** THE CRUX **)
      /\ (Game1_b.bad_3{1} => SUFCMA.win{2})); last first.
 + by inline *; auto=> />; smt(emptyE in_fset0).
@@ -1333,16 +1593,16 @@ call (: (** Equivalences **)
 + by proc; auto.
 + proc; if; 1,3:by auto.
   auto=> /> &1 &2 ge0_SUFn ge0_B1n.
-  move=> dom_pk dom_c partnering + + + + + not_halted.
-  rewrite not_halted=> /> + nbad1 nbad2 nbad3 esk _.
+  move=> dom_pk dom_c partnering + + + + + + not_halted.
+  rewrite not_halted=> /> + nbad1 nbad2 nbad3 nbad4 esk _.
   rewrite nbad2=> /= inj_pk.
   smt(find_some get_setE).
 + conseq (: ={glob RO, glob S, res}
-         /\ ={halt_bad}(Game0_b, B1)
+         /\ ={c_epks, halt_bad}(Game0_b, B1)
          /\ ={m, n, q, ich, rch, xp, cr, p_map, i_map, r_map, pk_map, c_map, b_ror}(Exp_b, B1)
          /\ ={cr, pk_map, sk_map}(Exp_b, SUFCMA))=> |>.
   proc; sp; if; 1,3:by auto.
-  inline {2} 3; rcondt {2} 6; 1:by auto.
+  inline {2} 4; rcondt {2} 7; 1:by auto.
   sim.
   auto; call (: ={glob RO}); 1:by sim.
   by auto; call (: true); auto.
@@ -1362,7 +1622,7 @@ call (: (** Equivalences **)
       + move=> /> &2 /eq_sym not_found_pk.
         case _: (B1.c_map.[i]{1})=> [/#|/>].
         move=> st_i0 /> cmap_i0 + + ->> <<-.
-        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _ _ _.
+        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _ _ _ _.
         case _: (B1.p_map.[i]{1})=> [/#|/>].
         move=> j; rewrite -negP=> /partnering=> - [] [].
         move=> pk0 epk0 esk0 []; rewrite cmap_i0=> />.
@@ -1377,7 +1637,7 @@ call (: (** Equivalences **)
       + move=> /> &2 /eq_sym not_found_pk.
         case _: (B1.c_map.[i]{2})=> [/#|/>].
         move=> st_i0 /> cmap_i0 + + ->> <<-.
-        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _ _ _.
+        move=> _ _ _ _ partnering _ _ _ _ _ _ _ _ _ _ _.
         case _: (B1.p_map.[i]{2})=> [/#|/>].
         move=> j; rewrite -negP=> /partnering=> - [] [].
         move=> pk0 epk0 esk0 []; rewrite cmap_i0=> />.
@@ -1399,7 +1659,7 @@ call (: (** Equivalences **)
     by move: jP=> /eq_sym /find_some /> ->.
   sp; seq 1 1: (={c_map, q, m, n, ich, rch, xp, cr, pk_map, p_map, i_map, r_map, b_ror}(Exp_b, B1)
              /\ ={cr, pk_map, sk_map}(Exp_b, SUFCMA)
-             /\ ={halt_bad}(Game0_b, B1)
+             /\ ={c_epks, halt_bad}(Game0_b, B1)
              /\ ={glob RO, glob S}
              /\ ={st_i, ko, i, c, ch, h, sig}
              /\ b{1} = b0{2}
@@ -1426,6 +1686,7 @@ call (: (** Equivalences **)
              /\ (Game1_b.bad_1 => Game0_b.halt_bad){1}
              /\ (Game1_b.bad_2 => Game0_b.halt_bad){1}
              /\ (Game1_b.bad_3 => Game0_b.halt_bad){1}
+             /\ (Game1_b.bad_4 => Game0_b.halt_bad){1}
              /\ (Game1_b.bad_3{1} => SUFCMA.win{2})
              /\ !Game0_b.halt_bad{1}
              /\ 0 < i{1} <= Exp_b.n{1}
@@ -1435,7 +1696,7 @@ call (: (** Equivalences **)
   swap {2} 2 -1.
   seq 0 4: (={c_map, q, m, n, ich, rch, xp, cr, pk_map, p_map, i_map, r_map, b_ror}(Exp_b, B1)
          /\ ={cr, pk_map, sk_map}(Exp_b, SUFCMA)
-         /\ ={halt_bad}(Game0_b, B1)
+         /\ ={c_epks, halt_bad}(Game0_b, B1)
          /\ ={glob RO, glob S}
          /\ ={st_i, ko, i, c, ch, b, h, sig}
          /\ ko{1} = None
@@ -1463,6 +1724,7 @@ call (: (** Equivalences **)
          /\ (Game1_b.bad_1 => Game0_b.halt_bad){1}
          /\ (Game1_b.bad_2 => Game0_b.halt_bad){1}
          /\ (Game1_b.bad_3 => Game0_b.halt_bad){1}
+         /\ (Game1_b.bad_4 => Game0_b.halt_bad){1}
          /\ (Game1_b.bad_3{1} => SUFCMA.win{2})
          /\ !Game0_b.halt_bad{1}
          /\ 0 < i{1} <= Exp_b.n{1}
@@ -1485,7 +1747,7 @@ call (: (** Equivalences **)
     case: (st_i{2})=> |> pk_j1 epk_i esk_i p_i_j1 pk_j0_pk_j1 c_i.
     move=> SUFCMA_ge0_n ge0_B1_n dom_pk dom_p /(_ _ _ p_i_j1).
     rewrite c_i=> |> pk_j1_pk_j1 /(_ _ _ _ pk_j1_pk_j1 pk_j0_pk_j1)=> |>.
-    move=> nbad1 gt0_i gei_B1n hs_notin_rmap + has_b _ _ gt0_j0 gej0_SUFCMA_n j0_notin_cr.
+    move=> nbad1 nbad4 gt0_i gei_B1n hs_notin_rmap + has_b _ _ gt0_j0 gej0_SUFCMA_n j0_notin_cr.
     rewrite j0_notin_cr has_b /=.
     admit. (* We need to show and keep that the SUFCMA query log
               contains all messages sent by honest servers. We cannot
@@ -1494,7 +1756,7 @@ call (: (** Equivalences **)
 admitted.
 
 local lemma Reduction1_0 &m:
-  Pr[Game2_b.run(false) @ &m: Game1_b.bad_3]
+  Pr[Game3_b.run(false) @ &m: Game1_b.bad_3]
   <= Pr[SUFCMA(S, B1_0(S, A)).run() @ &m: res].
 proof.
 byequiv (: ={glob A, glob S, glob RO} /\ !b{1} ==> Game1_b.bad_3{1} => res{2})=> //.
@@ -1510,7 +1772,7 @@ transitivity {2}
 qed.
 
 local lemma Reduction1_1 &m:
-  Pr[Game2_b.run(true) @ &m: Game1_b.bad_3]
+  Pr[Game3_b.run(true) @ &m: Game1_b.bad_3]
   <= Pr[SUFCMA(S, B1_1(S, A)).run() @ &m: res].
 proof.
 byequiv (: ={glob A, glob S, glob RO} /\ b{1} ==> Game1_b.bad_3{1} => res{2})=> //.
@@ -1525,7 +1787,7 @@ transitivity {2}
   by sim.
 qed.
 
-local module Game3_b = {
+local module Game4_b = {
   include var Exp_b(SignedDH(S), RO, A) [-run]
   include var Game1_b [-run]
 
@@ -1715,28 +1977,30 @@ local module Game3_b = {
 }.
 
 op p: real.
-local lemma Hop3 b &m:
-  `|Pr[Game2_b.run(b) @ &m: res] - Pr[Game3_b.run(b) @ &m: res]|
+local lemma Hop4 b &m:
+  `|Pr[Game3_b.run(b) @ &m: res] - Pr[Game4_b.run(b) @ &m: res]|
   <= p.
 admitted.
 
 local lemma Reduction &m:
-  `|Pr[Game3_b.run(false) @ &m: res] - Pr[Game3_b.run(true) @ &m: res]|
+  `|Pr[Game4_b.run(false) @ &m: res] - Pr[Game4_b.run(true) @ &m: res]|
   <= Pr[St_CDH(B2(S,A)).run() @ &m: res].
 proof. admitted.
 
 local lemma Security_of_SignedDH &m:
   `|  Pr[Exp_b(SignedDH(S), RO, A).run(false) @ &m : res]
     - Pr[Exp_b(SignedDH(S), RO, A).run(true) @ &m : res]|
-  <=   Pr[Game1_b.run(true) @ &m: Game1_b.bad_1]
-     + Pr[Game1_b.run(true) @ &m: Game1_b.bad_2]  
-     + Pr[Game1_b.run(false) @ &m: Game1_b.bad_1]
+  <=   Pr[Game1_b.run(false) @ &m: Game1_b.bad_1]
      + Pr[Game1_b.run(false) @ &m: Game1_b.bad_2]  
+     + Pr[Game2_b.run(false) @ &m: Game1_b.bad_4]  
+     + Pr[Game1_b.run(true) @ &m: Game1_b.bad_1]
+     + Pr[Game1_b.run(true) @ &m: Game1_b.bad_2]  
+     + Pr[Game2_b.run(true) @ &m: Game1_b.bad_4]  
      + Pr[SUFCMA(S, B1_0(S, A)).run() @ &m: res]
      + Pr[SUFCMA(S, B1_1(S, A)).run() @ &m: res]
      + 2%r * p
      + Pr[St_CDH(B2(S,A)).run() @ &m: res].
 proof.
-smt(Hop0 Hop1 Hop2 Reduction1_0 Reduction1_1 Hop3 Reduction).
+smt(Hop0 Hop1 Hop2 Hop3 Reduction1_0 Reduction1_1 Hop4 Reduction).
 qed.
 end section.
