@@ -1,25 +1,21 @@
 (*
- * Protocol:	  Signed Diffie-Hellman
- * Modeler: 	  Charlie Jacomme
- * Date:        April 2025
+ * Protocol: SignedDH+KEM	 
+ * Modeler: Luc Fontaine and Charlie Jacomme	  
+ * Date: March 2026        
  *
- * Status: 	    Finished
+ * Status: 	   
  * 
  * attacker:    active
  * sessions:    unbounded ∞ 
  * agents:      unbounded ∞ 
  * compromises: long-term keys (LTK)
- * primitives:  ROM, signatures, diffie-hellman
+ * primitives:  ROM, signatures, diffie-hellman, KEM
  * properties:  exec, auth, forward secrecy
  * difficulty:  medium
  *
 
 Verifies in under a second.
 
-Example adapted from: D. Baelde, A. Koutsos, and J. Lallemand, “A
-higher-order indistinguishability logic for cryptographic reasoning,”
-in 2023 38th annual ACM/IEEE symposium on logic in computer science
-(LICS), 2023, pp. 1–13, https://hal.inria.fr/hal-03981949.
 *) 
 
 
@@ -32,6 +28,15 @@ Function Definitions
 (* a public communication channel over the network.*)
 channel c.
 
+(*------------------------------------------------------------------*)
+(* kem types and functions *)
+type kem_skey[serializable].
+type kem_randomness[serializable].
+
+abstract kem_pub : kem_skey -> message.
+abstract encap_shared : kem_randomness -> message -> message
+abstract encap_ct : kem_randomness -> message -> message.
+abstract decap : message -> kem_skey -> message.
 
 (*------------------------------------------------------------------*)
 (* Gdh group *)
@@ -51,23 +56,8 @@ abstract toG : message -> G.
 
 (* signature declaration through builtin construction *)
 signature SIGsign,SIGverify,pk.
-(*
-this declaration can be thought equivalent to
 
-type skey [large].
-type pkey.
-
-abstract pk : skey -> pkey.
-abstract SIGsign : message * skey -> message.
-abstract SIGverify : message * message * pkey -> bool.
-
-axiom [any] SIGverify_correct (x,y:message,k : skey) : 
-     SIGverify(SIGsign(x,k), x, pk(k)).
-
-+ UF-CMA axiom
-*)
-
-axiom [any] SIGsign_ax (x,y,k : message) : x = y => SIGverify(x, SIGsign(y,k), pk(k)).
+axiom [any] SIGsign_ax (m1,m2,k : message) : m1 = m2 => SIGverify(m1, SIGsign(m2,k), pk(k)).
 
 abstract error : G.
 
@@ -88,10 +78,16 @@ name kHash : message.
 name s_sk : index -> message.
 
 (* ephemerals for Client  *)
+name z_sk : index -> kem_skey.
 name x_sk : index -> Z.
 (* ephemerals for Server  *)
-name y_sk : index * index  -> Z.
 
+name y_sk : index * index  -> Z.
+name r_s : index -> index -> kem_randomness.
+(* s_sk, x_sk, y_sk ---> DH; z_sk, r_s ---> KEM*)
+(* We do not assume any security on the KEM part, we are doing the opposite
+   assumptions on security of DH and KEM in the file signedDHKEM_CPA_singleALL.sp *) 
+(* This proof is thus correct under the hypothesis of a broken KEM scheme *)
 (*
 =====================
 Protocol model
@@ -103,32 +99,44 @@ process Client (i:index) =
   in(c, s_pk);
 
   (* we compute our ephemeral *)
+    (* DH part *)
   let x_sk = x_sk i in
   let x_pk = gen^x_sk in
+     (* KEM part *)
+  let z_sk = z_sk i in
+  let z_pk = kem_pub z_sk in
 
-  C1:out(c, ofG(x_pk));
-
+  C1:out(c, <ofG(x_pk), z_pk>);
   in(c, mA);
-  let y_pk = toG(fst(mA)) in
-  let sig = snd(mA) in
-  if SIGverify(< ofG(x_pk), ofG(y_pk)>, sig, s_pk) then
+  let y_pk = toG(fst(fst(mA))) in
+  let sig = snd(fst(mA)) in
+  let ct = snd(mA) in
+
+  if SIGverify(<<ofG(x_pk), ofG(y_pk)>,<z_pk, ct>>, sig, s_pk) then
+    let ss = decap ct z_sk in
     let gCS = y_pk^x_sk  in
-    let kC = Hash( ofG(gCS), kHash) in
+    let kC = Hash(<ofG(gCS), ss>, kHash) in
     C2: null.
 
 
 process Server (S:index, j:index) =
-  in(c, x_pk');
+  in(c,xz_pk');
 
-  let x_pk = toG(x_pk') in
-
+  let x_pk = toG(fst(xz_pk')) in
+  let z_pk = snd xz_pk' in
+  (* DH part *)
   let y_sk = y_sk(S, j) in
   let y_pk = gen^y_sk in
-
-  let sig = SIGsign(< ofG(x_pk), ofG(y_pk)>, s_sk S) in  
   let gSC = x_pk^y_sk in
-  let kS = Hash(ofG( gSC ), kHash) in
-  S1:out(c, <ofG(y_pk), sig>).
+
+  (* KEM part *)
+  let r_s = r_s S j  in
+  let ct = encap_ct r_s z_pk in
+  let ss = encap_shared r_s z_pk in
+
+  let sig = SIGsign(<<ofG(x_pk), ofG(y_pk)>, <z_pk, ct>>, s_sk S) in  
+  let kS = Hash(<ofG( gSC ), ss>, kHash) in
+  S1:out(c, <<ofG(y_pk), sig>, ct>).
 
 process kdforacle (i:index) =
    in(c,x); O : 
@@ -155,7 +163,7 @@ include Core.
 abstract Some : message -> message.
 abstract None : message.
 abstract oget : message -> message.
-include DHLib.
+include DHlib.
 
 
 
@@ -185,10 +193,11 @@ lemma [default] executable (S,i,k:index):
     cond@C2(i) &&   (* cond@X is a shortcut to the possible conditionals inside an action X. *)
     (* and both derived the same key. *)
     gCS i@C2(i) = gSC S k@S1(S,k).
+
 Proof.
 intro [O1 O2 Pk Is1 Ic2].
 (* we expand the let binding defintions and the hypothesis we have. *)
-rewrite /cond /gCS /gSC /y_pk /sig Ic2 /output /sig1 Pk /x_pk1 Is1 /output /=. 
+rewrite /cond /gSC /gCS /y_pk /sig Ic2 /output /sig1 Pk /x_pk1 Is1 /output /=. 
 split. (* we split the conjuction in two goals *)
  + by apply SIGsign_ax.  (* SIGverify succeeds thanks to the correctness of SIG. *)
  + rewrite /y_pk1 /x_pk. 
@@ -196,7 +205,7 @@ split. (* we split the conjuction in two goals *)
 Qed.
 
 (*------------------------------------------------------------------*)
-(* Agreement of Client holds whenever S has not been corrupted before A's execution *)
+(* Agreement of Client holds whenever S has not been corrupted before C's execution *)
 lemma [default] authentication (S,i:index):
    (* a client session terminated *)
    happens(C2(i)) =>
@@ -212,14 +221,16 @@ lemma [default] authentication (S,i:index):
       S1(S,k) < C2(i) && 
       (* and all the value match. *)
       gCS i@C2(i) =  gen ^ (y_sk (S, k) ** x_sk i) &&
-      toG(fst (input@C2(i))) = gen ^ y_sk (S,k) &&
-      toG(input@S1(S,k)) = gen ^ x_sk i &&
-
+      toG(fst( fst((input@C2(i))))) = gen ^ y_sk (S,k) &&
+      toG(fst (input@S1(S,k))) = gen ^ x_sk i &&
+      snd (input@S1(S, k)) = kem_pub (z_sk i) &&
+      snd (input@C2(i)) = encap_ct (r_s S k) (kem_pub (z_sk i)) &&
       (* to prove the equivalence between the SIGverify and our
       formula, as we only have eufcma and not sufcma, we also need
       this final bit. *)
-      SIGverify(<ofG (gen ^ x_sk(i)), ofG (gen ^ y_sk(S,k))>, 
-                snd (input@C2(i)), 
+      SIGverify(<<ofG (gen ^ x_sk(i)), ofG (gen ^ y_sk(S,k))>,
+      <snd(input@S1(S,k)), encap_ct(r_s S k) (snd(input@S1(S,k)))>>, 
+                snd(fst(input@C2(i))), 
                 pk(s_sk S))).
 Proof.
   intro HC2 [Hon NoCor].
@@ -235,19 +246,16 @@ Proof.
 
 
     +   (* case 2: the signature comes from the server *)
-      intro [k [Ord Eq]].
+      intro [k [Ord [Eqdh Eqkem]]].
       exists k; simpl.
-
      (* we extract from Eq that `y_pk i@C2(i)` is equal to `y_pk1 S k@S1(S, k))` *)
      have Eq2 :  y_pk i@C2(i) = y_pk1 S k@S1(S, k).
-      by apply f_apply snd in Eq; simpl.   
-    apply f_apply fst in Eq; simpl.         
-      
+      by apply f_apply snd in Eqdh; simpl.   
+    apply f_apply fst in Eqdh; simpl.
      (* rewrite macros and use Eq2 to conclude. *)
-     by rewrite /gCS Eq2 /y_pk1 /y_sk1 /x_sk1 /=.
-    
+    rewrite /gCS Eq2 /y_pk1 /y_sk1 /x_sk1 //=.
   (* other direction. *)
-  - intro [j [H1 [H2 H3 H4 H5]]].  
+  - intro [j [H1 [H2 H3 H4 H5 H6 H7]]].
     auto.
 Qed.
 
@@ -268,7 +276,7 @@ lemma [default] gCS_secret (i:index, t:timestamp):
                      not ((corrupt(S)) < C2(i)))) 
   =>
   (* then the attacker cannot provide as input at time t the derived shared DH. *)
-  input@t = ofG(gCS i@C2(i)) =>
+  input@t = <ofG(gCS i@C2(i)), ss i@C2(i)> =>
   false.
 Proof.
   intro Ht HC2 C [S [Hon NoCor]] T.
@@ -280,11 +288,12 @@ Proof.
   + auto. (* direct contradictions with the hypothesis NoCor *)
   
   (* case 2: the signature comes from the server *)
-  +  intro [k [Ord Eq]].
+  +  intro [k [Ord [Eqdh Eqkem]]].
      clear C.
      (* we extract from Eq that `y_pk i@C2(i)` is equal to `y_pk1 S k@S1(S, k))` *)
-     apply f_apply snd in Eq; simpl.      
-     rewrite /gCS Eq /y_pk1 /y_sk1 /x_sk1 in T.
+     apply f_apply snd in Eqdh; simpl.      
+     rewrite /gCS Eqdh /y_pk1 /y_sk1 /x_sk1 in T.
+     apply f_apply fst in T; simpl.
      apply f_apply toG in T; simpl.
      gdh T, gen.
 Qed.
@@ -314,7 +323,7 @@ global lemma [set:default/left; equiv:default/left, default/left]
                      not ((corrupt(S)) < t)) ] ->
   equiv(
     (* if we give the full frame up to t0 to an attacker *)
-    frame@t0, 
+    frame@t0,
     (* as long as C2 i accepted successfully. *)
     if cond@t then 
        (* then the derived key is indistinguishable from the secret. *)
@@ -368,13 +377,14 @@ lemma [default] gSC_secret (S,k:index, t:timestamp):
   (exists i:index,  (C1(i) < S1(S,k) && input@S1(S,k) = output@(C1 i) ))
   =>
   (* then the attacker cannot provide as input at time t the derived shared DH. *)
-  input@t = ofG(gSC S k@S1(S,k)) =>
+  input@t = <ofG(gSC S k@S1(S,k)), ss1 S k@S1(S, k)>  =>
   false.
 Proof.
   intro Ht HS1 [C [Hon NoCor]] T.
 
   rewrite /gSC /x_pk1 NoCor /output /x_pk /= in T.
 
+  apply f_apply fst in T; simpl.
   apply f_apply toG in T; simpl.
   gdh T, gen.
 Qed.
@@ -388,6 +398,8 @@ global lemma [set:default/left; equiv:default/left, default/left]
   (* if t is point where a server derived key. *)
   [t = S1(S,k)] ->
   (* and if this server got an honest DH Client share *)
+  (* We can improve this, just assuming that the part of the input corresponding 
+     to dh is equal to the honest one. *)
   [exists i:index,  (C1(i) < S1(S,k) && input@S1(S,k) = output@(C1 i) )]
   ->
   equiv(

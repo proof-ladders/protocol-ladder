@@ -104,7 +104,7 @@ subfolder: [signedKEM](signedKEM/)
 
 | Tool        | Attacker | Sessions | Agents | Compromises      | Attacker Class | Primitives              | Properties                 | Difficulty ratings | Status |
 | :---------- | -------- | :------: | :----: | ---------------- | -------------- | ----------------------- | -------------------------- | ------------------ | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Easy               |   ❎   |
+| Squirrel    | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign, KEM         | Auth, FS                   | WIP                |   WIP  |
 | CryptoVerif | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Easy               |   ❎   |
 | EasyCrypt   | Active   |    ∞     |   ∞    | None             | Computational  | Hash, Sign              | Auth, FS                   | Hard               |   ❎   |
 | Tamarin     | Active   |    ∞     |   ∞    | LTK, EK, MAL_LTK | Symbolic       | Hash, DH, Sign, AsymEnc | Auth, FS, ⚡UKS, ⚡ReEncap   | Easy               |   ✅   |
@@ -116,7 +116,8 @@ subfolder: [signedDH+KEM](signedDH+KEM/)
 
 | Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives        | Properties        | Difficulty ratings | Status |
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | ----------------- | ----------------- | ------------------ | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Easy               |   ❎   |
+| Squirrel    | Active   |    ∞     |   ∞    | LTK         | Computational  | Hash, Sign, DH    | Auth, FS          | Easy               |   ✅   |
+| Squirrel    | Active   |    1     |   1    | LTK         | Computational  | Hash, Sign, KEM   | Auth, FS          | Easy               |   ✅   |
 | CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Easy               |   ❎   |
 | EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Hash, Sign        | Auth, FS          | Hard               |   ❎   |
 | Tamarin     | Active   |    ∞     |   ∞    | EK + LTK    | Symbolic       | DH, Sign, AsymEnc | Auth, FS, Secrecy | Easy               |   ✅   |
@@ -156,7 +157,7 @@ subfolder: [acme](acme/)
 
 | Tool        | Attacker | Sessions | Agents | Compromises | Attacker Class | Primitives | Properties  | Difficulty ratings | Status |
 | :---------- | -------- | :------: | :----: | ----------- | -------------- | ---------- | ----------- | ------------------ | :----: |
-| Squirrel    | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Easy               |   ❎   |
+| Squirrel    | Active   |    ∞     |   ∞    | LTK         | Computational  | Sign       | Auth        | Easy               |   ✅   |
 | CryptoVerif | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Easy               |   ❎   |
 | EasyCrypt   | Active   |    ∞     |   ∞    | None        | Computational  | Sign       | Auth        | Hard               |   ❎   |
 | Tamarin     | Active   |    ∞     |   ∞    | None        | Symbolic       | Sign       | Auth, ⚡DEO  | Easy               |   ✅   |
