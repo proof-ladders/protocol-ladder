@@ -334,7 +334,7 @@ Proof.
 
    (* We simplify H1 into its consequence. *)
    have ? : O(j) <= t0.  
-    case H1; 1,2: auto. by have _ := depends_C1_C2 i.
+    case H1; 1,2: smt. by have _ := depends_C1_C2 i.
    clear H1.     
 
    rewrite eq_sym in H2. 

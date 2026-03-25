@@ -1,15 +1,15 @@
 (*
- * Protocol:	  Simplified ACME
- * Modeler: 	  Luc Fontaine and Charlie Jacomme
+ * Protocol:	Simplified ACME
+ * Modeler: 	Luc Fontaine and Charlie Jacomme
  * Date:        March 2026
  *
- * Status: 	    Finished
+ * Status: 	Finished
  * 
  * attacker:    active
  * sessions:    unbounded ∞ 
  * agents:      unbounded ∞ 
  * compromises: long-term keys (LTK)
- * primitives:  ROM, signatures
+ * primitives:  signatures
  * properties:  auth
  * difficulty:  medium
  *
@@ -44,6 +44,13 @@ axiom [any] SIGsign_ax (x,y,k : message) : x = y => SIGverify(x, SIGsign(y,k), p
 
 (* To prove authentication, we use UEO proerty on signature, which affirm that
  if  a signature done with some key sk is verified with some key opk then opk = pk(sk) *)
+
+
+(* Possible improvement : 
+In fact, UEO is defined for polynomial values, but by defining it like that in Squirrel
+we assume it for all values, even exponential ones. To refine that axiom, 
+the idea would be to rewrite it as a crypto game and use the crypto tactic instead. *)
+
 axiom [any] SIGsign_UEO (m, m', opk, sk : message) :
       SIGverify(m', SIGsign(m, sk), opk) => opk = pk(sk).
 
@@ -204,12 +211,6 @@ Proof.
   auto.
 
 Qed.
-
-
-(* Possible improvements : 
-In fact, UEO is defined for polynomial values, but by defining it like that in Squirrel
-we assume it for all values, even exponential ones. To refine that axiom, 
-the idea would be to rewrite it as a crypto game and use the crypto tactic instead. *)
 
 
 

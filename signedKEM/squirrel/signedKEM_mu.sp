@@ -1,17 +1,17 @@
 (*
- * Protocol:	  Signed KEM
- * Modeler: 	  Luc Fontaine
+ * Protocol:	Signed KEM
+ * Modeler:     Luc Fontaine
  * Date:        March 2026
  *
- * Status: 	    Ongoing
+ * Status: 	Ongoing
  * 
  * attacker:    active
  * sessions:    unbounded ∞ 
  * agents:      unbounded ∞ 
  * compromises: long-term keys (LTK)
  * primitives:  signatures, KEM
- * properties:  auth
- * difficulty:  easy
+ * properties:  partial auth
+ * difficulty:  WIP
  *
 
 Verifies in under a second.
