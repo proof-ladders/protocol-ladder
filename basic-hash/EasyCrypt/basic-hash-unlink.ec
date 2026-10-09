@@ -4,12 +4,7 @@ D. Baelde, S. Delaune, A. Koutsos, C. Jacomme, and S. Moreau, “An Interactive 
 
 (* Unlinkability of the Basic Hash protocol, multiple tags, one reader. *)
 
-(* Easycrypt: 1.0 (fa3853d3029d) *)
-(* Alt-Ergo version 2.3.3 *)
-(* Z3 4.8.4 *)
-(* CVC4 1.5 *)
-
-require import AllCore Int List FSet SmtMap IntDiv StdBigop Distr DBool Mu_mem.
+require import AllCore Int List FSet FMap IntDiv StdBigop Distr DBool Mu_mem.
 require import StdOrder.
 (*---*) import Bigint Bigreal BRA BIA IntOrder RealOrder RField.
 require (*---*) FelTactic.
@@ -167,7 +162,7 @@ module Multiple0 (H : PRFs_Oracles) = {
     b <- false;
     i <- 0;
     while (i < n_tag) {
-      r <- H.check(i, n, h);
+      r <@ H.check(i, n, h);
       b <- b || r;
       i <- i + 1;
     }
@@ -228,7 +223,7 @@ module Single0 (H : PRFs_Oracles) = {
       j <- 0;
       b0 <- false;
       while (j < n_session) {
-        r <- H.check(i * n_session + j, n, h);
+        r <@ H.check(i * n_session + j, n, h);
         b0 <- b0 || r;
         j <- j + 1;
       }
@@ -321,7 +316,7 @@ module Unlink (Adv : Adv) (BH : BasicHashF) (H : PRFs) = {
   proc main () = {
     var b : bool;
     BH.init ();
-    b <- Adv.a();
+    b <@ Adv.a();
     return b;
   }
 }.
@@ -350,23 +345,23 @@ module D (A : Adv) (BH : BasicHashF0) (F : PRFs_Oracles) = {
 (*-----------------------------------------------------------------------*)
 (* Game-hope, PRF to RF for the multiple and single sessions protocols.  *)
 
-lemma eq_mult_RF &m (A <: Adv {Multiple0, EUF_RF}) : 
+lemma eq_mult_RF &m (A <: Adv {-Multiple0, -EUF_RF}) : 
     Pr[Unlink(A, Multiple, EUF_RF).main() @ &m : res] =
     Pr[EUF_PRF_IND(EUF_RF, D(A, Multiple0)).main() @ &m : res]
 by byequiv; auto; proc; inline *; wp; sim; auto. 
 
-lemma eq_mult_PRF &m (A <: Adv {Multiple0, PRFs}) : 
+lemma eq_mult_PRF &m (A <: Adv {-Multiple0, -PRFs}) : 
     Pr[Unlink(A, Multiple, PRFs).main() @ &m : res] =
     Pr[EUF_PRF_IND(PRFs, D(A, Multiple0)).main() @ &m : res]
 by byequiv; auto; proc; inline *; wp; sim; auto. 
 
 (* Idem with the single session protocol. *)
-lemma eq_single_RF &m (A <: Adv {Multiple0, EUF_RF}) : 
+lemma eq_single_RF &m (A <: Adv {-Multiple0, -EUF_RF}) : 
     Pr[Unlink(A, Single, EUF_RF).main() @ &m : res] =
     Pr[EUF_PRF_INDb(EUF_RF, D(A, Single0)).main() @ &m : res]
 by byequiv; auto; proc; inline *; wp; sim.
 
-lemma eq_single_PRF &m (A <: Adv {Multiple0, PRFs}) : 
+lemma eq_single_PRF &m (A <: Adv {-Multiple0, -PRFs}) : 
     Pr[Unlink(A, Single, PRFs).main() @ &m : res] =
     Pr[EUF_PRF_INDb(PRFs, D(A, Single0)).main() @ &m : res]
 by byequiv; auto; proc; inline *; wp; sim.
@@ -418,8 +413,8 @@ module RF_bad = {
    sessions) instanciated with Random Functions (EUF_RF) is equal to the
    winning probability when instanciated with the Collision-Free Random
    Functions (RF_bad), up-to-bad. *)
-lemma coll_multiple &m (A <: Adv {EUF_RF, RF_bad, Multiple0}) : 
-    (forall (BH <: BasicHashT0{A}),
+lemma coll_multiple &m (A <: Adv {-EUF_RF, -RF_bad, -Multiple0}) : 
+    (forall (BH <: BasicHashT0{-A}),
       islossless BH.tag => islossless BH.reader => islossless A(BH).a) =>
     Pr[Unlink(A, Multiple, EUF_RF).main() @ &m : res] <=
     Pr[Unlink(A, Multiple, RF_bad).main() @ &m : res] +
@@ -433,14 +428,26 @@ proof.
     (forall (x), omap (fun x => [x]) (EUF_RF.m.[(x)]{1}) = RF_bad.m.[(x)]{2})).
   + proc; inline *; sp; if; 1,3 : by auto.
     sp; if; 1, 3 : by auto. 
-    seq 4 4 : (#pre /\ ={n, i0, x}); 1 : by auto => /#.
-    wp; if {1}; 1 : by auto => />; smt(get_setE). 
-    by auto; smt ().
-  + by move => &2 Hb; islossless.
+    seq 4 4: (#pre /\ ={n, i0, x}); 1:by auto=> |>.
+    if {1}.
+    + auto=> |> &1 &2 i _ H _ _ _ r _ H'.
+      rewrite get_set_sameE=> |> hp.
+      case: (hp = (i0, x){2})=> |> => [|neq_hp].
+      + by rewrite !get_set_sameE=> |> /#.
+      by rewrite !get_set_neqE // H.
+    auto=> |> &1 &2 i _ H _ _; rewrite !domE=> /= ix_in_m r _ ix_notin_m'.
+    move: (H (i0, x){2}) ix_in_m; rewrite ix_notin_m'.
+    by case: (EUF_RF.m{1}.[i0, x]{2})=> |>.
+  + by move => &2 Hb; islossless; smt(dnonce_ll).
   + move => &2. proc; inline *; auto; sp; if; sp; auto. 
     by if; auto; smt (drf_ll dnonce_ll). 
   + proc; inline *. while (#pre /\ ={b,i}); auto => />. 
-    move => &1 &2 Hbad Hind Hle /> /#. 
+    move => &1 &2 Hbad Hind Hle />.
+    case: (b{2})=> |> _.
+    move: (Hind (if EUF_RF.n <= i then 0 else i, n){2}).
+    rewrite !domE; case: (RF_bad.m{2}.[_])=> |>.
+    + by case: (EUF_RF.m{1}.[_])=> |>.
+    by case: (EUF_RF.m{1}.[_])=> |> /#.
   + move => &2 Hb; islossless. 
     while true (n_tag - i); auto; 2 : by smt ().
     conseq (:true); 1 : by smt (). 
@@ -481,14 +488,14 @@ module EUF_RF2 = {
   proc check = EUF_RF.check
 }.
 
-lemma eq_single_RF2 &m (A <: Adv {Multiple0, EUF_RF}) : 
+lemma eq_single_RF2 &m (A <: Adv {-Multiple0, -EUF_RF, -EUF_RF2}) : 
     Pr[Unlink(A, Single, EUF_RF).main() @ &m : res] =
-    Pr[Unlink(A, Single, EUF_RF2).main() @ &m : res]
-by byequiv; auto; proc; inline *; wp; sim; auto. 
+    Pr[Unlink(A, Single, EUF_RF2).main() @ &m : res].
+proof. by byequiv; auto; proc; inline *; sim. qed.
 
 (* Idem for the single session version of the unlinkability game. *)
-lemma coll_single &m (A <: Adv {EUF_RF, RF_bad, Multiple0, EUF_RF2}) : 
-    (forall (BH <: BasicHashT0{A}),
+lemma coll_single &m (A <: Adv {-EUF_RF, -RF_bad, -Multiple0, -EUF_RF2}) : 
+    (forall (BH <: BasicHashT0{-A}),
       islossless BH.tag => islossless BH.reader => islossless A(BH).a) =>
     `| Pr[Unlink(A, Single, EUF_RF).main() @ &m : res] -
        Pr[Unlink(A, Single, RF_bad).main() @ &m : res] | <=
@@ -508,8 +515,16 @@ proof.
   + proc; inline *; sp; if; 1,3 : by auto. 
     sp; if; 1, 3 : by auto. 
     seq 4 4 : (#pre /\ ={n, i0, x}); 1 : by auto => /> /#.
-    wp; sp. if {1}; 1 : by auto => />; smt(get_setE). 
-    by auto; smt ().
+    wp; sp; if {1}.
+    + auto=> |> &1 &2 _ i _ H _ _; rewrite !domE /=.
+      move: (H (i0, x){2}); case: (EUF_RF.m{1}.[_])=> |> <- /=.
+      move=> r _; rewrite get_set_sameE /=.
+      move=> hp; case: (hp = (i0, x){2})=> |>.
+      + by rewrite !get_set_sameE.
+      by move=> neq; rewrite !get_set_neqE // H.
+    auto=> |> &1 &2 _ i _ H _ _ + _ _; rewrite !domE.
+    move: (H (i0, x){2}).
+    by case: (EUF_RF.m{1}.[_]); case: (RF_bad.m{2}.[_])=> |>.
   + move => &2 Hb. 
     proc; inline *; auto; sp.
     if; 2: by auto; smt().
@@ -524,7 +539,11 @@ proof.
     by if; auto; smt (drf_ll dnonce_ll). 
   + proc; inline *; while (#pre /\ ={b,b0,j,i}); auto => />. 
     while (#pre); auto => />. 
-    by move => &1 &2 Hbad Hind Hle Hlt />; smt().
+    move => &1 &2 Hbad Hind Hle Hlt />; rewrite !domE.
+    case: (b0{2})=> |> _.
+    pose x := if EUF_RF.n{2} <= _ then _ else _.
+    move: (Hind (x, n{2})).
+    by case: (RF_bad.m.[x, n]{2}); case: (EUF_RF.m{1}.[x, n{2}])=> |> /#.
   + move => &2 Hb. 
     proc; inline *; conseq />. 
     while true (n_tag - i); auto; 2 : by smt ().
@@ -545,8 +564,8 @@ qed.
    since each tag hashes only one message. *)
 
 (* For the single session protocol, this should be 0. *)
-lemma coll_bound_single &m (A <: Adv {EUF_RF, RF_bad, Multiple0}) : 
-    (forall (BH <: BasicHashT0{A}),
+lemma coll_bound_single &m (A <: Adv {-EUF_RF, -RF_bad, -Multiple0}) : 
+    (forall (BH <: BasicHashT0{-A}),
       islossless BH.tag => islossless BH.reader => islossless A(BH).a) =>
     Pr[Unlink(A, Single, RF_bad).main() @ &m : RF_bad.bad] = 0%r.
 proof.
@@ -567,15 +586,31 @@ proof.
     auto.
     move => /> &hr i1. 
     pose i2 := (if n_tag <= i1 then 0 else i1).
-    move => *.
-    have -> /= : !(n_tag * n_session <= 
-                   i2 * n_session + oget Multiple0.s_cpt{hr}.[i2]); 
-    1 : smt (). 
-    rewrite Tactics.eq_iff /dom => /=. 
-    split; 1: by apply H1; smt().
-    rewrite /dom in H2; progress; 1,2,3,4 : smt (get_setE). 
-    have := euclideU n_session i2 j (oget Multiple0.s_cpt{hr}.[i2]) k.
-    smt (get_setE). 
+    rewrite !domE=> dom_scpt scpt_ge0 ih.
+    case _: (Multiple0.s_cpt{hr}.[i2])=> |> j scpt_i2 j_lt_session r.
+    move: (dom_scpt i2) (scpt_ge0 i2); rewrite scpt_i2=> /=.
+    move=> i2_bnd /(_ i2_bnd) ge0_j.
+    have -> /= : !(n_tag * n_session <= i2 * n_session + j).
+    + apply/ltzNge/(IntOrder.ltr_le_trans ((i2 + 1) * n_session)).
+      + smt().
+      by apply: IntOrder.ler_pmul2r=> /#.
+    move=> r_in_drf; split.
+    + by rewrite ih ?scpt_i2.
+    split.
+    + by move=> i0; rewrite get_setE; case: (i0 = i2)=> |> /#.
+    split.
+    + by move=> i0; rewrite get_setE; case: (i0 = i2)=> |> /#.
+    move=> i0 k p; rewrite !get_setE; case: (i0 = i2)=> |>.
+    + case: (k = j)=> |>=> [|k_neq_j]; 1:smt().
+      have -> /=: i2 * n_session + k <> i2 * n_session + j by smt().
+      by move=> Sj_le_k k_lt_nsess; apply: ih=> //; rewrite scpt_i2=> //#.
+    move=> neq_i; case _: (Multiple0.s_cpt{hr}.[i0])=> |> k0 scpt_i0 k0_le_k k_lt_nsess.
+    move: (dom_scpt i0) (scpt_ge0 i0); rewrite scpt_i0=> |>.
+    move=> ge0_i0 i0_lt_ntag ge0_k0.
+    have -> /=: i0 * n_session + k <> i2 * n_session + j.
+    + rewrite -negP=> /(congr1 (fun x=> x %/ n_session)) /=.
+      by rewrite !edivz_eq // /#.
+    by apply: ih; rewrite scpt_i0.
   + by conseq />; auto.
   inline *; sp 6. 
   while (0 <= i <= n_tag /\
@@ -585,8 +620,8 @@ proof.
   by auto => />; smt (empty_valE n_tag_p). 
 qed.
 
-lemma coll_single_eq &m (A <: Adv {EUF_RF, RF_bad, Multiple0, EUF_RF2}) : 
-    (forall (BH <: BasicHashT0{A}),
+lemma coll_single_eq &m (A <: Adv {-EUF_RF, -RF_bad, -Multiple0, -EUF_RF2}) : 
+    (forall (BH <: BasicHashT0{-A}),
       islossless BH.tag => islossless BH.reader => islossless A(BH).a) =>
     Pr[Unlink(A, Single, EUF_RF).main() @ &m : res] =
     Pr[Unlink(A, Single, RF_bad).main() @ &m : res].
@@ -623,7 +658,7 @@ op pr_bad = pr_bad_step_r * (n_session * n_tag)%r.
 
 (* Number of plain-texts hashed for tag [i]. *)
 op ptxt_hashed_l (i : int) (m : (int * ptxt, ptxt list) fmap) =
-  FSet.filter (fun x => fst x = i) (SmtMap.fdom m).
+  FSet.filter (fun x => fst x = i) (fdom m).
 
 op ptxt_hashed (i : int) (m : (int * ptxt, ptxt list) fmap)  =
   FSet.card (ptxt_hashed_l i m).
@@ -668,8 +703,8 @@ proof.
   by rewrite -!big_int !bigi_constz // /#. 
 qed.
 
-lemma coll_bound_multiple &m (A <: Adv {EUF_RF, RF_bad, Multiple0}) : 
-    (forall (BH <: BasicHashT0{A}),
+lemma coll_bound_multiple &m (A <: Adv {-EUF_RF, -RF_bad, -Multiple0}) : 
+    (forall (BH <: BasicHashT0{-A}),
       islossless BH.tag => islossless BH.reader => islossless A(BH).a) =>
     Pr[Unlink(A, Multiple, RF_bad).main() @ &m : RF_bad.bad] <= pr_bad.
 proof.
@@ -715,14 +750,19 @@ proof.
      (forall (j : int), 0 <= j && j < i => Multiple0.s_cpt.[j] = Some 0));
     1 : by auto; move => /> *; smt (get_setE).
     auto => />; split; 1 : smt (empty_valE n_tag_p).
-    move => *; split. 
-    + rewrite (eq_big_int 0 n_tag _ (fun k => 0)); 
-      1 : by move => *; smt (get_setE).
+    move => scpt i0 /lezNgt ntag_le_i0 ge0_i0 i0_le_ntag dom_scpt scpt_ge0.
+    have ->> {ntag_le_i0 i0_le_ntag}: i0 = n_tag by smt().
+    split.
+    + rewrite (eq_big_int 0 n_tag _ (fun k => 0)).
+      + by move=> i ^ /dom_scpt + /scpt_ge0; case _: (scpt.[i])=> |> ->.
       by rewrite big1_eq.
-    move => *; split; 1 :  smt (empty_valE n_tag_p).
-    move => *; split; 1 :  smt (empty_valE n_session_p).   
-    by move => *; rewrite /ptxt_hashed /ptxt_hashed_l fdom0 filter0 fcards0 /#.  
-
+    split; 1 :  smt (n_tag_p).
+    split.
+    + move=> i ge0_i i_lt_ntag.
+      move: (dom_scpt i) (scpt_ge0 i); rewrite ge0_i i_lt_ntag /=.
+      by case: (scpt.[i])=> |>; smt(n_session_p).
+    move=> j; move: (dom_scpt j) (scpt_ge0 j); case: (scpt.[j])=> |>.
+    by rewrite /ptxt_hashed /ptxt_hashed_l fdom0 filter0 fcards0.
   + rewrite /pr_bad_step /=.
     proc; inline *; 
     do 2! (sp; if; 2 : by hoare; auto). 
