@@ -4,7 +4,7 @@ D. Baelde, S. Delaune, A. Koutsos, C. Jacomme, and S. Moreau, “An Interactive 
 
 
 (* Authentication of the Basic Hash protocol, multiple tags. *)
-require import AllCore List FSet SmtMap.
+require import AllCore List FSet FMap.
 require import Distr DBool.
 require FelTactic.
 
@@ -132,7 +132,7 @@ module BasicHash0 (H : PRFs_Oracles) = {
   
   proc reader_i (i : int, n h : ptxt) : bool = {    
     var b;
-    b <- H.check(i, n, h);
+    b <@ H.check(i, n, h);
     return b;
   } 
 
@@ -141,7 +141,7 @@ module BasicHash0 (H : PRFs_Oracles) = {
     b <- false;
     i <- 0;
     while (i < n_tag) {
-      r <- H.check(i, n, h);
+      r <@ H.check(i, n, h);
       (* If the message is accepted but was not sent by a honest tag, 
          we log it. *)
       if (r && ! (mem tag_outputs (i,n,h))){ 
@@ -242,20 +242,20 @@ module D (A : Adv) (BH : BasicHashF0) (F : PRFs_Oracles) = {
 
 (* The probability of winning the indistinguishability game against
    the RF is identical to the authentication game using the RF. *)
-lemma eq_RF &m (A <: Adv {BasicHash, EUF_RF}) : 
+lemma eq_RF &m (A <: Adv {-BasicHash, -EUF_RF}) : 
     Pr[AuthGame(A, BasicHash, EUF_RF).main() @ &m : res] =
     Pr[EUF_PRF_IND(EUF_RF, D(A, BasicHash0)).main() @ &m : res]
 by byequiv; auto; proc; inline *; wp; sim; auto. 
 
 (* Idem with PRF *)
-lemma eq_PRF &m (A <: Adv {BasicHash, PRFs}) : 
+lemma eq_PRF &m (A <: Adv {-BasicHash, -PRFs}) : 
     Pr[AuthGame(A, BasicHash, PRFs).main() @ &m : res] =
     Pr[EUF_PRF_IND(PRFs, D(A, BasicHash0)).main() @ &m : res]
 by byequiv; auto; proc; inline *; wp; sim; auto. 
 
 (* The adversary cannot win the authentication game instantiated
     with the ideal unforgeable hash function. *)
-lemma res_0 &m (A <: Adv {BasicHash, PRFs, EUF_RF}) : 
+lemma res_0 &m (A <: Adv {-BasicHash, -PRFs, -EUF_RF}) : 
     Pr[AuthGame(A, BasicHash, EUF_RF).main() @ &m : res] = 0%r.
 proof.
   byphoare; auto. 
@@ -268,18 +268,25 @@ proof.
   + proc; inline *; auto; sp.
     seq 1: (#pre); 1  : by conseq />; auto; smt().
     sp; if; 2: by conseq/>;auto;smt().
-    by auto; smt(get_setE).
+    auto=> |> &0 i. pose x := if n_tag <= i then _ else _.
+    have ->: (if n_tag <= x then 0 else x) = x by smt().
+    move=> dom_tagP xn_notin_m p p_in_drf_x h p'.
+    rewrite get_setE; case: ((h, p') = (x, n{0}))=> |>.
+    + by rewrite get_set_sameE.
+    move=> _ hp'_notin_m.
+    move: (dom_tagP h p' (oget EUF_RF.m{0}.[h, p']))=> |>.
+    by rewrite hp'_notin_m=> |>.
 
   (* reader *)
   + proc; inline *; conseq />.
     while (0 <= i <= n_tag /\ #pre) => //; 2 : by conseq />; auto; smt(n_tag_p).
     conseq />; auto => /> *; smt(get_setE).
 
-  + by move => *; smt.
+  by move=> |>; smt(emptyE).
 qed.
 
 (* We conclude. *)
-lemma auth0 &m (A <: Adv {BasicHash, PRFs, EUF_RF}) : 
+lemma auth0 &m (A <: Adv {-BasicHash, -PRFs, -EUF_RF}) : 
     Pr[AuthGame(A, BasicHash, PRFs).main() @ &m : res] = 
       (   Pr[EUF_PRF_IND(PRFs,   D(A, BasicHash0)).main() @ &m : res] 
         - Pr[EUF_PRF_IND(EUF_RF, D(A, BasicHash0)).main() @ &m : res] ).
