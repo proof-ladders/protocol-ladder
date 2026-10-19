@@ -4,6 +4,30 @@ open Comparse
 open DY.Core
 open DY.Lib
 
+/// Protocol: Signed DH
+/// Modeler: Théophile Wallez
+/// Date: March 2025
+///
+/// Model features:
+///  * attacker: active
+///  * sessions: unbounded
+///  * agents: unbounded
+///  * compromises: long-term keys + ephemeral keys
+///  * Attacker class: symbolic
+///  * Primitives: DH, signature, KDF
+///  * Properties: Authentication, Forward Secrecy
+///
+/// Analysis features:
+///   * difficulty ratings: easy
+///   * status: finished
+
+/// This file contains the specification.
+/// We start by defining types for participant states,
+/// messages sent on the network,
+/// signature inputs,
+/// and protocol events.
+
+/// Type for client state
 [@@ with_bytes bytes]
 type client_state =
   | ClientInitiateState:
@@ -13,57 +37,69 @@ type client_state =
     k_c:bytes ->
     client_state
 
+/// generate a corresponding message format with Comparse
 %splice [ps_client_state] (gen_parser (`client_state))
 %splice [ps_client_state_is_well_formed] (gen_is_well_formed_lemma (`client_state))
 
+/// and register it as a state type.
 instance _: local_state client_state = {
   tag = "SignedDH.ClientState";
   format = mk_parseable_serializeable ps_client_state;
 }
 
+/// Type for server state
 [@@ with_bytes bytes]
 type server_state =
   | ServerFinishState:
     k_s:bytes ->
     server_state
 
+/// generate a corresponding message format with Comparse
 %splice [ps_server_state] (gen_parser (`server_state))
 %splice [ps_server_state_is_well_formed] (gen_is_well_formed_lemma (`server_state))
 
+/// and register it as a state type.
 instance _: local_state server_state = {
   tag = "SignedDH.ServerState";
   format = mk_parseable_serializeable ps_server_state;
 }
 
+/// Type for client message sent on the network
 [@@ with_bytes bytes]
 type client_message = {
   x_pk: bytes;
 }
 
+/// generate a corresponding message format with Comparse.
 %splice [ps_client_message] (gen_parser (`client_message))
 %splice [ps_client_message_is_well_formed] (gen_is_well_formed_lemma (`client_message))
 instance _: parseable_serializeable bytes client_message = mk_parseable_serializeable ps_client_message
 
+/// Type for server message sent on the network
 [@@ with_bytes bytes]
 type server_message = {
   y_pk: bytes;
   sig: bytes;
 }
 
+/// generate a corresponding message format with Comparse.
 %splice [ps_server_message] (gen_parser (`server_message))
 %splice [ps_server_message_is_well_formed] (gen_is_well_formed_lemma (`server_message))
 instance _: parseable_serializeable bytes server_message = mk_parseable_serializeable ps_server_message
 
+/// Type for signature input
 [@@ with_bytes bytes]
 type sig_input = {
   x_pk: bytes;
   y_pk: bytes;
 }
 
+/// generate a corresponding message format with Comparse.
 %splice [ps_sig_input] (gen_parser (`sig_input))
 %splice [ps_sig_input_is_well_formed] (gen_is_well_formed_lemma (`sig_input))
 instance _: parseable_serializeable bytes sig_input = mk_parseable_serializeable ps_sig_input
 
+/// Type for protocol event (e.g. to state authentication property)
 [@@ with_bytes bytes]
 type signed_dh_event =
   | ClientInitiateEvent:
@@ -84,12 +120,16 @@ type signed_dh_event =
     k_c:bytes ->
     signed_dh_event
 
+/// generate a corresponding message format with Comparse
 %splice [ps_signed_dh_event] (gen_parser (`signed_dh_event))
 
+/// and register it as an event type.
 instance _: event signed_dh_event = {
   tag = "SignedDH.Event";
   format = mk_parseable_serializeable ps_signed_dh_event;
 }
+
+/// The following is a proof artifact.
 
 val client_ephemeral_key_label:
   principal -> state_id ->
@@ -102,6 +142,15 @@ val server_ephemeral_key_label:
   label
 let server_ephemeral_key_label server sid =
   principal_tag_state_label server "SignedDH.ServerState" sid
+
+/// We now specify the protocol.
+
+/// The protocol steps to generate long-term keys
+/// and send public keys to other participants
+/// belong to the standard library of DY*,
+/// hence are not in this file.
+
+/// Initiate the handshake with a server.
 
 val client_initiate:
   client:principal ->
@@ -120,6 +169,9 @@ let client_initiate client =
   let* msg_timestamp = send_msg (serialize client_message { x_pk }) in
 
   return (client_sid, msg_timestamp)
+
+/// Receive a handshake request from a client,
+/// and send a response.
 
 val server_receive:
   server:principal -> private_keys_sid:state_id ->
@@ -149,6 +201,9 @@ let server_receive server private_keys_sid msg_ts =
   // Send message
   let* msg_timestamp = send_msg (serialize server_message { y_pk; sig; }) in
   return (Some (server_sid, msg_timestamp))
+
+/// Receive the response from a server,
+/// and finish processing the handshake.
 
 val client_finish:
   client:principal -> server:principal -> pki_sid:state_id ->

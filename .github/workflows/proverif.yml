@@ -1,0 +1,21 @@
+name: "Check ProVerif proofs"
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  proverif:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: DeterminateSystems/nix-installer-action@main
+    - uses: DeterminateSystems/magic-nix-cache-action@main
+    - name: Build
+      run: |
+        git mv .ci/proverif/* .
+        nix flake check -L
